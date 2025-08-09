@@ -1,6 +1,6 @@
 'use client';
 
-import { MoreHorizontal, X, GripVertical } from 'lucide-react';
+import { MoreHorizontal, X, GripVertical, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Card } from '@/components/ui/card';
@@ -82,6 +82,22 @@ export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
         </div>
         
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Placeholder "+" dropdown for future actions */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                <Plus className="h-3 w-3 text-[#cccccc]" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => console.log('Add action 1')}>
+                Add action 1
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => console.log('Add action 2')}>
+                Add action 2
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-6 w-6 p-0">

@@ -36,6 +36,8 @@ interface WorkspaceState {
   bottomPanelHeight: number;
   bottomPanelCollapsed: boolean;
   activeBottomTab: string;
+  // Selection
+  selectedWidgetId?: string;
 }
 
 interface WorkspaceActions {
@@ -66,6 +68,9 @@ interface WorkspaceActions {
   // Persistence
   persist: () => void;
   hydrate: () => void;
+
+  // Selection
+  setSelectedWidget: (id?: string) => void;
 }
 
 type WorkspaceStore = WorkspaceState & WorkspaceActions;
@@ -90,6 +95,10 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       bottomPanelHeight: 200,
       bottomPanelCollapsed: false,
       activeBottomTab: 'output',
+  selectedWidgetId: undefined,
+
+  // Selection
+  setSelectedWidget: (id) => set({ selectedWidgetId: id }),
 
       // Sheet actions
       addSheet: (kind: SheetKind, title?: string) => {
@@ -357,7 +366,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
     }),
     {
       name: 'madlab-workspace',
-      skipHydration: true,
+  // allow auto hydration for persisted state
     }
   )
 );

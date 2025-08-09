@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import { Responsive, WidthProvider, type Layout } from 'react-grid-layout';
 import { WidgetTile } from './WidgetTile';
 import { useWorkspaceStore, type Sheet } from '@/lib/store';
+import { cn } from '@/lib/utils';
 
 // Make GridLayout responsive
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -13,7 +14,7 @@ interface GridCanvasProps {
 }
 
 export function GridCanvas({ sheet }: GridCanvasProps) {
-  const { updateLayout } = useWorkspaceStore();
+  const { updateLayout, selectedWidgetId, setSelectedWidget } = useWorkspaceStore();
 
   const handleLayoutChange = useCallback((layout: Layout[]) => {
     updateLayout(sheet.id, layout);
@@ -49,21 +50,29 @@ export function GridCanvas({ sheet }: GridCanvasProps) {
           margin={[8, 8]}
           containerPadding={[0, 0]}
         >
-          {sheet.widgets.map((widget) => (
-            <div key={widget.id} className="react-grid-item">
-              <WidgetTile widget={widget} sheetId={sheet.id} />
-            </div>
-          ))}
+          {sheet.widgets.map((widget) => {
+            const selected = selectedWidgetId === widget.id;
+            return (
+              <button
+                key={widget.id}
+                className={cn(
+                  'react-grid-item outline-0',
+                  selected && 'ring-1 ring-[#007acc] ring-offset-0'
+                )}
+                onClick={() => setSelectedWidget(widget.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') setSelectedWidget(widget.id);
+                }}
+                tabIndex={0}
+                aria-label={`Select widget ${widget.title}`}
+                data-widget-id={widget.id}
+              >
+                <WidgetTile widget={widget} sheetId={sheet.id} />
+              </button>
+            );
+          })}
         </ResponsiveGridLayout>
       )}
     </div>
   );
 }
-
-// TODO: Implement advanced grid features
-// - Custom breakpoints based on widget types
-// - Auto-layout algorithms for optimal widget placement
-// - Grid snapping and alignment guides
-// - Widget grouping and containers
-// - Export/import grid layouts
-// - Template-based layouts for common analysis patterns

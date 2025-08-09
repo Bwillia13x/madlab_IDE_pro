@@ -17,6 +17,45 @@ test.describe('MAD LAB Workbench', () => {
     await expect(page.locator('text=Welcome to MAD LAB')).toBeVisible();
   });
 
+  test('layout persists after dragging a tile', async ({ page }) => {
+    await page.goto('/');
+
+    // Add "Valuation Workbench" sheet via "+"
+    await page.click('[data-testid="add-sheet-button"]');
+    await page.getByText('Valuation Workbench').click();
+
+    // Expect 4 tiles
+    const items = page.locator('.react-grid-item');
+    await expect(items).toHaveCount(4);
+
+    // Pick first tile and read its initial transform
+    const firstItem = items.first();
+    const readTransform = async () =>
+      await firstItem.evaluate((el) => (el as HTMLElement).style.transform || '');
+
+    const before = await readTransform();
+
+    // Drag using the header drag handle
+    const handle = firstItem.locator('.drag-handle');
+    const box = await handle.boundingBox();
+    if (!box) throw new Error('Drag handle bounding box not found');
+
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 150, box.y + box.height / 2 + 0, { steps: 10 });
+    await page.mouse.up();
+
+    // Wait for transform to change
+    await expect.poll(readTransform).not.toBe(before);
+
+    // Reload and verify persisted layout
+    await page.reload();
+    const itemsAfter = page.locator('.react-grid-item').first();
+    const afterReload = await itemsAfter.evaluate(
+      (el) => (el as HTMLElement).style.transform || ''
+    );
+    expect(afterReload).not.toBe(before);
+  });
   test('should create a new sheet from preset', async ({ page }) => {
     await page.goto('/');
     
