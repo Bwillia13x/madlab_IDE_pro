@@ -1,27 +1,51 @@
 'use client';
 
-import { MoreHorizontal, X, GripVertical, Plus } from 'lucide-react';
+import { MoreHorizontal, X, GripVertical, Plus, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Card } from '@/components/ui/card';
 import { useWorkspaceStore, type Widget } from '@/lib/store';
+import { Input } from '@/components/ui/input';
+import dynamic from 'next/dynamic';
+import { getSchemaWidget } from '@/lib/widgets/registry';
+import { registerCoreWidgets } from '@/lib/widgets/coreWidgets';
+import type { WidgetProps as SchemaWidgetProps } from '@/lib/widgets/schema';
 // ...existing code...
 
 // Widget components
 import { KpiCard } from '@/components/widgets/KpiCard';
-import { DcfBasic } from '@/components/widgets/DcfBasic';
-import { LineChart } from '@/components/widgets/LineChart';
-import { BarChart } from '@/components/widgets/BarChart';
-import { Heatmap } from '@/components/widgets/Heatmap';
+const DcfBasic = dynamic(async () => (await import('@/components/widgets/DcfBasic')).DcfBasic, {
+  ssr: false,
+});
+const LineChart = dynamic(async () => (await import('@/components/widgets/LineChart')).LineChart, {
+  ssr: false,
+});
+const BarChart = dynamic(async () => (await import('@/components/widgets/BarChart')).BarChart, {
+  ssr: false,
+});
+const Heatmap = dynamic(async () => (await import('@/components/widgets/Heatmap')).Heatmap, {
+  ssr: false,
+});
 import { VarEs } from '@/components/widgets/VarEs';
 import { StressScenarios } from '@/components/widgets/StressScenarios';
 import { FactorExposures } from '@/components/widgets/FactorExposures';
 import { CorrelationMatrix } from '@/components/widgets/CorrelationMatrix';
 import { GreeksSurface } from '@/components/widgets/GreeksSurface';
-import { VolCone } from '@/components/widgets/VolCone';
+const VolCone = dynamic(async () => (await import('@/components/widgets/VolCone')).VolCone, {
+  ssr: false,
+});
 import { StrategyBuilder } from '@/components/widgets/StrategyBuilder';
 import { PnLProfile } from '@/components/widgets/PnLProfile';
 import { BlankTile } from '@/components/widgets/BlankTile';
+const OptionsCard = dynamic(
+  async () => (await import('@/components/widgets/OptionsCard')).OptionsCard,
+  { ssr: false }
+);
 
 interface WidgetTileProps {
   widget: Widget;
@@ -33,7 +57,7 @@ const WIDGET_COMPONENTS = {
   'dcf-basic': DcfBasic,
   'line-chart': LineChart,
   'bar-chart': BarChart,
-  'heatmap': Heatmap,
+  heatmap: Heatmap,
   'var-es': VarEs,
   'stress-scenarios': StressScenarios,
   'factor-exposures': FactorExposures,
@@ -43,12 +67,25 @@ const WIDGET_COMPONENTS = {
   'strategy-builder': StrategyBuilder,
   'pnl-profile': PnLProfile,
   'blank-tile': BlankTile,
+  'options-card': OptionsCard,
 };
 
 export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
-  const { removeWidget, updateWidget } = useWorkspaceStore();
-  
+  // Ensure core widgets are registered once
+  registerCoreWidgets();
+  const { removeWidget, updateWidget, setSelectedWidget, selectedWidgetId, setInspectorOpen } =
+    useWorkspaceStore();
+
+  // Prefer schema-based registry if available for this type
+  const schemaEntry = getSchemaWidget(widget.type);
+  const SchemaComponent = schemaEntry?.definition.runtime.component as
+    | ((props: SchemaWidgetProps) => JSX.Element)
+    | undefined;
+
   const WidgetComponent = WIDGET_COMPONENTS[widget.type as keyof typeof WIDGET_COMPONENTS];
+  const propsObj = widget.props as Record<string, unknown> | undefined;
+  const currentSymbol =
+    typeof propsObj?.['symbol'] === 'string' ? (propsObj['symbol'] as string) : '';
 
   const handleRemove = () => {
     removeWidget(sheetId, widget.id);
@@ -58,7 +95,7 @@ export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
     updateWidget(sheetId, { id: widget.id, title: newTitle });
   };
 
-  if (!WidgetComponent) {
+  if (!SchemaComponent && !WidgetComponent) {
     return (
       <Card className="w-full h-full bg-card/50 border-destructive">
         <div className="flex items-center justify-center h-full text-destructive">
@@ -68,25 +105,52 @@ export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
     );
   }
 
+  const selected = selectedWidgetId === widget.id;
   return (
-    <Card className="w-full h-full bg-[#252526] border-[#2d2d30] hover:border-[#007acc]/50 transition-colors group" data-testid={`widget-tile-${widget.id}`}>
+    <Card
+      className={`w-full h-full bg-background border-border transition-colors group ${selected ? 'ring-1 ring-primary' : 'hover:border-primary/50'}`}
+      data-testid={`widget-tile-${widget.id}`}
+      data-selected={selected ? 'true' : 'false'}
+      onClick={(e) => {
+        // don't toggle when clicking inside inputs
+        const target = e.target as HTMLElement;
+        if (['input', 'textarea', 'button'].includes((target.tagName || '').toLowerCase())) return;
+        e.stopPropagation();
+        setSelectedWidget(widget.id);
+      }}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between p-2 border-b border-[#2d2d30]">
+      <div className="flex items-center justify-between p-2 border-b border-border">
         <div className="flex items-center gap-2">
           <div className="drag-handle cursor-move opacity-0 group-hover:opacity-100 transition-opacity">
-            <GripVertical className="h-4 w-4 text-[#969696]" />
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
-          <span className="text-sm font-medium text-[#cccccc] truncate">
-            {widget.title}
-          </span>
+          <span className="text-sm font-medium text-foreground truncate">{widget.title}</span>
+          {/* Symbol input */}
+          <div className="ml-2 flex items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Sym</span>
+            <Input
+              value={currentSymbol}
+              placeholder="ACME"
+              onChange={(e) => {
+                const raw = e.target.value || '';
+                const sym = raw.toUpperCase().slice(0, 12);
+                updateWidget(sheetId, {
+                  id: widget.id,
+                  props: { ...(widget.props || {}), symbol: sym },
+                });
+              }}
+              className="h-6 px-2 py-0 text-xs w-[84px] bg-input border-border text-foreground"
+            />
+          </div>
         </div>
-        
+
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {/* Placeholder "+" dropdown for future actions */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                <Plus className="h-3 w-3 text-[#cccccc]" />
+                <Plus className="h-3 w-3 text-foreground" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -100,15 +164,31 @@ export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
           </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                <MoreHorizontal className="h-3 w-3 text-[#cccccc]" />
+              <Button
+                aria-label="More horizontal"
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                data-testid="widget-menu"
+              >
+                <MoreHorizontal className="h-3 w-3 text-foreground" aria-hidden />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => console.log('Configure widget')}>
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedWidget(widget.id);
+                  setInspectorOpen(true);
+                }}
+                data-testid="widget-configure"
+              >
+                <Settings className="w-4 h-4 mr-2" />
                 Configure
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => console.log('Duplicate widget')}>
+              <DropdownMenuItem
+                data-testid="widget-duplicate"
+                onClick={() => useWorkspaceStore.getState().duplicateWidget(sheetId, widget.id)}
+              >
                 Duplicate
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleRemove} className="text-destructive">
@@ -116,25 +196,39 @@ export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          
-          <Button 
-            variant="ghost" 
-            size="sm" 
+
+          <Button
+            variant="ghost"
+            size="sm"
             className="h-6 w-6 p-0 hover:bg-destructive/20"
             onClick={handleRemove}
           >
-            <X className="h-3 w-3 text-[#cccccc]" />
+            <X className="h-3 w-3 text-foreground" />
           </Button>
         </div>
       </div>
 
       {/* Content */}
       <div className="flex-1 p-2 overflow-hidden">
-        <WidgetComponent 
-          widget={widget} 
-          onTitleChange={handleTitleChange}
-          {...(widget.props || {})} 
-        />
+        {SchemaComponent ? (
+          <SchemaComponent
+            id={widget.id}
+            config={(widget.props as any) || schemaEntry!.definition.meta.defaultConfig}
+            isSelected={selected}
+            onConfigChange={(config) =>
+              updateWidget(sheetId, { id: widget.id, props: config as Record<string, unknown> })
+            }
+            onError={(err) => console.warn('Widget error', widget.type, err)}
+          />
+        ) : (
+          WidgetComponent && (
+            <WidgetComponent
+              widget={widget}
+              onTitleChange={handleTitleChange}
+              {...(widget.props || {})}
+            />
+          )
+        )}
       </div>
     </Card>
   );

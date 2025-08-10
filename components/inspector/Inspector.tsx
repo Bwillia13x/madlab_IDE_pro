@@ -4,6 +4,8 @@ import { useWorkspaceStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import AutoForm from '@/lib/ui/AutoForm';
+import { z } from 'zod';
 import { X } from 'lucide-react';
 
 export function Inspector() {
@@ -50,18 +52,18 @@ export function Inspector() {
             }}
           />
         </div>
-        <div>
-          <label className="text-xs text-muted-foreground">Symbol</label>
-          <Input
-            data-testid="inspector-symbol"
-            placeholder="AAPL"
-            value={typeof props.symbol === 'string' ? (props.symbol as string) : ''}
-            onChange={(e) => {
+        <div className="space-y-2">
+          <label className="text-xs text-muted-foreground">Properties</label>
+          <AutoForm
+            schema={z.object({ symbol: z.string().optional() })}
+            value={props}
+            onChange={(next) => {
               if (!owningSheet || !widget) return;
-              updateWidget(owningSheet.id, {
-                id: widget.id,
-                props: { ...props, symbol: e.target.value.toUpperCase().slice(0, 12) },
-              });
+              const safe = { ...next } as Record<string, unknown>;
+              if (typeof safe.symbol === 'string') {
+                safe.symbol = (safe.symbol as string).toUpperCase().slice(0, 12);
+              }
+              updateWidget(owningSheet.id, { id: widget.id, props: safe });
             }}
           />
         </div>
