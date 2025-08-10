@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Layout } from 'react-grid-layout';
 import { SHEET_PRESETS } from './presets';
+import { exportWorkspaceJson } from './io/export';
+import { coerceToWorkspaceState, parseWorkspaceImport } from './io/import';
 
 export type SheetKind = 'valuation' | 'charting' | 'risk' | 'options' | 'blank';
 
@@ -11,6 +13,7 @@ export interface Widget {
   title: string;
   layout: Layout;
   props?: Record<string, unknown>;
+  version?: number;
 }
 
 export interface Sheet {
@@ -46,6 +49,8 @@ export interface WorkspaceState {
   schemaVersion: number;
   // Preset version for tracking preset evolution
   presetVersion: number;
+  // Data provider selection
+  dataProvider: string;
 }
 
 interface WorkspaceActions {
@@ -85,6 +90,10 @@ interface WorkspaceActions {
   // Inspector
   setInspectorOpen: (open: boolean) => void;
   toggleInspector: () => void;
+
+  // Data Provider
+  setDataProvider: (provider: string) => Promise<void>;
+  getDataProvider: () => string;
 
   // Import/export helpers
   exportWorkspace: () => string;
@@ -137,6 +146,7 @@ const createInitialState = (): WorkspaceState => ({
   inspectorOpen: false,
   schemaVersion: 1,
   presetVersion: 1,
+  dataProvider: 'mock',
 });
 
 // Migration helper (exported for tests if needed)
@@ -200,6 +210,7 @@ export function migrateState(persisted: unknown, _fromVersion: number): Workspac
                       w: Number((w?.layout as Layout)?.w ?? 6),
                       h: Number((w?.layout as Layout)?.h ?? 4),
                     },
+                    version: typeof w?.version === 'number' ? w.version : 1,
                   }) as Widget
               )
             : [],
@@ -218,6 +229,11 @@ export function migrateState(persisted: unknown, _fromVersion: number): Workspac
   // Preset version (default to 1 when missing)
   if (typeof next.presetVersion !== 'number') {
     next.presetVersion = 1;
+  }
+
+  // Data provider (default to 'mock' when missing)
+  if (typeof next.dataProvider !== 'string') {
+    next.dataProvider = 'mock';
   }
 
   // Merge with defaults to ensure all required fields are present
@@ -253,6 +269,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       inspectorOpen: false,
       schemaVersion: 1,
       presetVersion: 1,
+      dataProvider: 'mock',
 
       // Selection
       setSelectedWidget: (id) => set({ selectedWidgetId: id }),
@@ -260,6 +277,18 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       setInspectorOpen: (open: boolean) => set({ inspectorOpen: open }),
       toggleInspector: () => set((state) => ({ inspectorOpen: !state.inspectorOpen })),
       setExplorerWidth: (width: number) => set({ explorerWidth: Math.max(200, width) }),
+
+      // Data Provider
+      setDataProvider: async (provider: string) => {
+        const { setDataProvider: setProviderRegistry } = await import('./data/providers');
+        const success = await setProviderRegistry(provider);
+        if (success) {
+          set({ dataProvider: provider });
+        } else {
+          console.warn(`Failed to set data provider to '${provider}'`);
+        }
+      },
+      getDataProvider: () => get().dataProvider,
 
       // Sheet actions
       addSheet: (kind: SheetKind, title?: string) => {
@@ -307,7 +336,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       // Widget actions
       addWidget: (sheetId: string, widget: Omit<Widget, 'id'>) => {
         const id = `widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const newWidget: Widget = { ...widget, id };
+        const newWidget: Widget = { version: 1, ...widget, id } as Widget;
 
         set((state) => ({
           sheets: state.sheets.map((sheet) =>
@@ -361,6 +390,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           title: `${source.title} (Copy)`,
           layout: nextLayout,
           props: source.props ? { ...source.props } : undefined,
+          version: source.version ?? 1,
         };
         set((prev) => ({
           sheets: prev.sheets.map((s) =>
@@ -515,63 +545,15 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       // Import/export helpers
       exportWorkspace: () => {
         const state = get();
-        const serializable = {
-          schemaVersion: state.schemaVersion,
-          ts: Date.now(),
-          sheets: state.sheets,
-          activeSheetId: state.activeSheetId,
-          messages: state.messages.map((m) => ({
-            ...m,
-            timestamp:
-              m.timestamp instanceof Date
-                ? m.timestamp.toISOString()
-                : typeof m.timestamp === 'string'
-                  ? m.timestamp
-                  : new Date().toISOString(),
-          })),
-          ui: {
-            theme: state.theme,
-            explorerCollapsed: state.explorerCollapsed,
-            explorerWidth: state.explorerWidth,
-            chatCollapsed: state.chatCollapsed,
-            bottomPanelHeight: state.bottomPanelHeight,
-            bottomPanelCollapsed: state.bottomPanelCollapsed,
-            activeBottomTab: state.activeBottomTab,
-          },
-        };
-        return JSON.stringify(serializable, null, 2);
+        return exportWorkspaceJson(state);
       },
 
       importWorkspace: (data: unknown) => {
         try {
-          const obj = typeof data === 'string' ? JSON.parse(data) : (data as any);
-          const schemaVersion = typeof obj?.schemaVersion === 'number' ? obj.schemaVersion : 1;
-          const sheets = Array.isArray(obj?.sheets) ? (obj.sheets as Sheet[]) : [];
-          const activeSheetId =
-            typeof obj?.activeSheetId === 'string' ? obj.activeSheetId : undefined;
-          const ui = obj?.ui ?? {};
-          const messagesIn = Array.isArray(obj?.messages) ? obj.messages : [];
-          const messages: Message[] = messagesIn.map((m: any) => ({
-            id: String(m?.id ?? `msg-${Math.random().toString(36).slice(2)}`),
-            content: String(m?.content ?? ''),
-            sender: m?.sender === 'user' ? 'user' : 'agent',
-            timestamp: new Date(m?.timestamp ?? Date.now()),
-          }));
-
+          const parsed = parseWorkspaceImport(data);
+          const coerced = coerceToWorkspaceState(parsed);
           set({
-            schemaVersion,
-            sheets,
-            activeSheetId,
-            messages,
-            theme: ui?.theme === 'light' ? 'light' : 'dark',
-            explorerCollapsed: Boolean(ui?.explorerCollapsed),
-            explorerWidth: typeof ui?.explorerWidth === 'number' ? ui.explorerWidth : 280,
-            chatCollapsed: Boolean(ui?.chatCollapsed),
-            bottomPanelHeight:
-              typeof ui?.bottomPanelHeight === 'number' ? ui.bottomPanelHeight : 200,
-            bottomPanelCollapsed: Boolean(ui?.bottomPanelCollapsed),
-            activeBottomTab:
-              typeof ui?.activeBottomTab === 'string' ? ui.activeBottomTab : 'output',
+            ...coerced,
             selectedWidgetId: undefined,
             inspectorOpen: false,
           });
