@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Layout } from 'react-grid-layout';
+import { SHEET_PRESETS } from './presets';
 
 export type SheetKind = 'valuation' | 'charting' | 'risk' | 'options' | 'blank';
 
@@ -43,6 +44,8 @@ export interface WorkspaceState {
   inspectorOpen: boolean;
   // Schema version for persisted state
   schemaVersion: number;
+  // Preset version for tracking preset evolution
+  presetVersion: number;
 }
 
 interface WorkspaceActions {
@@ -133,6 +136,7 @@ const createInitialState = (): WorkspaceState => ({
   selectedWidgetId: undefined,
   inspectorOpen: false,
   schemaVersion: 1,
+  presetVersion: 1,
 });
 
 // Migration helper (exported for tests if needed)
@@ -211,6 +215,11 @@ export function migrateState(persisted: unknown, _fromVersion: number): Workspac
   // Workspace export schema version inside state
   next.schemaVersion = 1;
 
+  // Preset version (default to 1 when missing)
+  if (typeof next.presetVersion !== 'number') {
+    next.presetVersion = 1;
+  }
+
   // Merge with defaults to ensure all required fields are present
   return {
     ...createInitialState(),
@@ -243,6 +252,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       selectedWidgetId: undefined,
       inspectorOpen: false,
       schemaVersion: 1,
+      presetVersion: 1,
 
       // Selection
       setSelectedWidget: (id) => set({ selectedWidgetId: id }),
@@ -429,105 +439,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       },
 
       getPresetWidgets: (kind: SheetKind): Omit<Widget, 'id'>[] => {
-        const presets = {
-          valuation: [
-            {
-              type: 'kpi-card',
-              title: 'KPI',
-              layout: { i: '', x: 0, y: 0, w: 6, h: 4 },
-            },
-            {
-              type: 'dcf-basic',
-              title: 'DCF (Basic)',
-              layout: { i: '', x: 6, y: 0, w: 6, h: 4 },
-            },
-            {
-              type: 'bar-chart',
-              title: 'Peer Multiples',
-              layout: { i: '', x: 0, y: 4, w: 6, h: 4 },
-            },
-            {
-              type: 'heatmap',
-              title: 'Sensitivity (WACC x g)',
-              layout: { i: '', x: 6, y: 4, w: 6, h: 4 },
-            },
-          ],
-          charting: [
-            {
-              type: 'line-chart',
-              title: 'Price Line',
-              layout: { i: '', x: 0, y: 0, w: 6, h: 4 },
-            },
-            {
-              type: 'bar-chart',
-              title: 'Bar Chart',
-              layout: { i: '', x: 6, y: 0, w: 6, h: 4 },
-            },
-            {
-              type: 'heatmap',
-              title: 'Heatmap',
-              layout: { i: '', x: 0, y: 4, w: 6, h: 4 },
-            },
-            {
-              type: 'line-chart',
-              title: 'Volume',
-              layout: { i: '', x: 6, y: 4, w: 6, h: 4 },
-            },
-          ],
-          risk: [
-            {
-              type: 'var-es',
-              title: 'VaR/ES',
-              layout: { i: '', x: 0, y: 0, w: 6, h: 4 },
-            },
-            {
-              type: 'stress-scenarios',
-              title: 'Stress Scenarios',
-              layout: { i: '', x: 6, y: 0, w: 6, h: 4 },
-            },
-            {
-              type: 'factor-exposures',
-              title: 'Factor Exposures',
-              layout: { i: '', x: 0, y: 4, w: 6, h: 4 },
-            },
-            {
-              type: 'correlation-matrix',
-              title: 'Correlation Matrix',
-              layout: { i: '', x: 6, y: 4, w: 6, h: 4 },
-            },
-          ],
-          options: [
-            {
-              type: 'greeks-surface',
-              title: 'Greeks Surface',
-              layout: { i: '', x: 0, y: 0, w: 6, h: 4 },
-            },
-            {
-              type: 'vol-cone',
-              title: 'Vol Cone',
-              layout: { i: '', x: 6, y: 0, w: 6, h: 4 },
-            },
-            {
-              type: 'strategy-builder',
-              title: 'Strategy Builder',
-              layout: { i: '', x: 0, y: 4, w: 6, h: 4 },
-            },
-            {
-              type: 'pnl-profile',
-              title: 'P&L Profile',
-              layout: { i: '', x: 6, y: 4, w: 6, h: 4 },
-            },
-          ],
-          blank: [
-            {
-              type: 'blank-tile',
-              title: 'Click to configure',
-              layout: { i: '', x: 0, y: 0, w: 12, h: 8 },
-            },
-          ],
-        };
-
-        return presets[kind] || [];
+        return SHEET_PRESETS[kind]?.widgets ?? [];
       },
 
       // Templates
