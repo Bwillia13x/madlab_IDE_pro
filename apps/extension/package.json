@@ -1,9 +1,9 @@
 {
-  "name": "@madlab/extension",
+  "name": "madlab-workbench",
   "displayName": "MAD LAB Workbench",
   "description": "Opens the MAD LAB web UI in a VS Code Webview",
   "publisher": "madlab",
-  "icon": "images/icon.svg",
+  "icon": "images/icon.png",
   "version": "0.0.1",
   "private": true,
   "engines": {
@@ -22,6 +22,18 @@
       {
         "command": "madlab.openWorkbench",
         "title": "MAD LAB: Open Workbench"
+      },
+      {
+        "command": "madlab.setAlphaVantageKey",
+        "title": "MAD LAB: Set Alpha Vantage API Key"
+      },
+      {
+        "command": "madlab.setYahooKey",
+        "title": "MAD LAB: Set Yahoo API Key"
+      },
+      {
+        "command": "madlab.clearApiKeys",
+        "title": "MAD LAB: Clear Stored API Keys"
       }
     ]
   },

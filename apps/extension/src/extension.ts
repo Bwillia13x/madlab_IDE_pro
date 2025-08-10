@@ -9,6 +9,38 @@ let globalStorageUri: vscode.Uri;
 const WORKSPACE_STORAGE_KEY = 'madlab-workspace-data';
 
 export function activate(context: vscode.ExtensionContext) {
+  // Register secret-setting commands (Batch 04)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('madlab.setAlphaVantageKey', async () => {
+      const key = await vscode.window.showInputBox({
+        prompt: 'Enter Alpha Vantage API Key',
+        ignoreFocusOut: true,
+        password: true,
+      });
+      if (!key) return;
+      await context.secrets.store('alphaVantageApiKey', key);
+      vscode.window.showInformationMessage('Alpha Vantage API key saved to SecretStorage.');
+    })
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand('madlab.setYahooKey', async () => {
+      const key = await vscode.window.showInputBox({
+        prompt: 'Enter Yahoo API Key (if applicable)',
+        ignoreFocusOut: true,
+        password: true,
+      });
+      if (!key) return;
+      await context.secrets.store('yahooApiKey', key);
+      vscode.window.showInformationMessage('Yahoo API key saved to SecretStorage.');
+    })
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand('madlab.clearApiKeys', async () => {
+      await context.secrets.delete('alphaVantageApiKey');
+      await context.secrets.delete('yahooApiKey');
+      vscode.window.showInformationMessage('MAD LAB: API keys cleared.');
+    })
+  );
   // Initialize global storage
   globalStorageUri = context.globalStorageUri;
 
@@ -77,7 +109,7 @@ async function handleWebviewMessage(
   msg: FromWebviewMessage,
   panel: vscode.WebviewPanel,
   context: vscode.ExtensionContext,
-  workspaceRoot: vscode.Uri
+  workspaceRoot?: vscode.Uri
 ) {
   // Extract request ID for response correlation
   const requestId = (msg.payload as any)?._requestId;
@@ -124,9 +156,14 @@ async function handleWebviewMessage(
     case 'file:save': {
       const { path: filePath, content } = msg.payload;
       try {
-        const fullPath = path.isAbsolute(filePath)
-          ? vscode.Uri.file(filePath)
-          : vscode.Uri.joinPath(workspaceRoot, filePath);
+        let fullPath: vscode.Uri;
+        if (path.isAbsolute(filePath)) {
+          fullPath = vscode.Uri.file(filePath);
+        } else if (workspaceRoot) {
+          fullPath = vscode.Uri.joinPath(workspaceRoot, filePath);
+        } else {
+          throw new Error('No workspace open to resolve relative path');
+        }
 
         await vscode.workspace.fs.writeFile(fullPath, new TextEncoder().encode(content));
         sendResponse('file:saved', { success: true, path: filePath });
@@ -142,9 +179,14 @@ async function handleWebviewMessage(
     case 'file:open': {
       const { path: filePath } = msg.payload;
       try {
-        const fullPath = path.isAbsolute(filePath)
-          ? vscode.Uri.file(filePath)
-          : vscode.Uri.joinPath(workspaceRoot, filePath);
+        let fullPath: vscode.Uri;
+        if (path.isAbsolute(filePath)) {
+          fullPath = vscode.Uri.file(filePath);
+        } else if (workspaceRoot) {
+          fullPath = vscode.Uri.joinPath(workspaceRoot, filePath);
+        } else {
+          throw new Error('No workspace open to resolve relative path');
+        }
 
         const fileData = await vscode.workspace.fs.readFile(fullPath);
         const content = new TextDecoder().decode(fileData);
@@ -459,6 +501,15 @@ async function fetchQuote(symbol: string) {
   };
   setCached(key, data, 30_000);
   return data;
+}
+
+// Helper to load secrets (without exposing to webview)
+async function getSecret(context: vscode.ExtensionContext, key: string) {
+  try {
+    return await context.secrets.get(key);
+  } catch {
+    return undefined;
+  }
 }
 
 async function fetchKpis(symbol: string) {
