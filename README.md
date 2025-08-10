@@ -234,14 +234,16 @@ docker build -t mad-lab-workbench .
 docker run -p 3000:3000 mad-lab-workbench
 ```
 
-### Static Export
+### Static Export (Demo Mode)
 
 ```bash
-# Build static files
+# Build static files (Next.js static export)
 pnpm build
 
 # Files will be in the 'out' directory
 ```
+
+When running the static demo, the app operates in mock data mode and displays a banner: "Demo mode: synthetic data". Real API keys are never exposed in the browser. For live data in development, use the VS Code extension (webview) and set your keys in the extension's SecretStorage.
 
 ## 🛣️ Roadmap
 
