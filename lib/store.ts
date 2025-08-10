@@ -26,18 +26,23 @@ export interface Message {
   sender: 'user' | 'agent';
 }
 
-interface WorkspaceState {
+export interface WorkspaceState {
   sheets: Sheet[];
   activeSheetId?: string;
   messages: Message[];
   theme: 'light' | 'dark';
   explorerCollapsed: boolean;
+  explorerWidth: number;
   chatCollapsed: boolean;
   bottomPanelHeight: number;
   bottomPanelCollapsed: boolean;
   activeBottomTab: string;
   // Selection
   selectedWidgetId?: string;
+  // Inspector panel
+  inspectorOpen: boolean;
+  // Schema version for persisted state
+  schemaVersion: number;
 }
 
 interface WorkspaceActions {
@@ -46,17 +51,18 @@ interface WorkspaceActions {
   closeSheet: (id: string) => void;
   setActiveSheet: (id: string) => void;
   updateSheetTitle: (id: string, title: string) => void;
-  
+
   // Widget management
   addWidget: (sheetId: string, widget: Omit<Widget, 'id'>) => void;
   updateWidget: (sheetId: string, widget: Partial<Widget> & { id: string }) => void;
   removeWidget: (sheetId: string, widgetId: string) => void;
   updateLayout: (sheetId: string, layout: Layout[]) => void;
-  
+  duplicateWidget: (sheetId: string, widgetId: string) => void;
+
   // Chat management
   addMessage: (content: string, sender: 'user' | 'agent') => void;
   clearMessages: () => void;
-  
+
   // UI state
   setTheme: (theme: 'light' | 'dark') => void;
   toggleExplorer: () => void;
@@ -64,7 +70,8 @@ interface WorkspaceActions {
   setBottomPanelHeight: (height: number) => void;
   toggleBottomPanel: () => void;
   setActiveBottomTab: (tab: string) => void;
-  
+  setExplorerWidth: (width: number) => void;
+
   // Persistence
   persist: () => void;
   hydrate: () => void;
@@ -72,15 +79,147 @@ interface WorkspaceActions {
   // Selection
   setSelectedWidget: (id?: string) => void;
 
+  // Inspector
+  setInspectorOpen: (open: boolean) => void;
+  toggleInspector: () => void;
+
+  // Import/export helpers
+  exportWorkspace: () => string;
+  importWorkspace: (data: unknown) => boolean;
+
   // Presets
   populateSheetWithPreset: (sheetId: string, kind: SheetKind) => void;
   getPresetWidgets: (kind: SheetKind) => Omit<Widget, 'id'>[];
+
+  // Templates
+  getTemplates: () => {
+    name: string;
+    kind: SheetKind;
+    title: string;
+    widgets: Omit<Widget, 'id'>[];
+  }[];
+  saveTemplate: (name: string, sheetId: string) => boolean;
+  createSheetFromTemplate: (name: string) => boolean;
 }
 
 type WorkspaceStore = WorkspaceState & WorkspaceActions;
 
+// Persisted store schema version (Batch 4: start at 1)
+export const PERSIST_VERSION = 1;
+
+// Persisted state can be of any shape, define a loose type for migration
+type RawState = Partial<Record<keyof WorkspaceState, unknown>>;
+
+// Default initial state
+const createInitialState = (): WorkspaceState => ({
+  sheets: [],
+  activeSheetId: undefined,
+  messages: [
+    {
+      id: '1',
+      content:
+        "Welcome to MAD LAB! I'm your AI assistant for financial analysis. How can I help you today?",
+      timestamp: new Date(),
+      sender: 'agent',
+    },
+  ],
+  theme: 'dark',
+  explorerCollapsed: false,
+  explorerWidth: 280,
+  chatCollapsed: false,
+  bottomPanelHeight: 200,
+  bottomPanelCollapsed: false,
+  activeBottomTab: 'output',
+  selectedWidgetId: undefined,
+  inspectorOpen: false,
+  schemaVersion: 1,
+});
+
+// Migration helper (exported for tests if needed)
+export function migrateState(persisted: unknown, _fromVersion: number): WorkspaceState {
+  if (!persisted || typeof persisted !== 'object') return createInitialState();
+  const next = persisted as any;
+
+  // Coerce messages timestamps to Date
+  if (Array.isArray(next.messages)) {
+    next.messages = next.messages.map(
+      (m: any) =>
+        ({
+          ...m,
+          timestamp: new Date((m?.timestamp as string) ?? Date.now()),
+          sender: m?.sender === 'user' ? 'user' : 'agent',
+          id: String(m?.id ?? `msg-${Math.random().toString(36).slice(2)}`),
+        }) as Message
+    );
+  }
+
+  // Ensure basic UI defaults
+  next.theme = next.theme === 'light' ? 'light' : 'dark';
+  next.explorerCollapsed = Boolean(next.explorerCollapsed);
+  next.explorerWidth = typeof next.explorerWidth === 'number' ? next.explorerWidth : 280;
+  next.chatCollapsed = Boolean(next.chatCollapsed);
+  next.bottomPanelHeight =
+    typeof next.bottomPanelHeight === 'number' ? next.bottomPanelHeight : 200;
+  next.bottomPanelCollapsed = Boolean(next.bottomPanelCollapsed);
+  next.activeBottomTab = typeof next.activeBottomTab === 'string' ? next.activeBottomTab : 'output';
+
+  // Selection & inspector defaults
+  next.selectedWidgetId =
+    typeof next.selectedWidgetId === 'string' ? next.selectedWidgetId : undefined;
+  next.inspectorOpen = Boolean(next.inspectorOpen);
+
+  // Sheets/widgets minimal coercion
+  if (Array.isArray(next.sheets)) {
+    next.sheets = next.sheets.map(
+      (s: any) =>
+        ({
+          ...s,
+          id: String(s?.id ?? `sheet-${Math.random().toString(36).slice(2)}`),
+          kind: (['valuation', 'charting', 'risk', 'options', 'blank'] as const).includes(
+            s?.kind as SheetKind
+          )
+            ? (s.kind as SheetKind)
+            : 'blank',
+          title: String(s?.title ?? 'Untitled'),
+          widgets: Array.isArray(s?.widgets)
+            ? s.widgets.map(
+                (w: any) =>
+                  ({
+                    ...w,
+                    id: String(w?.id ?? `widget-${Math.random().toString(36).slice(2)}`),
+                    title: String(w?.title ?? 'Widget'),
+                    type: String(w?.type ?? 'unknown'),
+                    layout: {
+                      i: String(w?.id ?? (w?.layout as Layout)?.i ?? ''),
+                      x: Number((w?.layout as Layout)?.x ?? 0),
+                      y: Number((w?.layout as Layout)?.y ?? 0),
+                      w: Number((w?.layout as Layout)?.w ?? 6),
+                      h: Number((w?.layout as Layout)?.h ?? 4),
+                    },
+                  }) as Widget
+              )
+            : [],
+        }) as Sheet
+    );
+  }
+
+  // Ensure sheets is always an array
+  if (!Array.isArray(next.sheets)) {
+    next.sheets = [];
+  }
+
+  // Workspace export schema version inside state
+  next.schemaVersion = 1;
+
+  // Merge with defaults to ensure all required fields are present
+  return {
+    ...createInitialState(),
+    ...next,
+  } as WorkspaceState;
+}
+
 export const useWorkspaceStore = create<WorkspaceStore>()(
-  persist(
+  persist<WorkspaceStore>(
     (set, get) => ({
       // Initial state
       sheets: [],
@@ -88,40 +227,48 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       messages: [
         {
           id: '1',
-          content: 'Welcome to MAD LAB! I\'m your AI assistant for financial analysis. How can I help you today?',
+          content:
+            "Welcome to MAD LAB! I'm your AI assistant for financial analysis. How can I help you today?",
           timestamp: new Date(),
-          sender: 'agent'
-        }
+          sender: 'agent',
+        },
       ],
       theme: 'dark',
       explorerCollapsed: false,
+      explorerWidth: 280,
       chatCollapsed: false,
       bottomPanelHeight: 200,
       bottomPanelCollapsed: false,
       activeBottomTab: 'output',
-  selectedWidgetId: undefined,
+      selectedWidgetId: undefined,
+      inspectorOpen: false,
+      schemaVersion: 1,
 
-  // Selection
-  setSelectedWidget: (id) => set({ selectedWidgetId: id }),
+      // Selection
+      setSelectedWidget: (id) => set({ selectedWidgetId: id }),
+      // Inspector
+      setInspectorOpen: (open: boolean) => set({ inspectorOpen: open }),
+      toggleInspector: () => set((state) => ({ inspectorOpen: !state.inspectorOpen })),
+      setExplorerWidth: (width: number) => set({ explorerWidth: Math.max(200, width) }),
 
       // Sheet actions
       addSheet: (kind: SheetKind, title?: string) => {
         const id = `sheet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const defaultTitle = title || `${kind.charAt(0).toUpperCase() + kind.slice(1)} Sheet`;
-        
+
         const newSheet: Sheet = {
           id,
           kind,
           title: defaultTitle,
-          widgets: []
+          widgets: [],
         };
 
         set((state) => ({
           sheets: [...state.sheets, newSheet],
-          activeSheetId: id
+          activeSheetId: id,
         }));
 
-        // Auto-populate with preset widgets
+        // Auto-populate with preset widgets for non-blank kinds only
         if (kind !== 'blank') {
           get().populateSheetWithPreset(id, kind);
         }
@@ -129,11 +276,10 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
       closeSheet: (id: string) => {
         set((state) => {
-          const sheets = state.sheets.filter(s => s.id !== id);
-          const activeSheetId = state.activeSheetId === id 
-            ? sheets[sheets.length - 1]?.id 
-            : state.activeSheetId;
-          
+          const sheets = state.sheets.filter((s) => s.id !== id);
+          const activeSheetId =
+            state.activeSheetId === id ? sheets[sheets.length - 1]?.id : state.activeSheetId;
+
           return { sheets, activeSheetId };
         });
       },
@@ -144,9 +290,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
       updateSheetTitle: (id: string, title: string) => {
         set((state) => ({
-          sheets: state.sheets.map(sheet =>
-            sheet.id === id ? { ...sheet, title } : sheet
-          )
+          sheets: state.sheets.map((sheet) => (sheet.id === id ? { ...sheet, title } : sheet)),
         }));
       },
 
@@ -156,52 +300,79 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         const newWidget: Widget = { ...widget, id };
 
         set((state) => ({
-          sheets: state.sheets.map(sheet =>
-            sheet.id === sheetId
-              ? { ...sheet, widgets: [...sheet.widgets, newWidget] }
-              : sheet
-          )
+          sheets: state.sheets.map((sheet) =>
+            sheet.id === sheetId ? { ...sheet, widgets: [...sheet.widgets, newWidget] } : sheet
+          ),
         }));
       },
 
       updateWidget: (sheetId: string, widget: Partial<Widget> & { id: string }) => {
         set((state) => ({
-          sheets: state.sheets.map(sheet =>
+          sheets: state.sheets.map((sheet) =>
             sheet.id === sheetId
               ? {
                   ...sheet,
-                  widgets: sheet.widgets.map(w =>
-                    w.id === widget.id ? { ...w, ...widget } : w
-                  )
+                  widgets: sheet.widgets.map((w) => (w.id === widget.id ? { ...w, ...widget } : w)),
                 }
               : sheet
-          )
+          ),
         }));
       },
 
       removeWidget: (sheetId: string, widgetId: string) => {
         set((state) => ({
-          sheets: state.sheets.map(sheet =>
+          sheets: state.sheets.map((sheet) =>
             sheet.id === sheetId
-              ? { ...sheet, widgets: sheet.widgets.filter(w => w.id !== widgetId) }
+              ? { ...sheet, widgets: sheet.widgets.filter((w) => w.id !== widgetId) }
               : sheet
-          )
+          ),
+          selectedWidgetId:
+            state.selectedWidgetId === widgetId ? undefined : state.selectedWidgetId,
+        }));
+      },
+
+      duplicateWidget: (sheetId: string, widgetId: string) => {
+        const state = get();
+        const sheet = state.sheets.find((s) => s.id === sheetId);
+        const source = sheet?.widgets.find((w) => w.id === widgetId);
+        if (!sheet || !source) return;
+        const GRID_COLUMNS = 12;
+        const nextLayout = { ...source.layout } as Layout;
+        if (nextLayout.x + nextLayout.w + 1 <= GRID_COLUMNS) {
+          nextLayout.x = nextLayout.x + 1;
+        } else {
+          nextLayout.x = 0;
+          nextLayout.y = nextLayout.y + 1;
+        }
+        const newId = `widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const duplicated: Widget = {
+          id: newId,
+          type: source.type,
+          title: `${source.title} (Copy)`,
+          layout: nextLayout,
+          props: source.props ? { ...source.props } : undefined,
+        };
+        set((prev) => ({
+          sheets: prev.sheets.map((s) =>
+            s.id === sheetId ? { ...s, widgets: [...s.widgets, duplicated] } : s
+          ),
+          selectedWidgetId: newId,
         }));
       },
 
       updateLayout: (sheetId: string, layout: Layout[]) => {
         set((state) => ({
-          sheets: state.sheets.map(sheet =>
+          sheets: state.sheets.map((sheet) =>
             sheet.id === sheetId
               ? {
                   ...sheet,
-                  widgets: sheet.widgets.map(widget => ({
+                  widgets: sheet.widgets.map((widget) => ({
                     ...widget,
-                    layout: layout.find(l => l.i === widget.id) || widget.layout
-                  }))
+                    layout: layout.find((l) => l.i === widget.id) || widget.layout,
+                  })),
                 }
               : sheet
-          )
+          ),
         }));
       },
 
@@ -212,11 +383,11 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           id,
           content,
           timestamp: new Date(),
-          sender
+          sender,
         };
 
         set((state) => ({
-          messages: [...state.messages, message]
+          messages: [...state.messages, message],
         }));
       },
 
@@ -252,7 +423,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       // Utility methods
       populateSheetWithPreset: (sheetId: string, kind: SheetKind) => {
         const presets = get().getPresetWidgets(kind);
-        presets.forEach(widget => {
+        presets.forEach((widget) => {
           get().addWidget(sheetId, widget);
         });
       },
@@ -263,100 +434,240 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
             {
               type: 'kpi-card',
               title: 'KPI',
-              layout: { i: '', x: 0, y: 0, w: 6, h: 4 }
+              layout: { i: '', x: 0, y: 0, w: 6, h: 4 },
             },
             {
               type: 'dcf-basic',
               title: 'DCF (Basic)',
-              layout: { i: '', x: 6, y: 0, w: 6, h: 4 }
+              layout: { i: '', x: 6, y: 0, w: 6, h: 4 },
             },
             {
               type: 'bar-chart',
               title: 'Peer Multiples',
-              layout: { i: '', x: 0, y: 4, w: 6, h: 4 }
+              layout: { i: '', x: 0, y: 4, w: 6, h: 4 },
             },
             {
               type: 'heatmap',
               title: 'Sensitivity (WACC x g)',
-              layout: { i: '', x: 6, y: 4, w: 6, h: 4 }
-            }
+              layout: { i: '', x: 6, y: 4, w: 6, h: 4 },
+            },
           ],
           charting: [
             {
               type: 'line-chart',
               title: 'Price Line',
-              layout: { i: '', x: 0, y: 0, w: 6, h: 4 }
+              layout: { i: '', x: 0, y: 0, w: 6, h: 4 },
             },
             {
               type: 'bar-chart',
               title: 'Bar Chart',
-              layout: { i: '', x: 6, y: 0, w: 6, h: 4 }
+              layout: { i: '', x: 6, y: 0, w: 6, h: 4 },
             },
             {
               type: 'heatmap',
               title: 'Heatmap',
-              layout: { i: '', x: 0, y: 4, w: 6, h: 4 }
+              layout: { i: '', x: 0, y: 4, w: 6, h: 4 },
             },
             {
               type: 'line-chart',
               title: 'Volume',
-              layout: { i: '', x: 6, y: 4, w: 6, h: 4 }
-            }
+              layout: { i: '', x: 6, y: 4, w: 6, h: 4 },
+            },
           ],
           risk: [
             {
               type: 'var-es',
               title: 'VaR/ES',
-              layout: { i: '', x: 0, y: 0, w: 6, h: 4 }
+              layout: { i: '', x: 0, y: 0, w: 6, h: 4 },
             },
             {
               type: 'stress-scenarios',
               title: 'Stress Scenarios',
-              layout: { i: '', x: 6, y: 0, w: 6, h: 4 }
+              layout: { i: '', x: 6, y: 0, w: 6, h: 4 },
             },
             {
               type: 'factor-exposures',
               title: 'Factor Exposures',
-              layout: { i: '', x: 0, y: 4, w: 6, h: 4 }
+              layout: { i: '', x: 0, y: 4, w: 6, h: 4 },
             },
             {
               type: 'correlation-matrix',
               title: 'Correlation Matrix',
-              layout: { i: '', x: 6, y: 4, w: 6, h: 4 }
-            }
+              layout: { i: '', x: 6, y: 4, w: 6, h: 4 },
+            },
           ],
           options: [
             {
               type: 'greeks-surface',
               title: 'Greeks Surface',
-              layout: { i: '', x: 0, y: 0, w: 6, h: 4 }
+              layout: { i: '', x: 0, y: 0, w: 6, h: 4 },
             },
             {
               type: 'vol-cone',
               title: 'Vol Cone',
-              layout: { i: '', x: 6, y: 0, w: 6, h: 4 }
+              layout: { i: '', x: 6, y: 0, w: 6, h: 4 },
             },
             {
               type: 'strategy-builder',
               title: 'Strategy Builder',
-              layout: { i: '', x: 0, y: 4, w: 6, h: 4 }
+              layout: { i: '', x: 0, y: 4, w: 6, h: 4 },
             },
             {
               type: 'pnl-profile',
               title: 'P&L Profile',
-              layout: { i: '', x: 6, y: 4, w: 6, h: 4 }
-            }
+              layout: { i: '', x: 6, y: 4, w: 6, h: 4 },
+            },
           ],
           blank: [
             {
               type: 'blank-tile',
               title: 'Click to configure',
-              layout: { i: '', x: 0, y: 0, w: 12, h: 8 }
-            }
-          ]
+              layout: { i: '', x: 0, y: 0, w: 12, h: 8 },
+            },
+          ],
         };
 
         return presets[kind] || [];
+      },
+
+      // Templates
+      getTemplates: () => {
+        try {
+          const raw =
+            typeof window !== 'undefined' ? window.localStorage.getItem('madlab-templates') : null;
+          if (!raw) return [];
+          const arr = JSON.parse(raw);
+          if (!Array.isArray(arr)) return [];
+          return arr as {
+            name: string;
+            kind: SheetKind;
+            title: string;
+            widgets: Omit<Widget, 'id'>[];
+          }[];
+        } catch {
+          return [];
+        }
+      },
+      saveTemplate: (name: string, sheetId: string) => {
+        try {
+          const state = get();
+          const sheet = state.sheets.find((s) => s.id === sheetId);
+          if (!sheet) return false;
+          const template = {
+            name,
+            kind: sheet.kind,
+            title: sheet.title,
+            widgets: sheet.widgets.map((w) => ({
+              type: w.type,
+              title: w.title,
+              layout: { ...w.layout, i: '' },
+              props: w.props ? { ...w.props } : undefined,
+            })),
+          } as { name: string; kind: SheetKind; title: string; widgets: Omit<Widget, 'id'>[] };
+          const existing = get().getTemplates();
+          // replace if same name exists
+          const next = [...existing.filter((t) => t.name !== name), template];
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem('madlab-templates', JSON.stringify(next));
+          }
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      createSheetFromTemplate: (name: string) => {
+        try {
+          const tpl = get()
+            .getTemplates()
+            .find((t) => t.name === name);
+          if (!tpl) return false;
+          // Create a sheet with template name
+          const sheetName = tpl.title || name;
+          const idBefore = get().activeSheetId;
+          get().addSheet(tpl.kind || 'blank', sheetName);
+          const sheetId = get().activeSheetId;
+          if (!sheetId || sheetId === idBefore) return false;
+          // Clear any auto-populated widgets from preset if not blank
+          set((state) => ({
+            sheets: state.sheets.map((s) => (s.id === sheetId ? { ...s, widgets: [] } : s)),
+          }));
+          for (const w of tpl.widgets) {
+            get().addWidget(sheetId, w);
+          }
+          return true;
+        } catch {
+          return false;
+        }
+      },
+
+      // Import/export helpers
+      exportWorkspace: () => {
+        const state = get();
+        const serializable = {
+          schemaVersion: state.schemaVersion,
+          ts: Date.now(),
+          sheets: state.sheets,
+          activeSheetId: state.activeSheetId,
+          messages: state.messages.map((m) => ({
+            ...m,
+            timestamp:
+              m.timestamp instanceof Date
+                ? m.timestamp.toISOString()
+                : typeof m.timestamp === 'string'
+                  ? m.timestamp
+                  : new Date().toISOString(),
+          })),
+          ui: {
+            theme: state.theme,
+            explorerCollapsed: state.explorerCollapsed,
+            explorerWidth: state.explorerWidth,
+            chatCollapsed: state.chatCollapsed,
+            bottomPanelHeight: state.bottomPanelHeight,
+            bottomPanelCollapsed: state.bottomPanelCollapsed,
+            activeBottomTab: state.activeBottomTab,
+          },
+        };
+        return JSON.stringify(serializable, null, 2);
+      },
+
+      importWorkspace: (data: unknown) => {
+        try {
+          const obj = typeof data === 'string' ? JSON.parse(data) : (data as any);
+          const schemaVersion = typeof obj?.schemaVersion === 'number' ? obj.schemaVersion : 1;
+          const sheets = Array.isArray(obj?.sheets) ? (obj.sheets as Sheet[]) : [];
+          const activeSheetId =
+            typeof obj?.activeSheetId === 'string' ? obj.activeSheetId : undefined;
+          const ui = obj?.ui ?? {};
+          const messagesIn = Array.isArray(obj?.messages) ? obj.messages : [];
+          const messages: Message[] = messagesIn.map((m: any) => ({
+            id: String(m?.id ?? `msg-${Math.random().toString(36).slice(2)}`),
+            content: String(m?.content ?? ''),
+            sender: m?.sender === 'user' ? 'user' : 'agent',
+            timestamp: new Date(m?.timestamp ?? Date.now()),
+          }));
+
+          set({
+            schemaVersion,
+            sheets,
+            activeSheetId,
+            messages,
+            theme: ui?.theme === 'light' ? 'light' : 'dark',
+            explorerCollapsed: Boolean(ui?.explorerCollapsed),
+            explorerWidth: typeof ui?.explorerWidth === 'number' ? ui.explorerWidth : 280,
+            chatCollapsed: Boolean(ui?.chatCollapsed),
+            bottomPanelHeight:
+              typeof ui?.bottomPanelHeight === 'number' ? ui.bottomPanelHeight : 200,
+            bottomPanelCollapsed: Boolean(ui?.bottomPanelCollapsed),
+            activeBottomTab:
+              typeof ui?.activeBottomTab === 'string' ? ui.activeBottomTab : 'output',
+            selectedWidgetId: undefined,
+            inspectorOpen: false,
+          });
+          return true;
+        } catch (e) {
+          console.error('Failed to import workspace', e);
+          return false;
+        }
       },
 
       // Persistence methods
@@ -370,7 +681,13 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
     }),
     {
       name: 'madlab-workspace',
-  // allow auto hydration for persisted state
+      version: PERSIST_VERSION,
+      migrate: (persistedState, fromVersion) => {
+        const migratedState = migrateState(persistedState, fromVersion);
+        // Zustand will merge the state with actions, so we can just return the state portion
+        return migratedState as any;
+      },
+      // allow auto hydration for persisted state
     }
   )
 );
