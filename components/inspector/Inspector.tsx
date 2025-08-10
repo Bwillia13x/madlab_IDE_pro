@@ -1,0 +1,89 @@
+'use client';
+
+import { useWorkspaceStore } from '@/lib/store';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { X } from 'lucide-react';
+
+export function Inspector() {
+  const { inspectorOpen, setInspectorOpen, selectedWidgetId, sheets, updateWidget } =
+    useWorkspaceStore();
+
+  if (!inspectorOpen || !selectedWidgetId) {
+    return null;
+  }
+
+  const owningSheet = sheets.find((s) => s.widgets.some((w) => w.id === selectedWidgetId));
+  const widget = owningSheet?.widgets.find((w) => w.id === selectedWidgetId);
+  const props = (widget?.props as Record<string, unknown> | undefined) || {};
+
+  return (
+    <div
+      className="w-80 bg-vscode-panel border-l border-vscode-border flex flex-col"
+      data-testid="inspector"
+    >
+      <div className="h-9 px-3 flex items-center justify-between border-b border-vscode-border">
+        <span className="text-xs font-medium text-vscode-foreground uppercase tracking-wider">
+          Inspector
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0"
+          onClick={() => setInspectorOpen(false)}
+          data-testid="inspector-toggle"
+        >
+          <X className="h-3 w-3 text-vscode-foreground" />
+        </Button>
+      </div>
+      <div className="p-4 space-y-4">
+        <div>
+          <label className="text-xs text-muted-foreground">Title</label>
+          <Input
+            data-testid="inspector-title"
+            placeholder="Widget Title"
+            value={(widget?.title ?? '') as string}
+            onChange={(e) => {
+              if (!owningSheet || !widget) return;
+              updateWidget(owningSheet.id, { id: widget.id, title: e.target.value });
+            }}
+          />
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground">Symbol</label>
+          <Input
+            data-testid="inspector-symbol"
+            placeholder="AAPL"
+            value={typeof props.symbol === 'string' ? (props.symbol as string) : ''}
+            onChange={(e) => {
+              if (!owningSheet || !widget) return;
+              updateWidget(owningSheet.id, {
+                id: widget.id,
+                props: { ...props, symbol: e.target.value.toUpperCase().slice(0, 12) },
+              });
+            }}
+          />
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground">Props (JSON)</label>
+          <Textarea
+            data-testid="inspector-props"
+            placeholder='{ "symbol": "AAPL" }'
+            rows={8}
+            value={JSON.stringify(props, null, 2)}
+            onChange={(e) => {
+              try {
+                const next = JSON.parse(e.target.value);
+                if (!owningSheet || !widget) return;
+                updateWidget(owningSheet.id, { id: widget.id, props: next });
+              } catch {
+                // ignore invalid JSON while typing
+              }
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
