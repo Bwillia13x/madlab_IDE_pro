@@ -16,7 +16,7 @@ const MOCK_FACTOR_DATA = [
   { factor: 'Quality', exposure: 0.42, color: '#9c88ff' },
 ];
 
-export function FactorExposures({ widget }: FactorExposuresProps) {
+export function FactorExposures({ widget: _widget }: Readonly<FactorExposuresProps>) {
   return (
     <div className="h-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -43,7 +43,11 @@ export function FactorExposures({ widget }: FactorExposuresProps) {
               borderRadius: '4px',
               color: '#cccccc'
             }}
-            formatter={(value) => [value.toFixed(2), 'Exposure']}
+            formatter={(value: number | string) => {
+              const num = typeof value === 'number' ? value : Number(value);
+              const label = Number.isFinite(num) ? num.toFixed(2) : String(value);
+              return [label, 'Exposure'];
+            }}
           />
           <Bar dataKey="exposure" radius={[0, 2, 2, 0]}>
             {MOCK_FACTOR_DATA.map((entry, index) => (

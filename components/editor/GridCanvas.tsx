@@ -53,10 +53,10 @@ export function GridCanvas({ sheet }: GridCanvasProps) {
           {sheet.widgets.map((widget) => {
             const selected = selectedWidgetId === widget.id;
             return (
-              <button
+        <button
                 key={widget.id}
                 className={cn(
-                  'react-grid-item outline-0',
+          'outline-0',
                   selected && 'ring-1 ring-[#007acc] ring-offset-0'
                 )}
                 onClick={() => setSelectedWidget(widget.id)}

@@ -15,7 +15,7 @@ const MOCK_VAR_DATA = {
   es99: { value: '$6.1M', confidence: '99%' }
 };
 
-export function VarEs({ widget }: VarEsProps) {
+export function VarEs({ widget: _widget }: Readonly<VarEsProps>) {
   return (
     <div className="h-full space-y-3">
       <div className="grid grid-cols-2 gap-3">

@@ -1,0 +1,44 @@
+name: Package VS Code Extension
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.15.9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build webview and extension
+        run: pnpm -w build
+
+      - name: Install vsce
+        run: pnpm dlx vsce@latest --version
+
+      - name: Package VSIX
+        working-directory: apps/extension
+        run: pnpm dlx vsce package --no-dependencies --out madlab-extension.vsix
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: madlab-extension-vsix
+          path: apps/extension/madlab-extension.vsix

@@ -16,6 +16,25 @@ export default function Home() {
   useEffect(() => {
     // Hydrate store from localStorage on mount
     hydrate();
+
+    // Initialize webview bridge if present
+    if (typeof window !== 'undefined' && window.madlabBridge) {
+      type WebviewMsg =
+        | { type: 'extension:ready'; payload?: { version?: number } }
+        | { type: 'pong'; payload?: unknown }
+        | { type: string; payload?: unknown };
+      window.madlabBridge.onMessage((msg: WebviewMsg) => {
+        // Handle simple demo messages for now
+        if (msg?.type === 'extension:ready') {
+          // extension is ready
+        } else if (msg?.type === 'pong') {
+          // keep minimal differentiation for lint; useful during dev
+          console.debug('pong from extension', msg.payload);
+        }
+      });
+      // Send a ping to extension
+      window.madlabBridge.post('ping', { from: 'web' });
+    }
   }, [hydrate]);
 
   return (

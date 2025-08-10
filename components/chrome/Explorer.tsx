@@ -5,7 +5,6 @@ import {
   ChevronRight, 
   FileText, 
   Folder, 
-  FolderOpen,
   Database,
   TrendingUp
 } from 'lucide-react';
@@ -15,32 +14,40 @@ import { cn } from '@/lib/utils';
 import { useWorkspaceStore } from '@/lib/store';
 import { useState } from 'react';
 
-const MOCK_EXPLORER_DATA = {
+const MOCK_EXPLORER_DATA: { data: TreeItem[]; models: TreeItem[] } = {
   data: [
-    { id: '1', name: 'market_data.csv', type: 'file', icon: FileText },
-    { id: '2', name: 'portfolio.json', type: 'file', icon: FileText },
-    { id: '3', name: 'earnings', type: 'folder', icon: Folder, children: [
+  { id: '1', name: 'market_data.csv', type: 'file', icon: FileText },
+  { id: '2', name: 'portfolio.json', type: 'file', icon: FileText },
+  { id: '3', name: 'earnings', type: 'folder', icon: Folder, children: [
       { id: '3-1', name: 'Q1_2024.xlsx', type: 'file', icon: FileText },
       { id: '3-2', name: 'Q2_2024.xlsx', type: 'file', icon: FileText },
     ]},
-    { id: '4', name: 'indices', type: 'folder', icon: Folder, children: [
+  { id: '4', name: 'indices', type: 'folder', icon: Folder, children: [
       { id: '4-1', name: 'SPX.csv', type: 'file', icon: FileText },
       { id: '4-2', name: 'NDX.csv', type: 'file', icon: FileText },
     ]},
   ],
   models: [
-    { id: '5', name: 'dcf_model.py', type: 'file', icon: FileText },
-    { id: '6', name: 'monte_carlo.ipynb', type: 'file', icon: FileText },
-    { id: '7', name: 'risk_models', type: 'folder', icon: Folder, children: [
+  { id: '5', name: 'dcf_model.py', type: 'file', icon: FileText },
+  { id: '6', name: 'monte_carlo.ipynb', type: 'file', icon: FileText },
+  { id: '7', name: 'risk_models', type: 'folder', icon: Folder, children: [
       { id: '7-1', name: 'var_model.py', type: 'file', icon: FileText },
       { id: '7-2', name: 'stress_test.py', type: 'file', icon: FileText },
     ]},
   ]
 };
 
+type TreeItem = {
+  id: string;
+  name: string;
+  type: 'file' | 'folder';
+  icon: React.ComponentType<{ className?: string }>;
+  children?: TreeItem[];
+};
+
 interface ExplorerItemProps {
-  item: any;
-  level: number;
+  readonly item: TreeItem;
+  readonly level: number;
 }
 
 function ExplorerItem({ item, level }: ExplorerItemProps) {
@@ -71,9 +78,9 @@ function ExplorerItem({ item, level }: ExplorerItemProps) {
         <span className="truncate">{item.name}</span>
       </Button>
 
-      {expanded && hasChildren && (
+    {expanded && hasChildren && item.children && (
         <div>
-          {item.children.map((child: any) => (
+      {item.children.map((child: TreeItem) => (
             <ExplorerItem key={child.id} item={child} level={level + 1} />
           ))}
         </div>
@@ -90,11 +97,11 @@ export function Explorer() {
   if (explorerCollapsed) return null;
 
   return (
-    <div className="w-60 bg-[#252526] border-r border-[#2d2d30] flex flex-col">
+    <div className="w-60 bg-[#252526] border-r border-[#2d2d30] flex flex-col" data-testid="explorer">
       {/* Header */}
       <div className="h-9 px-3 flex items-center justify-between border-b border-[#2d2d30]">
         <span className="text-xs font-medium text-[#cccccc] uppercase tracking-wider">
-          Explorer
+          EXPLORER
         </span>
       </div>
 

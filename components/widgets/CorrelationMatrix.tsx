@@ -26,7 +26,7 @@ function getCorrelationColor(value: number): string {
   return 'bg-red-500';
 }
 
-export function CorrelationMatrix({ widget }: CorrelationMatrixProps) {
+export function CorrelationMatrix({ widget: _widget }: Readonly<CorrelationMatrixProps>) {
   return (
     <div className="h-full flex flex-col">
       <div className="grid grid-cols-6 gap-1 text-xs text-[#969696] mb-2">

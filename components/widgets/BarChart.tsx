@@ -16,7 +16,7 @@ const MOCK_BAR_DATA = [
   { name: 'Echo', value: 22.1, category: 'P/E' },
 ];
 
-export function BarChart({ widget }: BarChartProps) {
+export function BarChart({ widget: _widget }: Readonly<BarChartProps>) {
   return (
     <div className="h-full">
       <ResponsiveContainer width="100%" height="100%">

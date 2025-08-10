@@ -1,10 +1,10 @@
 'use client';
 
-import { GitBranch, AlertTriangle, CheckCircle } from 'lucide-react';
+import { GitBranch, CheckCircle } from 'lucide-react';
 import { useWorkspaceStore } from '@/lib/store';
 
 export function StatusBar() {
-  const { sheets, activeSheetId } = useWorkspaceStore();
+  const { sheets } = useWorkspaceStore();
 
   return (
     <div className="h-6 bg-[#007acc] border-t border-[#2d2d30] flex items-center justify-between px-2 text-xs text-white">

@@ -1,7 +1,6 @@
 'use client';
 
 import { 
-  FileText, 
   Search, 
   GitBranch, 
   Play, 
@@ -27,7 +26,7 @@ export function ActivityBar() {
   const { toggleExplorer, toggleChat } = useWorkspaceStore();
 
   return (
-    <div className="w-12 bg-[#2c2c2c] border-r border-[#2d2d30] flex flex-col">
+  <div className="w-12 bg-[#2c2c2c] border-r border-[#2d2d30] flex flex-col" data-testid="activity-bar">
       <TooltipProvider>
         <div className="flex flex-col">
           {ACTIVITY_ITEMS.map((item) => (
@@ -40,6 +39,7 @@ export function ActivityBar() {
                     "w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-[#2a2d2e]",
                     item.active && "border-l-[#007acc] bg-[#37373d]"
                   )}
+                  aria-label={item.label}
                   onClick={() => {
                     if (item.id === 'explorer') {
                       toggleExplorer();
@@ -65,6 +65,7 @@ export function ActivityBar() {
                 size="sm"
                 className="w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-[#2a2d2e]"
                 onClick={toggleChat}
+                aria-label="Agent Chat"
               >
                 <MessageSquare className="h-5 w-5 text-[#cccccc]" />
               </Button>
@@ -80,6 +81,7 @@ export function ActivityBar() {
                 variant="ghost"
                 size="sm"
                 className="w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-[#2a2d2e]"
+                aria-label="Settings"
               >
                 <Settings className="h-5 w-5 text-[#cccccc]" />
               </Button>

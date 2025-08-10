@@ -14,7 +14,7 @@ const MOCK_GREEKS_DATA = [
   { strike: '110', delta: '0.23', gamma: '0.04', theta: '-0.07', vega: '0.25' },
 ];
 
-export function GreeksSurface({ widget }: GreeksSurfaceProps) {
+export function GreeksSurface({ widget: _widget }: Readonly<GreeksSurfaceProps>) {
   return (
     <div className="h-full overflow-auto">
       <div className="min-w-full">

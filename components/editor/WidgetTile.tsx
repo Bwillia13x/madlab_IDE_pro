@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Card } from '@/components/ui/card';
 import { useWorkspaceStore, type Widget } from '@/lib/store';
-import { cn } from '@/lib/utils';
+// ...existing code...
 
 // Widget components
 import { KpiCard } from '@/components/widgets/KpiCard';
@@ -69,7 +69,7 @@ export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
   }
 
   return (
-    <Card className="w-full h-full bg-[#252526] border-[#2d2d30] hover:border-[#007acc]/50 transition-colors group">
+    <Card className="w-full h-full bg-[#252526] border-[#2d2d30] hover:border-[#007acc]/50 transition-colors group" data-testid={`widget-tile-${widget.id}`}>
       {/* Header */}
       <div className="flex items-center justify-between p-2 border-b border-[#2d2d30]">
         <div className="flex items-center gap-2">

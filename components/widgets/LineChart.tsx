@@ -18,7 +18,7 @@ const MOCK_CHART_DATA = [
   { date: 'Jul', value: 3490, volume: 4300 },
 ];
 
-export function LineChart({ widget }: LineChartProps) {
+export function LineChart({ widget: _widget }: Readonly<LineChartProps>) {
   return (
     <div className="h-full">
       <ResponsiveContainer width="100%" height="100%">

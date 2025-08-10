@@ -11,6 +11,8 @@
 # next.js
 /.next/
 /out/
+apps/extension/dist
+apps/extension/dist/webview
 
 # production
 /build

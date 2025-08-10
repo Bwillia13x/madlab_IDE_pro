@@ -13,7 +13,7 @@ const MOCK_DCF_DATA = [
   { company: 'Globex', multiple: '18.3x' },
 ];
 
-export function DcfBasic({ widget }: DcfBasicProps) {
+export function DcfBasic({ widget: _widget }: Readonly<DcfBasicProps>) {
   return (
     <div className="h-full flex flex-col">
       <div className="space-y-3">

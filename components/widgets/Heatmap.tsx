@@ -29,7 +29,7 @@ function getHeatmapColor(value: number, min: number, max: number): string {
   return 'bg-green-600';
 }
 
-export function Heatmap({ widget }: HeatmapProps) {
+export function Heatmap({ widget: _widget }: Readonly<HeatmapProps>) {
   const flatData = MOCK_HEATMAP_DATA.flat();
   const min = Math.min(...flatData);
   const max = Math.max(...flatData);

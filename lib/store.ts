@@ -71,6 +71,10 @@ interface WorkspaceActions {
 
   // Selection
   setSelectedWidget: (id?: string) => void;
+
+  // Presets
+  populateSheetWithPreset: (sheetId: string, kind: SheetKind) => void;
+  getPresetWidgets: (kind: SheetKind) => Omit<Widget, 'id'>[];
 }
 
 type WorkspaceStore = WorkspaceState & WorkspaceActions;

@@ -17,7 +17,7 @@ const WIDGET_SUGGESTIONS = [
   { type: 'kpi-card', icon: Activity, label: 'KPI Card' },
 ];
 
-export function BlankTile({ widget }: BlankTileProps) {
+export function BlankTile(_: Readonly<BlankTileProps>) {
   return (
     <div className="h-full flex flex-col items-center justify-center space-y-4">
       <div className="text-center">

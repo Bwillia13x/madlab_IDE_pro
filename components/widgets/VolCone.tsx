@@ -1,6 +1,6 @@
 'use client';
 
-import { LineChart as RechartsLineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Area, AreaChart } from 'recharts';
+import { Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Area, AreaChart } from 'recharts';
 import type { Widget } from '@/lib/store';
 
 interface VolConeProps {
@@ -16,7 +16,7 @@ const MOCK_VOL_CONE_DATA = [
   { dte: 90, p10: 0.19, p25: 0.22, p50: 0.26, p75: 0.30, p90: 0.36, current: 0.28 },
 ];
 
-export function VolCone({ widget }: VolConeProps) {
+export function VolCone({ widget: _widget }: Readonly<VolConeProps>) {
   return (
     <div className="h-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -41,7 +41,11 @@ export function VolCone({ widget }: VolConeProps) {
               color: '#cccccc'
             }}
             labelFormatter={(label) => `${label} DTE`}
-            formatter={(value, name) => [`${(value * 100).toFixed(1)}%`, name]}
+            formatter={(value: number | string, name) => {
+              const num = typeof value === 'number' ? value : Number(value);
+              const out = Number.isFinite(num) ? `${(num * 100).toFixed(1)}%` : String(value);
+              return [out, name];
+            }}
           />
           
           <Area dataKey="p90" stackId="1" stroke="none" fill="#ef4444" fillOpacity={0.1} />

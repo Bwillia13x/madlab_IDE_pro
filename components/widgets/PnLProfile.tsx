@@ -18,7 +18,7 @@ const MOCK_PNL_DATA = [
   { price: 115, pnl: 125 },
 ];
 
-export function PnLProfile({ widget }: PnLProfileProps) {
+export function PnLProfile({ widget: _widget }: Readonly<PnLProfileProps>) {
   return (
     <div className="h-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -43,7 +43,7 @@ export function PnLProfile({ widget }: PnLProfileProps) {
               borderRadius: '4px',
               color: '#cccccc'
             }}
-            formatter={(value, name) => [`$${value}`, 'P&L']}
+            formatter={(value, _name) => [`$${value}`, 'P&L']}
             labelFormatter={(label) => `Price: $${label}`}
           />
           

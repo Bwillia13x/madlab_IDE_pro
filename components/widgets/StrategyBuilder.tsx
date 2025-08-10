@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Minus, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Widget } from '@/lib/store';
 
@@ -14,7 +14,7 @@ const MOCK_STRATEGY_LEGS = [
   { type: 'Call', strike: '105', expiry: '30D', action: 'Sell', quantity: 1, premium: 1.20 },
 ];
 
-export function StrategyBuilder({ widget }: StrategyBuilderProps) {
+export function StrategyBuilder({ widget: _widget }: Readonly<StrategyBuilderProps>) {
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1 space-y-2">

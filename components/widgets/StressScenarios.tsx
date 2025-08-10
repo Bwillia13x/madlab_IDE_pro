@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, TrendingDown, TrendingUp } from 'lucide-react';
+import { AlertCircle, TrendingDown } from 'lucide-react';
 import type { Widget } from '@/lib/store';
 
 interface StressScenariosProps {
@@ -15,7 +15,7 @@ const MOCK_STRESS_DATA = [
   { scenario: 'Rate Spike', impact: '-6.2%', color: 'text-yellow-400' },
 ];
 
-export function StressScenarios({ widget }: StressScenariosProps) {
+export function StressScenarios({ widget: _widget }: Readonly<StressScenariosProps>) {
   return (
     <div className="h-full space-y-2">
       {MOCK_STRESS_DATA.map((scenario, index) => (

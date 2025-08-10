@@ -1,5 +1,7 @@
 # MAD LAB - Agent-Programmable Workbench
 
+[![CI](https://github.com/your-repo/mad-lab-workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/your-repo/mad-lab-workbench/actions/workflows/ci.yml)
+
 A production-ready VS Code-inspired financial analysis workbench with agent integration capabilities, built with Next.js 14, TypeScript, and modern web technologies.
 
 ![MAD LAB Screenshot](https://images.pexels.com/photos/6801648/pexels-photo-6801648.jpeg?auto=compress&cs=tinysrgb&w=800)
@@ -7,6 +9,7 @@ A production-ready VS Code-inspired financial analysis workbench with agent inte
 ## 🚀 Features
 
 ### Core Functionality
+
 - **VS Code-Inspired Interface**: Pixel-perfect recreation of VS Code's layout and styling
 - **Sheet Management System**: Create, manage, and switch between multiple analysis sheets
 - **5 Financial Analysis Presets**:
@@ -17,6 +20,7 @@ A production-ready VS Code-inspired financial analysis workbench with agent inte
   - 📝 **Blank Sheet**: Start from scratch with customizable widgets
 
 ### Advanced Capabilities
+
 - **Draggable/Resizable Grid System**: Powered by react-grid-layout for intuitive widget management
 - **State Persistence**: Full workspace state saved to localStorage with automatic hydration
 - **Agent Chat Integration**: Built-in AI assistant for financial analysis guidance
@@ -39,7 +43,8 @@ A production-ready VS Code-inspired financial analysis workbench with agent inte
 ## 📦 Quick Start
 
 ### Prerequisites
-- Node.js 18+ 
+
+- Node.js 18+
 - pnpm (recommended) or npm
 
 ### Installation
@@ -78,7 +83,7 @@ pnpm e2e              # Run end-to-end tests
 
 ## 🏗️ Project Structure
 
-```
+```text
 ├── app/                    # Next.js app directory
 │   ├── (routes)/          # Route groups
 │   ├── globals.css        # Global styles
@@ -148,6 +153,7 @@ Each widget provides specialized financial analysis capabilities:
 ### Agent Integration
 
 The built-in AI agent assists with:
+
 - Data interpretation and insights
 - Model validation and recommendations
 - Query processing for complex analysis
@@ -240,24 +246,28 @@ pnpm build
 ## 🛣️ Roadmap
 
 ### Phase 1: Core Enhancement
+
 - [ ] Real financial data integration (Alpha Vantage, Yahoo Finance)
 - [ ] Advanced widget configuration system
 - [ ] Custom widget builder
 - [ ] Data export/import capabilities
 
 ### Phase 2: AI Integration
+
 - [ ] Enhanced agent capabilities with financial domain knowledge
 - [ ] Natural language query processing
 - [ ] Automated insight generation
 - [ ] Code generation for custom models
 
 ### Phase 3: Collaboration
+
 - [ ] Multi-user workspaces
 - [ ] Real-time collaboration
 - [ ] Shared templates and presets
 - [ ] Version control for analysis
 
 ### Phase 4: Enterprise Features
+
 - [ ] SSO integration
 - [ ] Advanced security and compliance
 - [ ] Custom branding and themes
@@ -266,24 +276,28 @@ pnpm build
 ## 📝 TODO: Production Readiness Checklist
 
 ### Data Integration
+
 - [ ] Connect to real financial data APIs (Alpha Vantage, Bloomberg, etc.)
 - [ ] Implement data caching and refresh mechanisms
 - [ ] Add data validation and error handling
 - [ ] Support for multiple data formats (CSV, JSON, Parquet)
 
 ### Widget Enhancement
+
 - [ ] Real-time data streaming for charts
 - [ ] Interactive controls for all widgets
 - [ ] Custom calculation engine
 - [ ] Widget marketplace and plugin system
 
 ### Security & Performance
+
 - [ ] API key management system
 - [ ] Rate limiting and usage monitoring
 - [ ] Lazy loading for large datasets
 - [ ] Progressive web app (PWA) support
 
 ### User Experience
+
 - [ ] Onboarding flow and tutorials
 - [ ] Keyboard shortcuts and accessibility
 - [ ] Mobile-optimized interface

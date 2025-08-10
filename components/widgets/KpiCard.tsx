@@ -16,7 +16,7 @@ const MOCK_KPI_DATA = {
   fcf: { value: '$6.0M', change: '+15.2%', trend: 'up' }
 };
 
-export function KpiCard({ widget }: KpiCardProps) {
+export function KpiCard({ widget: _widget }: Readonly<KpiCardProps>) {
   return (
     <div className="h-full">
       <div className="grid grid-cols-2 gap-3 h-full">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Send, Minimize2, Maximize2, Bot, User } from 'lucide-react';
+import { Send, Minimize2, Bot, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -41,7 +41,7 @@ export function AgentChat() {
       {/* Header */}
       <div className="h-9 px-3 flex items-center justify-between border-b border-[#2d2d30]">
         <span className="text-xs font-medium text-[#cccccc] uppercase tracking-wider">
-          Agent Chat
+          AGENT CHAT
         </span>
         <Button
           variant="ghost"
@@ -103,6 +103,7 @@ export function AgentChat() {
             onClick={handleSendMessage}
             disabled={!inputValue.trim()}
             className="bg-[#007acc] hover:bg-[#005a9e]"
+            aria-label="Send message"
           >
             <Send className="h-4 w-4" />
           </Button>
@@ -112,6 +113,7 @@ export function AgentChat() {
   );
 }
 
+// eslint-disable-next-line
 // TODO: Advanced AI agent integration
 // - Context-aware financial analysis assistance
 // - Integration with financial data APIs
