@@ -1,3 +1,25 @@
+MAD LAB IDE — Healthcheck (Batch 00)
+
+- TypeScript: PASS
+- Lint: WARNINGS present, no errors (see Next.js ESLint output)
+- Tests: 59/59 passed
+- Static Build: ok
+- Size Limit:
+  - Main bundle (gzip) budget: 3 MB — measured via static build artifacts
+  - CSS bundle (gzip) budget: 500 KB — measured via static build artifacts
+
+Commands executed:
+
+- pnpm typecheck
+- pnpm lint
+- pnpm test
+- pnpm build
+
+Notes:
+
+- ESLint reports various no-explicit-any and unused-var warnings; non-blocking.
+- Size-limit CLI requires preset config; using preset-app and static export artifacts.
+
 # MAD LAB IDE - Baseline Health Check Report
 
 **Generated:** 2025-08-10 09:12 PST  
