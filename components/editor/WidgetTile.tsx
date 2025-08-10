@@ -17,58 +17,14 @@ import { registerCoreWidgets } from '@/lib/widgets/coreWidgets';
 import type { WidgetProps as SchemaWidgetProps } from '@/lib/widgets/schema';
 // ...existing code...
 
-// Widget components
-import { KpiCard } from '@/components/widgets/KpiCard';
-const DcfBasic = dynamic(async () => (await import('@/components/widgets/DcfBasic')).DcfBasic, {
-  ssr: false,
-});
-const LineChart = dynamic(async () => (await import('@/components/widgets/LineChart')).LineChart, {
-  ssr: false,
-});
-const BarChart = dynamic(async () => (await import('@/components/widgets/BarChart')).BarChart, {
-  ssr: false,
-});
-const Heatmap = dynamic(async () => (await import('@/components/widgets/Heatmap')).Heatmap, {
-  ssr: false,
-});
-import { VarEs } from '@/components/widgets/VarEs';
-import { StressScenarios } from '@/components/widgets/StressScenarios';
-import { FactorExposures } from '@/components/widgets/FactorExposures';
-import { CorrelationMatrix } from '@/components/widgets/CorrelationMatrix';
-import { GreeksSurface } from '@/components/widgets/GreeksSurface';
-const VolCone = dynamic(async () => (await import('@/components/widgets/VolCone')).VolCone, {
-  ssr: false,
-});
-import { StrategyBuilder } from '@/components/widgets/StrategyBuilder';
-import { PnLProfile } from '@/components/widgets/PnLProfile';
-import { BlankTile } from '@/components/widgets/BlankTile';
-const OptionsCard = dynamic(
-  async () => (await import('@/components/widgets/OptionsCard')).OptionsCard,
-  { ssr: false }
-);
+// Widget components rendered only via registry moving forward
 
 interface WidgetTileProps {
   widget: Widget;
   sheetId: string;
 }
 
-const WIDGET_COMPONENTS = {
-  'kpi-card': KpiCard,
-  'dcf-basic': DcfBasic,
-  'line-chart': LineChart,
-  'bar-chart': BarChart,
-  heatmap: Heatmap,
-  'var-es': VarEs,
-  'stress-scenarios': StressScenarios,
-  'factor-exposures': FactorExposures,
-  'correlation-matrix': CorrelationMatrix,
-  'greeks-surface': GreeksSurface,
-  'vol-cone': VolCone,
-  'strategy-builder': StrategyBuilder,
-  'pnl-profile': PnLProfile,
-  'blank-tile': BlankTile,
-  'options-card': OptionsCard,
-};
+const WIDGET_COMPONENTS: Record<string, never> = {};
 
 export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
   // Ensure core widgets are registered once
@@ -221,13 +177,9 @@ export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
             onError={(err) => console.warn('Widget error', widget.type, err)}
           />
         ) : (
-          WidgetComponent && (
-            <WidgetComponent
-              widget={widget}
-              onTitleChange={handleTitleChange}
-              {...(widget.props || {})}
-            />
-          )
+          <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+            Unknown widget: {widget.type}
+          </div>
         )}
       </div>
     </Card>
