@@ -15,6 +15,6 @@ Packaging:
 
 - Package VSIX locally:
   - pnpm -w build
-  - pnpm dlx vsce package --no-dependencies --out madlab-extension.vsix (from apps/extension)
+  - pnpm --filter @madlab/extension package
 - Install VSIX in VS Code: Extensions panel → … menu → Install from VSIX…
-- CI packaging: push a semver tag (vX.Y.Z); see .github/workflows/package-extension.yml
+  - CI packaging: push a semver tag (vX.Y.Z); see .github/workflows/package-extension.yml

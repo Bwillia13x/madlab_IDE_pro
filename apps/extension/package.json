@@ -1,34 +1,38 @@
 {
-    "name": "@madlab/extension",
-    "displayName": "MAD LAB Workbench",
-    "description": "Opens the MAD LAB web UI in a VS Code Webview",
-    "publisher": "madlab",
-    "version": "0.0.1",
-    "private": true,
-    "engines": {
-        "vscode": "^1.85.0"
-    },
-    "categories": [
-        "Other"
-    ],
-    "activationEvents": [
-        "onCommand:madlab.openWorkbench"
-    ],
-    "contributes": {
-        "commands": [
-            {
-                "command": "madlab.openWorkbench",
-                "title": "MAD LAB: Open Workbench"
-            }
-        ]
-    },
-    "main": "./dist/extension.js",
-    "scripts": {
-        "build": "tsc -p .",
-        "dev": "tsc -w -p ."
-    },
-    "devDependencies": {
-        "@types/vscode": "^1.85.0",
-        "typescript": "^5.4.0"
-    }
+  "name": "@madlab/extension",
+  "displayName": "MAD LAB Workbench",
+  "description": "Opens the MAD LAB web UI in a VS Code Webview",
+  "publisher": "madlab",
+  "icon": "images/icon.svg",
+  "version": "0.0.1",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Data Science",
+    "Visualization",
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:madlab.openWorkbench"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "madlab.openWorkbench",
+        "title": "MAD LAB: Open Workbench"
+      }
+    ]
+  },
+  "main": "./dist/extension.js",
+  "scripts": {
+    "build": "tsc -p .",
+    "dev": "tsc -w -p .",
+    "package": "pnpm -w build && pnpm dlx vsce package --no-dependencies --out madlab-workbench.vsix"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  }
 }

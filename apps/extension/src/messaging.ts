@@ -7,7 +7,19 @@ export type FromWebviewMessage =
   | { type: 'file:open'; payload: { path: string } }
   | { type: 'theme:get'; payload: {} }
   | { type: 'notification:show'; payload: { message: string; type?: 'info' | 'warning' | 'error' } }
-  | { type: 'agent:request'; payload: { message: string; history: any[] } };
+  | { type: 'agent:request'; payload: { message: string; history: any[] } }
+  // Data requests (Batch 04)
+  | { type: 'data:quote'; payload: { symbol: string } & { _requestId?: number } }
+  | {
+      type: 'data:prices';
+      payload: {
+        symbol: string;
+        range?: '1D' | '5D' | '1M' | '3M' | '6M' | '1Y' | '2Y' | '5Y' | 'MAX';
+      } & { _requestId?: number };
+    }
+  | { type: 'data:kpis'; payload: { symbol: string } & { _requestId?: number } }
+  | { type: 'data:financials'; payload: { symbol: string } & { _requestId?: number } }
+  | { type: 'data:vol'; payload: { symbol: string } & { _requestId?: number } };
 
 export type ToWebviewMessage =
   | { type: 'extension:ready'; payload: { version: number; extensionId: string } }
