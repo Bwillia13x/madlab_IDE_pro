@@ -74,3 +74,5 @@ export function VolCone({ widget: _widget }: Readonly<VolConeProps>) {
 // - Real-time volatility surface updates
 // - Volatility forecasting models
 // - Integration with options pricing
+
+export default VolCone;

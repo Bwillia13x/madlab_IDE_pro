@@ -7,9 +7,9 @@ export function StatusBar() {
   const { sheets } = useWorkspaceStore();
 
   return (
-    <div className="h-6 bg-[#007acc] border-t border-[#2d2d30] flex items-center justify-between px-2 text-xs text-white">
+    <div className="h-6 bg-[#007acc] border-t border-[#2d2d30] flex items-center justify-between px-2 text-xs text-white" data-testid="status-bar">
       {/* Left side */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3" role="status" aria-label="Status indicators">
         <div className="flex items-center gap-1">
           <GitBranch className="h-3 w-3" />
           <span>main</span>

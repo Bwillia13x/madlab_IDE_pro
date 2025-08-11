@@ -51,3 +51,5 @@ export function GreeksSurface({ widget: _widget }: Readonly<GreeksSurfaceProps>)
 // - Implied volatility surface integration
 // - Portfolio Greeks aggregation
 // - Real-time Greeks updates
+
+export default GreeksSurface;

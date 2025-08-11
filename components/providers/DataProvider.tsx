@@ -42,6 +42,7 @@ export function DataProvider({ children }: DataProviderProps) {
         role="status"
         aria-live="polite"
         className="w-full bg-amber-500/20 text-amber-900 dark:text-amber-100 border border-amber-500/40 px-3 py-2 text-sm text-center"
+        data-testid="demo-banner"
       >
         Demo mode: synthetic data
       </div>

@@ -97,7 +97,7 @@ export function Explorer() {
   if (explorerCollapsed) return null;
 
   return (
-    <div className="w-60 bg-[#252526] border-r border-[#2d2d30] flex flex-col" data-testid="explorer">
+    <div className="w-60 bg-[#252526] border-r border-[#2d2d30] flex flex-col" data-testid="explorer-panel">
       {/* Header */}
       <div className="h-9 px-3 flex items-center justify-between border-b border-[#2d2d30]">
         <span className="text-xs font-medium text-[#cccccc] uppercase tracking-wider">

@@ -78,3 +78,5 @@ export function Heatmap({ widget: _widget }: Readonly<HeatmapProps>) {
 // - Export functionality
 // - Custom axis labels and formatting
 // - Real-time data updates
+
+export default Heatmap;

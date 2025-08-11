@@ -57,7 +57,7 @@ export function Inspector() {
           <AutoForm
             schema={z.object({ symbol: z.string().optional() })}
             value={props}
-            onChange={(next) => {
+            onChange={(next: Record<string, unknown>) => {
               if (!owningSheet || !widget) return;
               const safe = { ...next } as Record<string, unknown>;
               if (typeof safe.symbol === 'string') {

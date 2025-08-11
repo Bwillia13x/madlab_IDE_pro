@@ -43,3 +43,5 @@ export function DcfBasic({ widget: _widget }: Readonly<DcfBasicProps>) {
 // - WACC calculation with market data
 // - Cash flow forecasting with scenario modeling
 // - Integration with company fundamental data
+
+export default DcfBasic;

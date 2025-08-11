@@ -1,0 +1,42 @@
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › tests/e2e/workspace.spec.ts:20:7 › MAD LAB Workbench › layout persists after dragging a tile (2.4s)
+
+  1 passed (7.7s)
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/e2e/workspace.spec.ts:94:7 › MAD LAB Workbench › should create a new sheet from preset (1.3s)
+
+
+  1) [chromium] › tests/e2e/workspace.spec.ts:94:7 › MAD LAB Workbench › should create a new sheet from preset 
+
+    Error: expect.toBeVisible: Error: strict mode violation: getByText('KPI') resolved to 2 elements:
+        1) <span class="text-sm font-medium text-foreground truncate">KPI</span> aka getByRole('button', { name: 'Select widget KPI' })
+        2) <div class="w-full h-full flex items-center justify-center text-xs text-muted-foreground">Unknown widget: kpi-card</div> aka getByRole('button', { name: 'Select widget KPI' })
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByText('KPI')[22m
+
+
+      105 |     
+      106 |     // Check that widgets were added to the sheet
+    > 107 |   await expect(page.getByText('KPI')).toBeVisible();
+          |                                       ^
+      108 |   await expect(page.getByText('DCF (Basic)')).toBeVisible();
+      109 |   await expect(page.getByText('Peer Multiples')).toBeVisible();
+      110 |   await expect(page.getByText('Sensitivity (WACC x g)')).toBeVisible();
+        at /workspace/tests/e2e/workspace.spec.ts:107:39
+
+    Error Context: test-results/workspace-MAD-LAB-Workbenc-c68f6-ate-a-new-sheet-from-preset-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/e2e/workspace.spec.ts:94:7 › MAD LAB Workbench › should create a new sheet from preset 
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › tests/e2e/workspace.spec.ts:94:7 › MAD LAB Workbench › should create a new sheet from preset (1.4s)
+
+  1 passed (6.2s)

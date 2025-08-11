@@ -67,3 +67,5 @@ export function FactorExposures({ widget: _widget }: Readonly<FactorExposuresPro
 // - Sector and regional factor exposures
 // - Factor performance attribution
 // - Risk-adjusted factor exposures
+
+export default FactorExposures;

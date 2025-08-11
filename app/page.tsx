@@ -9,6 +9,7 @@ import { AgentChat } from '@/components/panels/AgentChat';
 import { BottomPanel } from '@/components/panels/BottomPanel';
 import { StatusBar } from '@/components/chrome/StatusBar';
 import { useWorkspaceStore } from '@/lib/store';
+import { DataProvider } from '@/components/providers/DataProvider';
 
 export default function Home() {
   const { hydrate } = useWorkspaceStore();
@@ -38,6 +39,7 @@ export default function Home() {
   }, [hydrate]);
 
   return (
+    <DataProvider>
     <div className="h-screen flex flex-col bg-background text-foreground">
       {/* Title Bar */}
       <TitleBar />
@@ -63,5 +65,6 @@ export default function Home() {
       {/* Status Bar */}
       <StatusBar />
     </div>
+    </DataProvider>
   );
 }

@@ -1,0 +1,4 @@
+
+> mad-lab-workbench@0.1.0 typecheck /workspace
+> tsc --noEmit
+

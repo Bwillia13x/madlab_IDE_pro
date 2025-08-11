@@ -76,3 +76,5 @@ export function VarEs({ widget: _widget }: Readonly<VarEsProps>) {
 // - Backtesting and model validation
 // - Component VaR for portfolio decomposition
 // - Integration with real portfolio data
+
+export default VarEs;

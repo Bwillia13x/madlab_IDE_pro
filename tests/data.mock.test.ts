@@ -118,7 +118,7 @@ describe('Mock Data Provider', () => {
       expect(volSurface.points.length).toBeGreaterThan(0);
       expect(volSurface.timestamp).toBeInstanceOf(Date);
 
-      volSurface.points.forEach((point) => {
+      volSurface.points.forEach((point: any) => {
         expect(point.strike).toBeGreaterThan(0);
         expect(point.expiry).toBeInstanceOf(Date);
         expect(point.impliedVol).toBeGreaterThan(0);

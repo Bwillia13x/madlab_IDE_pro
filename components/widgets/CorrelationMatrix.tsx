@@ -71,3 +71,5 @@ export function CorrelationMatrix({ widget: _widget }: Readonly<CorrelationMatri
 // - Rolling window correlation analysis
 // - Conditional correlation models
 // - Export correlation matrices
+
+export default CorrelationMatrix;

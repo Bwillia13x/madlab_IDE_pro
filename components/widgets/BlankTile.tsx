@@ -54,3 +54,5 @@ export function BlankTile(_: Readonly<BlankTileProps>) {
 // - Widget import/export capabilities
 // - Community-contributed widgets
 // - Widget configuration wizard
+
+export default BlankTile;

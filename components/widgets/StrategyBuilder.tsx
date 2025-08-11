@@ -75,3 +75,5 @@ export function StrategyBuilder({ widget: _widget }: Readonly<StrategyBuilderPro
 // - Greeks analysis for complex strategies
 // - Risk/reward visualization
 // - Strategy performance backtesting
+
+export default StrategyBuilder;

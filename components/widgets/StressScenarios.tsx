@@ -51,3 +51,5 @@ export function StressScenarios({ widget: _widget }: Readonly<StressScenariosPro
 // - Multi-factor stress scenarios
 // - Regulatory stress test compliance
 // - Scenario correlation analysis
+
+export default StressScenarios;

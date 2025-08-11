@@ -1,0 +1,41 @@
+
+> mad-lab-workbench@0.1.0 test /workspace
+> vitest run --reporter verbose
+
+
+ RUN  v1.6.1 /workspace
+
+ ✓ tests/data.mock.test.ts > Mock Data Provider > Legacy sync methods > returns identical KPIs for same symbol across calls
+ ✓ tests/data.mock.test.ts > Mock Data Provider > Legacy sync methods > returns different KPIs for different symbols
+ ✓ tests/data.mock.test.ts > Mock Data Provider > Legacy sync methods > prices: length respects range and is deterministic
+ ✓ tests/data.mock.test.ts > Mock Data Provider > Legacy sync methods > vol surface: fixed shape and deterministic
+ ✓ tests/data.mock.test.ts > Mock Data Provider > Legacy sync methods > risk summary: deterministic
+ ✓ tests/data.mock.test.ts > Mock Data Provider > Enhanced async methods > generates deterministic KPIs for same symbol
+ ✓ tests/data.mock.test.ts > Mock Data Provider > Enhanced async methods > generates different data for different symbols
+ ✓ tests/store.migrate.test.ts > Zustand persist migrations > PERSIST_VERSION is 1
+ ✓ tests/store.migrate.test.ts > Zustand persist migrations > migrates legacy (v0) state and sets defaults/coerces types
+ ✓ tests/store.migrate.test.ts > Zustand persist migrations > migrates state without presetVersion and adds default
+ ✓ tests/store.test.ts > Workspace Store > Sheet Management > should add a new sheet
+ ✓ tests/store.test.ts > Workspace Store > Sheet Management > should close a sheet
+ ✓ tests/store.test.ts > Workspace Store > Sheet Management > should set active sheet
+ ✓ tests/store.test.ts > Workspace Store > Widget Management > should add a widget to a sheet
+ ✓ tests/store.test.ts > Workspace Store > Widget Management > should update a widget
+ ✓ tests/store.test.ts > Workspace Store > Widget Management > should remove a widget
+ ✓ tests/store.test.ts > Workspace Store > Chat Management > should add a message
+ ✓ tests/store.test.ts > Workspace Store > Chat Management > should clear messages
+ ✓ tests/data.mock.test.ts > Mock Data Provider > Enhanced async methods > generates price series with correct length and OHLC structure
+ ✓ tests/data.mock.test.ts > Mock Data Provider > Enhanced async methods > generates vol surface with expected structure
+ ✓ tests/data.mock.test.ts > Mock Data Provider > Enhanced async methods > generates correlation matrix with correct structure
+ ✓ tests/data.mock.test.ts > Mock Data Provider > Enhanced async methods > maintains determinism across async calls
+ ✓ tests/data.mock.test.ts > Mock Data Provider > Provider utilities > provider is available
+ ✓ tests/data.mock.test.ts > Mock Data Provider > Provider utilities > returns last update timestamp
+ ✓ tests/data.mock.test.ts > Mock Data Provider > Provider utilities > has correct provider name
+ ✓ tests/store.presets.test.ts > Store Presets Integration > guards against preset divergence - ensures presets only come from lib/presets.ts
+ ✓ tests/store.presets.test.ts > Store Presets Integration > ensures presetVersion is present in new store instances
+ ✓ tests/store.presets.test.ts > Store Presets Integration > creates identical layouts from preset across multiple calls
+
+ Test Files  4 passed (4)
+      Tests  28 passed (28)
+   Start at  22:13:35
+   Duration  1.58s (transform 136ms, setup 315ms, collect 238ms, tests 130ms, environment 1.44s, prepare 350ms)
+

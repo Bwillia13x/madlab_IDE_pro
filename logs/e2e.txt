@@ -1,0 +1,76 @@
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › tests/e2e/workspace.spec.ts:4:7 › MAD LAB Workbench › should render the main interface (1.0s)
+
+  1 passed (7.1s)
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/e2e/workspace.spec.ts:20:7 › MAD LAB Workbench › layout persists after dragging a tile (6.3s)
+
+
+  1) [chromium] › tests/e2e/workspace.spec.ts:20:7 › MAD LAB Workbench › layout persists after dragging a tile 
+
+    Error: [31mTimed out 5000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m
+
+    Locator: locator('[data-testid^="widget-tile-"]')
+    Expected: [32m4[39m
+    Received: [31m0[39m
+    Call log:
+    [2m  - Expect "toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('[data-testid^="widget-tile-"]')[22m
+    [2m    9 × locator resolved to 0 elements[22m
+    [2m      - unexpected value "0"[22m
+
+
+      27 |     // Expect 4 tiles
+      28 |   const items = page.locator('[data-testid^="widget-tile-"]');
+    > 29 |     await expect(items).toHaveCount(4);
+         |                         ^
+      30 |
+      31 |     // Pick first tile and read its initial transform (computed) and size
+      32 |   const gridItem = page.locator('.react-grid-item').first();
+        at /workspace/tests/e2e/workspace.spec.ts:29:25
+
+    Error Context: test-results/workspace-MAD-LAB-Workbenc-35454-sists-after-dragging-a-tile-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/e2e/workspace.spec.ts:20:7 › MAD LAB Workbench › layout persists after dragging a tile 
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/e2e/workspace.spec.ts:94:7 › MAD LAB Workbench › should create a new sheet from preset (6.4s)
+
+
+  1) [chromium] › tests/e2e/workspace.spec.ts:94:7 › MAD LAB Workbench › should create a new sheet from preset 
+
+    Error: [31mTimed out 5000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
+
+    Locator: getByText('DCF (Basic)')
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByText('DCF (Basic)')[22m
+
+
+      106 |     // Check that widgets were added to the sheet
+      107 |   await expect(page.getByText('KPI')).toBeVisible();
+    > 108 |   await expect(page.getByText('DCF (Basic)')).toBeVisible();
+          |                                               ^
+      109 |   await expect(page.getByText('Peer Multiples')).toBeVisible();
+      110 |   await expect(page.getByText('Sensitivity (WACC x g)')).toBeVisible();
+      111 |   });
+        at /workspace/tests/e2e/workspace.spec.ts:108:47
+
+    Error Context: test-results/workspace-MAD-LAB-Workbenc-c68f6-ate-a-new-sheet-from-preset-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/e2e/workspace.spec.ts:94:7 › MAD LAB Workbench › should create a new sheet from preset 
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › tests/e2e/workspace.spec.ts:148:7 › MAD LAB Workbench › should interact with bottom panel tabs (673ms)
+
+  1 passed (5.3s)

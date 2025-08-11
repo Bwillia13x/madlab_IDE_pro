@@ -58,3 +58,5 @@ export function BarChart({ widget: _widget }: Readonly<BarChartProps>) {
 // - Data labels and annotations
 // - Drill-down capabilities
 // - Comparison benchmarks
+
+export default BarChart;

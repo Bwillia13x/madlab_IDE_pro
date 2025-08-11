@@ -69,3 +69,5 @@ export function PnLProfile({ widget: _widget }: Readonly<PnLProfileProps>) {
 // - Interactive price/volatility sliders
 // - Export P&L charts and data
 // - Real-time P&L tracking
+
+export default PnLProfile;

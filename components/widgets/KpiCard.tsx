@@ -152,3 +152,5 @@ export function KpiCard({ widget: _widget, symbol }: Readonly<KpiCardProps>) {
 // - Add alert thresholds and notifications
 // - Support for custom KPI calculations
 // - Real-time data updates and WebSocket connections
+
+export default KpiCard;

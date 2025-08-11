@@ -64,3 +64,5 @@ export function LineChart({ widget: _widget }: Readonly<LineChartProps>) {
 // - Real-time data streaming
 // - Custom time range selection
 // - Export chart as image/PDF
+
+export default LineChart;

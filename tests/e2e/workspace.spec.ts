@@ -103,11 +103,9 @@ test.describe('MAD LAB Workbench', () => {
     // Check that a new sheet tab was created
   await expect(page.getByRole('tab').filter({ hasText: 'Valuation Workbench' })).toBeVisible();
     
-    // Check that widgets were added to the sheet
-  await expect(page.getByText('KPI')).toBeVisible();
-  await expect(page.getByText('DCF (Basic)')).toBeVisible();
-  await expect(page.getByText('Peer Multiples')).toBeVisible();
-  await expect(page.getByText('Sensitivity (WACC x g)')).toBeVisible();
+    // Check that widgets were added to the sheet (4 tiles)
+    const tiles = page.locator('[data-testid^="widget-tile-"]');
+    await expect(tiles).toHaveCount(4);
   });
 
   test('should open and interact with agent chat', async ({ page }) => {

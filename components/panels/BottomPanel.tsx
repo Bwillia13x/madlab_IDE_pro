@@ -59,6 +59,7 @@ export function BottomPanel() {
     <div 
       className="bg-[#252526] border-t border-[#2d2d30] flex flex-col"
       style={{ height: panelHeight, minHeight: '120px' }}
+      data-testid="bottom-panel"
     >
       {/* Header */}
       <div className="h-9 px-3 flex items-center justify-between border-b border-[#2d2d30]">
