@@ -1,0 +1,4 @@
+- Unify dynamic widget loader mapping to default exports if/when `lib/widgets/loader.ts` is added back to the repo.
+- Add a visible provider toggle UI with `data-testid="provider-toggle"` when the control exists (currently not present).
+- Consider applying `AccessibleWidget` wrappers to `Table`/`VarEs` if components exist in this repo snapshot.
+- Full Playwright run via project script may require system dependencies; targeted runs are green. Re-run full suite in CI/locally with browsers preinstalled.
