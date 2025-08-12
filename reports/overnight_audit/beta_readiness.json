@@ -1,0 +1,16 @@
+{
+  "status": "BLOCKED",
+  "dimensions": {
+    "dataPath": { "score": 0.2, "notes": "Missing providers registry, hooks, and schemas; mock adapter present." },
+    "analytics": { "score": 0.1, "notes": "DCF, VaR/ES engines absent; only mock UI." },
+    "widgets": { "score": 0.4, "notes": "Registry and schema missing; inspector relies on missing AutoForm." },
+    "UX": { "score": 0.6, "notes": "Core chrome solid; theming polish and a11y improvements needed." },
+    "IO": { "score": 0.5, "notes": "Import/export present with Zod; needs more validation tests." },
+    "performance": { "score": 0.5, "notes": "Static export; size-limit gating missing; optimization opportunities." },
+    "packaging": { "score": 0.6, "notes": "VSIX workflow present; build failing blocks packaging." },
+    "docs": { "score": 0.6, "notes": "README comprehensive; no project spec files present." },
+    "tests": { "score": 0.3, "notes": "E2E exists; unit tests fail due to missing modules." }
+  },
+  "weightedTotal": 0.41,
+  "notes": "Pass/fail gate: S1 signals missing; prioritize Phases 2–5 fixes."
+}

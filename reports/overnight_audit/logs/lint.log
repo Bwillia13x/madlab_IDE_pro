@@ -1,0 +1,32 @@
+
+> mad-lab-workbench@0.1.0 lint /workspace
+> next lint
+
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+
+./components/editor/WidgetTile.tsx
+14:8  Warning: 'dynamic' is defined but never used.  @typescript-eslint/no-unused-vars
+50:9  Warning: 'handleTitleChange' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+172:38  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./lib/data/adapters/mock.ts
+37:10  Warning: 'clamp' is defined but never used.  @typescript-eslint/no-unused-vars
+172:23  Warning: 'symbol' is defined but never used. Allowed unused args must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./lib/io/import.ts
+119:45  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./lib/store.ts
+123:6  Warning: 'RawState' is defined but never used.  @typescript-eslint/no-unused-vars
+155:29  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+160:11  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+188:11  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+200:21  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+582:33  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
+EXIT_CODE:0

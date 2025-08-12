@@ -1,0 +1,132 @@
+
+> mad-lab-workbench@0.1.0 e2e /workspace
+> playwright test
+
+[1A[2K[2m[WebServer] [22m [31m[1mX[22m[39m Failed to start server
+
+[1A[2K[2m[WebServer] [22mError: listen EADDRINUSE: address already in use :::3010
+[2m[WebServer] [22m[90m    at Server.setupListenHandle [as _listen2] (node:net:1939:16)[39m
+[2m[WebServer] [22m[90m    at listenInCluster (node:net:1996:12)[39m
+[2m[WebServer] [22m[90m    at Server.listen (node:net:2101:7)[39m
+[2m[WebServer] [22m    at [90m/workspace/[39mnode_modules/[4m.pnpm[24m/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/[4mnext[24m/dist/server/lib/start-server.js:251:16
+[2m[WebServer] [22m    at new Promise (<anonymous>)
+[2m[WebServer] [22m    at startServer [90m(/workspace/[39mnode_modules/[4m.pnpm[24m/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/[4mnext[24m/dist/server/lib/start-server.js:190:11[90m)[39m
+[2m[WebServer] [22m    at process.<anonymous> [90m(/workspace/[39mnode_modules/[4m.pnpm[24m/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/[4mnext[24m/dist/server/lib/start-server.js:274:19[90m)[39m
+[2m[WebServer] [22m[90m    at process.emit (node:events:518:28)[39m
+[2m[WebServer] [22m[90m    at emit (node:internal/child_process:949:14)[39m
+[2m[WebServer] [22m[90m    at process.processTicksAndRejections (node:internal/process/task_queues:91:21)[39m {
+[2m[WebServer] [22m  code: [32m'EADDRINUSE'[39m,
+[2m[WebServer] [22m  errno: [33m-98[39m,
+[2m[WebServer] [22m  syscall: [32m'listen'[39m,
+[2m[WebServer] [22m  address: [32m'::'[39m,
+[2m[WebServer] [22m  port: [33m3010[39m
+[2m[WebServer] [22m}
+
+Error: Process from config.webServer exited early.
+
+[1A[2K
+To open last HTML report run:
+[36m[39m
+[36m  pnpm exec playwright show-report[39m
+[36m[39m
+ ELIFECYCLE  Command failed with exit code 1.
+EXIT_CODE:0
+
+> mad-lab-workbench@0.1.0 e2e /workspace
+> playwright test
+
+[1A[2K[2m[WebServer] [22m [31m[1mX[22m[39m Failed to start server
+
+[1A[2K[2m[WebServer] [22mError: listen EADDRINUSE: address already in use :::3010
+[2m[WebServer] [22m[90m    at Server.setupListenHandle [as _listen2] (node:net:1939:16)[39m
+[2m[WebServer] [22m[90m    at listenInCluster (node:net:1996:12)[39m
+[2m[WebServer] [22m[90m    at Server.listen (node:net:2101:7)[39m
+[2m[WebServer] [22m    at [90m/workspace/[39mnode_modules/[4m.pnpm[24m/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/[4mnext[24m/dist/server/lib/start-server.js:251:16
+[2m[WebServer] [22m    at new Promise (<anonymous>)
+[2m[WebServer] [22m    at startServer [90m(/workspace/[39mnode_modules/[4m.pnpm[24m/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/[4mnext[24m/dist/server/lib/start-server.js:190:11[90m)[39m
+[2m[WebServer] [22m    at process.<anonymous> [90m(/workspace/[39mnode_modules/[4m.pnpm[24m/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/[4mnext[24m/dist/server/lib/start-server.js:274:19[90m)[39m
+[2m[WebServer] [22m[90m    at process.emit (node:events:518:28)[39m
+[2m[WebServer] [22m[90m    at emit (node:internal/child_process:949:14)[39m
+[2m[WebServer] [22m[90m    at process.processTicksAndRejections (node:internal/process/task_queues:91:21)[39m {
+[2m[WebServer] [22m  code: [32m'EADDRINUSE'[39m,
+[2m[WebServer] [22m  errno: [33m-98[39m,
+[2m[WebServer] [22m  syscall: [32m'listen'[39m,
+[2m[WebServer] [22m  address: [32m'::'[39m,
+[2m[WebServer] [22m  port: [33m3010[39m
+[2m[WebServer] [22m}
+
+Error: Process from config.webServer exited early.
+
+[1A[2K
+To open last HTML report run:
+[36m[39m
+[36m  pnpm exec playwright show-report[39m
+[36m[39m
+ ELIFECYCLE  Command failed with exit code 1.
+EXIT_CODE:0
+
+> mad-lab-workbench@0.1.0 e2e /workspace
+> playwright test
+
+[1A[2K[2m[WebServer] [22m [31m[1mX[22m[39m Failed to start server
+
+[1A[2K[2m[WebServer] [22mError: listen EADDRINUSE: address already in use :::3010
+[2m[WebServer] [22m[90m    at Server.setupListenHandle [as _listen2] (node:net:1939:16)[39m
+[2m[WebServer] [22m[90m    at listenInCluster (node:net:1996:12)[39m
+[2m[WebServer] [22m[90m    at Server.listen (node:net:2101:7)[39m
+[2m[WebServer] [22m    at [90m/workspace/[39mnode_modules/[4m.pnpm[24m/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/[4mnext[24m/dist/server/lib/start-server.js:251:16
+[2m[WebServer] [22m    at new Promise (<anonymous>)
+[2m[WebServer] [22m    at startServer [90m(/workspace/[39mnode_modules/[4m.pnpm[24m/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/[4mnext[24m/dist/server/lib/start-server.js:190:11[90m)[39m
+[2m[WebServer] [22m    at process.<anonymous> [90m(/workspace/[39mnode_modules/[4m.pnpm[24m/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/[4mnext[24m/dist/server/lib/start-server.js:274:19[90m)[39m
+[2m[WebServer] [22m[90m    at process.emit (node:events:518:28)[39m
+[2m[WebServer] [22m[90m    at emit (node:internal/child_process:949:14)[39m
+[2m[WebServer] [22m[90m    at process.processTicksAndRejections (node:internal/process/task_queues:91:21)[39m {
+[2m[WebServer] [22m  code: [32m'EADDRINUSE'[39m,
+[2m[WebServer] [22m  errno: [33m-98[39m,
+[2m[WebServer] [22m  syscall: [32m'listen'[39m,
+[2m[WebServer] [22m  address: [32m'::'[39m,
+[2m[WebServer] [22m  port: [33m3010[39m
+[2m[WebServer] [22m}
+
+Error: Process from config.webServer exited early.
+
+[1A[2K
+To open last HTML report run:
+[36m[39m
+[36m  pnpm exec playwright show-report[39m
+[36m[39m
+ ELIFECYCLE  Command failed with exit code 1.
+EXIT_CODE:0
+
+> mad-lab-workbench@0.1.0 e2e /workspace
+> playwright test
+
+[1A[2K[2m[WebServer] [22m [31m[1mX[22m[39m Failed to start server
+
+[1A[2K[2m[WebServer] [22mError: listen EADDRINUSE: address already in use :::3010
+[2m[WebServer] [22m[90m    at Server.setupListenHandle [as _listen2] (node:net:1939:16)[39m
+[2m[WebServer] [22m[90m    at listenInCluster (node:net:1996:12)[39m
+[2m[WebServer] [22m[90m    at Server.listen (node:net:2101:7)[39m
+[2m[WebServer] [22m    at [90m/workspace/[39mnode_modules/[4m.pnpm[24m/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/[4mnext[24m/dist/server/lib/start-server.js:251:16
+[2m[WebServer] [22m    at new Promise (<anonymous>)
+[2m[WebServer] [22m    at startServer [90m(/workspace/[39mnode_modules/[4m.pnpm[24m/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/[4mnext[24m/dist/server/lib/start-server.js:190:11[90m)[39m
+[2m[WebServer] [22m    at process.<anonymous> [90m(/workspace/[39mnode_modules/[4m.pnpm[24m/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/[4mnext[24m/dist/server/lib/start-server.js:274:19[90m)[39m
+[2m[WebServer] [22m[90m    at process.emit (node:events:518:28)[39m
+[2m[WebServer] [22m[90m    at emit (node:internal/child_process:949:14)[39m
+[2m[WebServer] [22m[90m    at process.processTicksAndRejections (node:internal/process/task_queues:91:21)[39m {
+[2m[WebServer] [22m  code: [32m'EADDRINUSE'[39m,
+[2m[WebServer] [22m  errno: [33m-98[39m,
+[2m[WebServer] [22m  syscall: [32m'listen'[39m,
+[2m[WebServer] [22m  address: [32m'::'[39m,
+[2m[WebServer] [22m  port: [33m3010[39m
+[2m[WebServer] [22m}
+
+Error: Process from config.webServer exited early.
+
+[1A[2K
+To open last HTML report run:
+[36m[39m
+[36m  pnpm exec playwright show-report[39m
+[36m[39m
+ ELIFECYCLE  Command failed with exit code 1.
+EXIT_CODE:0

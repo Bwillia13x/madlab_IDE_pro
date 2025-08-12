@@ -1,0 +1,55 @@
+
+> mad-lab-workbench@0.1.0 test /workspace
+> vitest run --reporter verbose
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v1.6.1 /workspace
+
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/data.mock.test.ts [ tests/data.mock.test.ts ]
+Error: Failed to resolve import "@/lib/data/mock" from "tests/data.mock.test.ts". Does the file exist?
+ ❯ TransformPluginContext._formatError node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:49258:41
+ ❯ TransformPluginContext.error node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:49253:16
+ ❯ normalizeUrl node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:64291:23
+ ❯ async file:/workspace/node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:64423:39
+ ❯ TransformPluginContext.transform node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:64350:7
+ ❯ PluginContainer.transform node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:49099:18
+ ❯ loadAndTransform node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:51977:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/store.migrate.test.ts [ tests/store.migrate.test.ts ]
+ FAIL  tests/store.test.ts [ tests/store.test.ts ]
+Error: Failed to resolve import "./data/providers" from "lib/store.ts". Does the file exist?
+ ❯ TransformPluginContext._formatError node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:49258:41
+ ❯ TransformPluginContext.error node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:49253:16
+ ❯ normalizeUrl node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:64291:23
+ ❯ async file:/workspace/node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:64423:39
+ ❯ TransformPluginContext.transform node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:64350:7
+ ❯ PluginContainer.transform node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:49099:18
+ ❯ loadAndTransform node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:51977:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/store.presets.test.ts [ tests/store.presets.test.ts ]
+Error: Failed to resolve import "./data/providers" from "lib/store.ts". Does the file exist?
+ ❯ TransformPluginContext._formatError node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:49258:41
+ ❯ TransformPluginContext.error node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:49253:16
+ ❯ normalizeUrl node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:64291:23
+ ❯ async file:/workspace/node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:64423:39
+ ❯ TransformPluginContext.transform node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:64350:7
+ ❯ PluginContainer.transform node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:49099:18
+ ❯ loadAndTransform node_modules/.pnpm/vite@5.4.19_@types+node@20.6.2/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:51977:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ Test Files  4 failed (4)
+      Tests  no tests
+   Start at  04:03:08
+   Duration  1.37s (transform 69ms, setup 331ms, collect 0ms, tests 0ms, environment 1.43s, prepare 440ms)
+
+ ELIFECYCLE  Test failed. See above for more details.
+EXIT_CODE:0

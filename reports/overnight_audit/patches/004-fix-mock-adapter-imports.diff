@@ -1,0 +1,18 @@
+diff --git a/lib/data/adapters/mock.ts b/lib/data/adapters/mock.ts
+--- a/lib/data/adapters/mock.ts
++++ b/lib/data/adapters/mock.ts
+@@ -1,10 +1,10 @@
+ /**
+  * Mock Data Provider Adapter
+  * Provides deterministic synthetic financial data for testing and demos
+  */
+ 
+-import type { Provider, PricePoint, PriceRange, KpiData, FinancialData } from '../provider.types';
+-import { zPriceSeries, zKpiData, zFinancials } from '../schemas';
++import type { Provider, PricePoint, PriceRange, KpiData, FinancialData } from '../provider.types';
++import { zPriceSeries, zKpiData, zFinancials } from '../schemas';
+@@
+ export const mockAdapter: Provider = {
+   name: 'mock',
+@@
+ }

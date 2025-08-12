@@ -1,0 +1,24 @@
+
+> mad-lab-workbench@0.1.0 typecheck /workspace
+> tsc --noEmit
+
+components/editor/WidgetTile.tsx(15,33): error TS2307: Cannot find module '@/lib/widgets/registry' or its corresponding type declarations.
+components/editor/WidgetTile.tsx(16,37): error TS2307: Cannot find module '@/lib/widgets/coreWidgets' or its corresponding type declarations.
+components/editor/WidgetTile.tsx(17,55): error TS2307: Cannot find module '@/lib/widgets/schema' or its corresponding type declarations.
+components/editor/WidgetTile.tsx(174,30): error TS7006: Parameter 'config' implicitly has an 'any' type.
+components/editor/WidgetTile.tsx(177,23): error TS7006: Parameter 'err' implicitly has an 'any' type.
+components/inspector/Inspector.tsx(7,22): error TS2307: Cannot find module '@/lib/ui/AutoForm' or its corresponding type declarations.
+components/inspector/Inspector.tsx(60,24): error TS7006: Parameter 'next' implicitly has an 'any' type.
+components/providers/DataProvider.tsx(4,41): error TS2307: Cannot find module '@/lib/data/init' or its corresponding type declarations.
+components/providers/DataProvider.tsx(6,33): error TS2307: Cannot find module '@/lib/data/providers' or its corresponding type declarations.
+components/providers/DataProvider.tsx(20,15): error TS7006: Parameter 'error' implicitly has an 'any' type.
+components/widgets/KpiCard.tsx(6,39): error TS2307: Cannot find module '@/lib/data/hooks' or its corresponding type declarations.
+lib/data/adapters/mock.ts(6,79): error TS2307: Cannot find module '../provider.types' or its corresponding type declarations.
+lib/data/adapters/mock.ts(7,53): error TS2307: Cannot find module '../schemas' or its corresponding type declarations.
+lib/store.ts(283,71): error TS2307: Cannot find module './data/providers' or its corresponding type declarations.
+tests/data.mock.test.ts(2,30): error TS2307: Cannot find module '@/lib/data/mock' or its corresponding type declarations.
+tests/data.mock.test.ts(3,33): error TS2307: Cannot find module '@/lib/data/providers' or its corresponding type declarations.
+tests/data.mock.test.ts(103,23): error TS7006: Parameter 'price' implicitly has an 'any' type.
+tests/data.mock.test.ts(121,34): error TS7006: Parameter 'point' implicitly has an 'any' type.
+ ELIFECYCLE  Command failed with exit code 2.
+EXIT_CODE:0

@@ -1,0 +1,514 @@
+diff --git a/lib/data/provider.types.ts b/lib/data/provider.types.ts
+new file mode 100644
+--- /dev/null
++++ b/lib/data/provider.types.ts
+@@ -0,0 +1,85 @@
++import { z } from 'zod';
++
++export type PriceRange = '1D' | '5D' | '1M' | '3M' | '6M' | '1Y' | '2Y' | '5Y' | 'MAX';
++
++export interface PricePoint {
++  date: Date;
++  open: number;
++  high: number;
++  low: number;
++  close: number;
++  volume: number;
++}
++
++export interface KpiData {
++  symbol: string;
++  name: string;
++  price: number;
++  change: number;
++  changePercent: number;
++  volume: number;
++  marketCap: number;
++  peRatio: number;
++  eps: number;
++  dividend: number;
++  divYield: number;
++  beta: number;
++  fiftyTwoWeekHigh: number;
++  fiftyTwoWeekLow: number;
++  timestamp: Date;
++}
++
++export interface FinancialData {
++  symbol: string;
++  revenue: number;
++  netIncome: number;
++  cashFlow: number;
++  fcf: number;
++  timestamp: Date;
++}
++
++export type VolSurfacePoint = {
++  strike: number;
++  expiry: Date;
++  impliedVol: number; // 0..1
++  delta: number;
++  gamma: number;
++  theta: number;
++  vega: number;
++};
++
++export type VolSurface = {
++  symbol: string;
++  underlyingPrice: number;
++  points: VolSurfacePoint[];
++  timestamp: Date;
++};
++
++export type RiskSummary = {
++  symbol: string;
++  var95: number;
++  var99: number;
++  es95: number;
++  es99: number;
++  timestamp: Date;
++};
++
++export interface Provider {
++  name: string;
++  getPrices(symbol: string, range: PriceRange): Promise<PricePoint[]>;
++  getKpis(symbol: string): Promise<KpiData>;
++  getFinancials(symbol: string): Promise<FinancialData>;
++  // optional newer methods
++  getVolSurface?: (symbol: string) => Promise<VolSurface>;
++  getRisk?: (symbol: string) => RiskSummary | Promise<RiskSummary>;
++  // legacy sync for tests
++  getPrices_sync?: (symbol: string, range: PriceRange) => PricePoint[];
++  getKpis_sync?: (symbol: string) => KpiData;
++  getVolSurface_sync?: (symbol: string) => VolSurfacePoint[];
++  isAvailable(): Promise<boolean> | boolean;
++  getLastUpdate?(symbol: string): Promise<Date | null> | Date | null;
++}
++
++// Re-export z for convenience (some call sites expect it near provider types)
++export { z };
++
++export const zDateString = z.union([z.string(), z.number(), z.date()]);
++
++export type AsyncResult<T> = { data: T | null; loading: boolean; error: Error | null };
++
++export type DataProviderName = 'mock' | string;
++
++export interface ProviderRegistry {
++  [name: string]: Provider;
++}
++
++export const PRICE_RANGES: PriceRange[] = ['1D', '5D', '1M', '3M', '6M', '1Y', '2Y', '5Y', 'MAX'];
++
++export function clamp(value: number, min: number, max: number): number {
++  return Math.max(min, Math.min(max, value));
++}
++
++export function seededRandom(seed: number): () => number {
++  return function () {
++    // Mulberry32
++    let t = (seed += 0x6d2b79f5);
++    t = Math.imul(t ^ (t >>> 15), t | 1);
++    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
++    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
++  };
++}
++
++export function hashStringToSeed(text: string): number {
++  let h = 1779033703 ^ text.length;
++  for (let i = 0; i < text.length; i++) {
++    h = Math.imul(h ^ text.charCodeAt(i), 3432918353);
++    h = (h << 13) | (h >>> 19);
++  }
++  h = Math.imul(h ^ (h >>> 16), 2246822507);
++  h = Math.imul(h ^ (h >>> 13), 3266489909);
++  return (h ^ (h >>> 16)) >>> 0;
++}
++
++export function seeded(symbol: string, suffix = ''): () => number {
++  return seededRandom(hashStringToSeed(symbol.toUpperCase() + suffix));
++}
++
++export const pointsByRange: Record<PriceRange, number> = {
++  '1D': 24,
++  '5D': 120,
++  '1M': 22,
++  '3M': 66,
++  '6M': 132,
++  '1Y': 252,
++  '2Y': 504,
++  '5Y': 1260,
++  MAX: 2520,
++};
++
++export function rangeLength(range: PriceRange): number {
++  return pointsByRange[range] ?? 132;
++}
++
++export function asDate(d: any): Date { return d instanceof Date ? d : new Date(d); }
++
++export function now(): Date { return new Date(); }
++
++export function round2(n: number): number { return Number(n.toFixed(2)); }
++
++export function ensureBounds(n: number, lo: number, hi: number): number { return Math.max(lo, Math.min(hi, n)); }
+
+diff --git a/lib/data/schemas.ts b/lib/data/schemas.ts
+new file mode 100644
+--- /dev/null
++++ b/lib/data/schemas.ts
+@@ -0,0 +1,52 @@
++import { z } from 'zod';
++
++export const zPricePoint = z.object({
++  date: z.date(),
++  open: z.number(),
++  high: z.number(),
++  low: z.number(),
++  close: z.number(),
++  volume: z.number(),
++});
++
++export const zPriceSeries = z.array(zPricePoint);
++
++export const zKpiData = z.object({
++  symbol: z.string(),
++  name: z.string(),
++  price: z.number(),
++  change: z.number(),
++  changePercent: z.number(),
++  volume: z.number(),
++  marketCap: z.number(),
++  peRatio: z.number(),
++  eps: z.number(),
++  dividend: z.number(),
++  divYield: z.number(),
++  beta: z.number(),
++  fiftyTwoWeekHigh: z.number(),
++  fiftyTwoWeekLow: z.number(),
++  timestamp: z.date(),
++});
++
++export const zFinancials = z.object({
++  symbol: z.string(),
++  revenue: z.number(),
++  netIncome: z.number(),
++  cashFlow: z.number(),
++  fcf: z.number(),
++  timestamp: z.date(),
++});
++
++export const zVolSurfacePoint = z.object({
++  strike: z.number(),
++  expiry: z.date(),
++  impliedVol: z.number().min(0).max(1),
++  delta: z.number(),
++  gamma: z.number(),
++  theta: z.number(),
++  vega: z.number(),
++});
++
++export const zVolSurface = z.object({
++  symbol: z.string(),
++  underlyingPrice: z.number(),
++  points: z.array(zVolSurfacePoint),
++  timestamp: z.date(),
++});
++
++export const zRiskSummary = z.object({
++  symbol: z.string(),
++  var95: z.number(),
++  var99: z.number(),
++  es95: z.number(),
++  es99: z.number(),
++  timestamp: z.date(),
++});
+
+diff --git a/lib/data/providers.ts b/lib/data/providers.ts
+new file mode 100644
+--- /dev/null
++++ b/lib/data/providers.ts
+@@ -0,0 +1,123 @@
++import type { Provider, DataProviderName, PriceRange } from './provider.types';
++import { mockProvider } from './mock';
++
++const registry = new Map<DataProviderName, Provider>();
++let activeProvider: DataProviderName = 'mock';
++
++export function registerProvider(name: DataProviderName, provider: Provider): void {
++  registry.set(name, provider);
++}
++
++export function setDataProvider(name: DataProviderName): Promise<boolean> {
++  if (!registry.has(name)) return Promise.resolve(false);
++  activeProvider = name;
++  return Promise.resolve(true);
++}
++
++export function getDataProvider(): DataProviderName {
++  return activeProvider;
++}
++
++export function getProvider(): Provider {
++  if (!registry.size) {
++    // auto-register mock to ensure safe default
++    registry.set('mock', mockProvider);
++  }
++  return registry.get(activeProvider) || mockProvider;
++}
++
++export type { PriceRange };
++
++// Initialize registry with mock by default
++registerProvider('mock', mockProvider);
++
++// Convenience: simple cached wrappers used by hooks (optional)
++const inMemoryCache = new Map<string, { ts: number; ttl: number; data: unknown }>();
++
++export function getCached<T>(key: string): T | null {
++  const e = inMemoryCache.get(key);
++  if (!e) return null;
++  if (Date.now() - e.ts < e.ttl) return e.data as T;
++  inMemoryCache.delete(key);
++  return null;
++}
++
++export function setCached<T>(key: string, data: T, ttlMs = 60_000): void {
++  inMemoryCache.set(key, { ts: Date.now(), ttl: ttlMs, data });
++}
++
++export function clearCache(): void { inMemoryCache.clear(); }
++
++// Explicit export for tests that import from '@/lib/data/providers'
++export default {
++  registerProvider,
++  setDataProvider,
++  getDataProvider,
++  getProvider,
++  getCached,
++  setCached,
++  clearCache,
+};
+
+diff --git a/lib/data/init.ts b/lib/data/init.ts
+new file mode 100644
+--- /dev/null
++++ b/lib/data/init.ts
+@@ -0,0 +1,24 @@
++import { registerProvider } from './providers';
++import { mockProvider } from './mock';
++
++/**
++ * Initialize data providers. In beta, we register the mock provider only.
++ * Additional providers (alphaVantage, yahoo) can be conditionally registered here.
++ */
++export async function initializeDataProviders(): Promise<void> {
++  registerProvider('mock', mockProvider);
++}
++
++export default { initializeDataProviders };
+
+diff --git a/lib/data/hooks.ts b/lib/data/hooks.ts
+new file mode 100644
+--- /dev/null
++++ b/lib/data/hooks.ts
+@@ -0,0 +1,119 @@
++'use client';
++
++import { useEffect, useState, useCallback } from 'react';
++import type { PriceRange, KpiData, PricePoint } from './provider.types';
++import { getProvider, getCached, setCached, clearCache as clearCacheImpl } from './providers';
++
++type AsyncResult<T> = { data: T | null; loading: boolean; error: Error | null };
++
++export function useDataCache() {
++  return { clearCache: () => clearCacheImpl() };
++}
++
++export function useKpis(symbol?: string): AsyncResult<KpiData> {
++  const [state, setState] = useState<AsyncResult<KpiData>>({ data: null, loading: true, error: null });
++  const sym = (symbol || 'ACME').toUpperCase();
++
++  useEffect(() => {
++    let mounted = true;
++    const key = `kpi:${sym}`;
++    const cached = getCached<KpiData>(key);
++    if (cached) {
++      setState({ data: cached, loading: false, error: null });
++      return;
++    }
++    setState((s) => ({ ...s, loading: true }));
++    getProvider()
++      .getKpis(sym)
++      .then((data) => {
++        if (!mounted) return;
++        setCached(key, data, 60_000);
++        setState({ data, loading: false, error: null });
++      })
++      .catch((error) => mounted && setState({ data: null, loading: false, error: error as Error }));
++    return () => {
++      mounted = false;
++    };
++  }, [sym]);
++
++  return state;
++}
++
++export function usePrices(symbol?: string, range: PriceRange = '6M'):
++  AsyncResult<PricePoint[]> {
++  const [state, setState] = useState<AsyncResult<PricePoint[]>>({ data: null, loading: true, error: null });
++  const sym = (symbol || 'ACME').toUpperCase();
++
++  useEffect(() => {
++    let mounted = true;
++    const key = `prices:${sym}:${range}`;
++    const cached = getCached<PricePoint[]>(key);
++    if (cached) {
++      setState({ data: cached, loading: false, error: null });
++      return;
++    }
++    setState((s) => ({ ...s, loading: true }));
++    getProvider()
++      .getPrices(sym, range)
++      .then((data) => {
++        if (!mounted) return;
++        setCached(key, data, 2 * 60_000);
++        setState({ data, loading: false, error: null });
++      })
++      .catch((error) => mounted && setState({ data: null, loading: false, error: error as Error }));
++    return () => {
++      mounted = false;
++    };
++  }, [sym, range]);
++
++  return state;
++}
++
++export function useRefreshCache() {
++  return useCallback((prefix?: string) => {
++    // Placeholder for future selective cache invalidation
++    clearCacheImpl();
++  }, []);
++}
++
++export default { useKpis, usePrices, useDataCache, useRefreshCache };
+
+diff --git a/lib/data/mock.ts b/lib/data/mock.ts
+new file mode 100644
+--- /dev/null
++++ b/lib/data/mock.ts
+@@ -0,0 +1,156 @@
++import type { Provider, PricePoint, PriceRange, KpiData, FinancialData, VolSurface, VolSurfacePoint, RiskSummary } from './provider.types';
++import { seeded, rangeLength, round2, now } from './provider.types';
++
++function genPrices(symbol: string, range: PriceRange): PricePoint[] {
++  const r = seeded(symbol, ':' + range);
++  const n = rangeLength(range);
++  const basePrice = 80 + r() * 60;
++  const drift = (r() - 0.5) * 0.001;
++  const vol = 0.02 + r() * 0.03;
++  const out: PricePoint[] = [];
++  let px = basePrice;
++  const start = Date.now() - (n - 1) * 24 * 60 * 60 * 1000;
++  for (let i = 0; i < n; i++) {
++    const shock = (r() - 0.5) * vol;
++    const prev = px;
++    px = px * (1 + drift + shock);
++    const high = Math.max(prev * (1 + Math.abs(shock) * 0.5 + r() * 0.01), px);
++    const low = Math.min(prev * (1 - Math.abs(shock) * 0.5 - r() * 0.01), px);
++    const open = prev * (1 + (r() - 0.5) * 0.005);
++    const volume = Math.round(50000 + r() * 200000);
++    out.push({
++      date: new Date(start + i * 24 * 60 * 60 * 1000),
++      open: round2(open),
++      high: round2(high),
++      low: round2(low),
++      close: round2(px),
++      volume,
++    });
++  }
++  return out;
++}
++
++function genKpis(symbol: string): KpiData {
++  const r = seeded(symbol, ':KPI');
++  const price = 80 + r() * 60;
++  const change = (r() - 0.5) * 10;
++  const changePercent = (change / price) * 100;
++  return {
++    symbol: symbol.toUpperCase(),
++    name: `${symbol.toUpperCase()} Corp`,
++    price: round2(price),
++    change: round2(change),
++    changePercent: round2(changePercent),
++    volume: Math.round(1000000 + r() * 5000000),
++    marketCap: Math.round(5000000000 + r() * 50000000000),
++    peRatio: 15 + r() * 20,
++    eps: 2 + r() * 8,
++    dividend: r() * 3,
++    divYield: r() * 5,
++    beta: 0.5 + r() * 1.5,
++    fiftyTwoWeekHigh: price * (1.1 + r() * 0.3),
++    fiftyTwoWeekLow: price * (0.7 + r() * 0.2),
++    timestamp: now(),
++  };
++}
++
++function genVolSurface(symbol: string): VolSurface {
++  const r = seeded(symbol, ':VOL');
++  const underlying = 80 + r() * 60;
++  const expiries = [30, 60, 90, 120, 180];
++  const strikes = [0.8, 0.9, 1.0, 1.1, 1.2].map((m) => m * underlying);
++  const points: VolSurfacePoint[] = [];
++  for (const d of expiries) {
++    for (const k of strikes) {
++      const iv = Math.min(0.8, Math.max(0.1, 0.2 + (r() - 0.5) * 0.1));
++      points.push({
++        strike: round2(k),
++        expiry: new Date(Date.now() + d * 24 * 60 * 60 * 1000),
++        impliedVol: iv,
++        delta: (r() - 0.5) * 2,
++        gamma: r() * 0.1,
++        theta: -(r() * 0.1),
++        vega: r() * 0.5,
++      });
++    }
++  }
++  return { symbol: symbol.toUpperCase(), underlyingPrice: round2(underlying), points, timestamp: now() };
++}
++
++function genRisk(symbol: string): RiskSummary {
++  const r = seeded(symbol, ':RISK');
++  const var95 = round2(1_000_000 + r() * 2_000_000);
++  const var99 = round2(var95 * (1.5 + r() * 0.5));
++  const es95 = round2(var95 * (1.2 + r() * 0.3));
++  const es99 = round2(var99 * (1.1 + r() * 0.2));
++  return { symbol: symbol.toUpperCase(), var95, var99, es95, es99, timestamp: now() };
++}
++
++export const mockProvider: Provider = {
++  name: 'mock',
++  async getPrices(symbol, range) { return genPrices(symbol, range); },
++  async getKpis(symbol) { return genKpis(symbol); },
++  async getFinancials(symbol) {
++    const r = seeded(symbol, ':FIN');
++    return {
++      symbol: symbol.toUpperCase(),
++      revenue: Math.round(30_000_000 + r() * 70_000_000),
++      netIncome: Math.round(1_000_000 + r() * 9_000_000),
++      cashFlow: Math.round(20_000_000 + r() * 60_000_000),
++      fcf: Math.round(3_000_000 + r() * 12_000_000),
++      timestamp: now(),
++    } as FinancialData;
++  },
++  async getVolSurface(symbol) { return genVolSurface(symbol); },
++  getRisk(symbol) { return genRisk(symbol); },
++  // legacy sync used by tests
++  getPrices_sync(symbol, range) { return genPrices(symbol, range); },
++  getKpis_sync(symbol) { return genKpis(symbol); },
++  getVolSurface_sync(symbol) { return genVolSurface(symbol).points; },
++  isAvailable() { return true; },
++  getLastUpdate() { return now(); },
++};
++
++export default mockProvider;

@@ -1,0 +1,15 @@
+diff --git a/lib/store.ts b/lib/store.ts
+--- a/lib/store.ts
++++ b/lib/store.ts
+@@ -280,7 +280,7 @@
+       // Data Provider
+       setDataProvider: async (provider: string) => {
+-        const { setDataProvider: setProviderRegistry } = await import('./data/providers');
++        const { setDataProvider: setProviderRegistry } = await import('./data/providers');
+         const success = await setProviderRegistry(provider);
+         if (success) {
+           set({ dataProvider: provider });
+         } else {
+           console.warn(`Failed to set data provider to '${provider}'`);
+         }
+       },

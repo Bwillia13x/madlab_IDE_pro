@@ -1,0 +1,44 @@
+
+> mad-lab-workbench@0.1.0 build /workspace
+> pnpm -w build:webview && pnpm --filter @madlab/extension build
+
+
+> mad-lab-workbench@0.1.0 build:webview /workspace
+> next build && rm -rf apps/extension/dist/webview && mkdir -p apps/extension/dist && cp -R out apps/extension/dist/webview
+
+   Creating an optimized production build...
+Failed to compile.
+
+./components/editor/WidgetTile.tsx
+Module not found: Can't resolve '@/lib/widgets/registry'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./components/editor/GridCanvas.tsx
+./components/editor/Editor.tsx
+./app/page.tsx
+
+./components/editor/WidgetTile.tsx
+Module not found: Can't resolve '@/lib/widgets/coreWidgets'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./components/editor/GridCanvas.tsx
+./components/editor/Editor.tsx
+./app/page.tsx
+
+./lib/store.ts
+Module not found: Can't resolve './data/providers'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/page.tsx
+
+
+> Build failed because of webpack errors
+ ELIFECYCLE  Command failed with exit code 1.
+ ELIFECYCLE  Command failed with exit code 1.
+EXIT_CODE:0

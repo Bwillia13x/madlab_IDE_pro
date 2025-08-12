@@ -1,0 +1,17 @@
+signal,category,status,severity,details
+csp_nonce,security,PRESENT,S1,apps/extension/src/extension.ts:353-366
+secret_storage,security,PRESENT,S1,apps/extension/src/extension.ts:12-45
+message_bus_prices,security/data,PRESENT,S1,apps/extension/src/extension.ts:253-264
+message_bus_kpis,security/data,PRESENT,S1,apps/extension/src/extension.ts:265-275
+message_bus_financials,security/data,PRESENT,S1,apps/extension/src/extension.ts:277-287
+provider_registry,data,ABSENT,S1,lib/data/providers.ts missing (referenced by lib/store.ts:283)
+hooks_useKpis,data,ABSENT,S1,components/widgets/KpiCard.tsx:6 expects '@/lib/data/hooks'
+hooks_usePrices,data,ABSENT,S1,Expected under lib/data/hooks
+zod_schemas_adapter,data,ABSENT,S1,lib/data/adapters/mock.ts imports ../schemas (missing)
+widget_registry,widgets,ABSENT,S2,components/editor/WidgetTile.tsx imports '@/lib/widgets/registry' (missing)
+inspector_autoform,widgets,ABSENT,S2,components/inspector/Inspector.tsx imports '@/lib/ui/AutoForm' (missing)
+quant_dcf,analytics,ABSENT,S1,lib/quant/dcf.ts missing
+quant_risk,analytics,ABSENT,S1,lib/quant/risk.ts missing
+size_limit,performance,ABSENT,S3,No size script in package.json
+static_export,packaging,PRESENT,S2,next.config.js:3
+extension_packaging,packaging,PRESENT,S2,apps/extension/package.json scripts

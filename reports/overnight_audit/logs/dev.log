@@ -1,0 +1,69 @@
+
+> mad-lab-workbench@0.1.0 dev:test /workspace
+> next dev -p 3010
+
+  ▲ Next.js 13.5.1
+  - Local:        http://localhost:3010
+
+ ✓ Ready in 1272ms
+ ○ compiling /page ...
+ X ./components/editor/WidgetTile.tsx:15:0
+Module not found: Can't resolve '@/lib/widgets/registry'
+[0m [90m 13 | [39m[36mimport[39m { [33mInput[39m } [36mfrom[39m [32m'@/components/ui/input'[39m[33m;[39m[0m
+[0m [90m 14 | [39m[36mimport[39m dynamic [36mfrom[39m [32m'next/dynamic'[39m[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 15 | [39m[36mimport[39m { getSchemaWidget } [36mfrom[39m [32m'@/lib/widgets/registry'[39m[33m;[39m[0m
+[0m [90m 16 | [39m[36mimport[39m { registerCoreWidgets } [36mfrom[39m [32m'@/lib/widgets/coreWidgets'[39m[33m;[39m[0m
+[0m [90m 17 | [39m[36mimport[39m type { [33mWidgetProps[39m [36mas[39m [33mSchemaWidgetProps[39m } [36mfrom[39m [32m'@/lib/widgets/schema'[39m[33m;[39m[0m
+[0m [90m 18 | [39m[90m// ...existing code...[39m[0m
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./components/editor/GridCanvas.tsx
+./components/editor/Editor.tsx
+./app/page.tsx
+ X ./components/editor/WidgetTile.tsx:15:0
+Module not found: Can't resolve '@/lib/widgets/registry'
+[0m [90m 13 | [39m[36mimport[39m { [33mInput[39m } [36mfrom[39m [32m'@/components/ui/input'[39m[33m;[39m[0m
+[0m [90m 14 | [39m[36mimport[39m dynamic [36mfrom[39m [32m'next/dynamic'[39m[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 15 | [39m[36mimport[39m { getSchemaWidget } [36mfrom[39m [32m'@/lib/widgets/registry'[39m[33m;[39m[0m
+[0m [90m 16 | [39m[36mimport[39m { registerCoreWidgets } [36mfrom[39m [32m'@/lib/widgets/coreWidgets'[39m[33m;[39m[0m
+[0m [90m 17 | [39m[36mimport[39m type { [33mWidgetProps[39m [36mas[39m [33mSchemaWidgetProps[39m } [36mfrom[39m [32m'@/lib/widgets/schema'[39m[33m;[39m[0m
+[0m [90m 18 | [39m[90m// ...existing code...[39m[0m
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./components/editor/GridCanvas.tsx
+./components/editor/Editor.tsx
+./app/page.tsx
+ X ./components/editor/WidgetTile.tsx:15:0
+Module not found: Can't resolve '@/lib/widgets/registry'
+[0m [90m 13 | [39m[36mimport[39m { [33mInput[39m } [36mfrom[39m [32m'@/components/ui/input'[39m[33m;[39m[0m
+[0m [90m 14 | [39m[36mimport[39m dynamic [36mfrom[39m [32m'next/dynamic'[39m[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 15 | [39m[36mimport[39m { getSchemaWidget } [36mfrom[39m [32m'@/lib/widgets/registry'[39m[33m;[39m[0m
+[0m [90m 16 | [39m[36mimport[39m { registerCoreWidgets } [36mfrom[39m [32m'@/lib/widgets/coreWidgets'[39m[33m;[39m[0m
+[0m [90m 17 | [39m[36mimport[39m type { [33mWidgetProps[39m [36mas[39m [33mSchemaWidgetProps[39m } [36mfrom[39m [32m'@/lib/widgets/schema'[39m[33m;[39m[0m
+[0m [90m 18 | [39m[90m// ...existing code...[39m[0m
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./components/editor/GridCanvas.tsx
+./components/editor/Editor.tsx
+./app/page.tsx
+ X ./components/editor/WidgetTile.tsx:15:0
+Module not found: Can't resolve '@/lib/widgets/registry'
+[0m [90m 13 | [39m[36mimport[39m { [33mInput[39m } [36mfrom[39m [32m'@/components/ui/input'[39m[33m;[39m[0m
+[0m [90m 14 | [39m[36mimport[39m dynamic [36mfrom[39m [32m'next/dynamic'[39m[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 15 | [39m[36mimport[39m { getSchemaWidget } [36mfrom[39m [32m'@/lib/widgets/registry'[39m[33m;[39m[0m
+[0m [90m 16 | [39m[36mimport[39m { registerCoreWidgets } [36mfrom[39m [32m'@/lib/widgets/coreWidgets'[39m[33m;[39m[0m
+[0m [90m 17 | [39m[36mimport[39m type { [33mWidgetProps[39m [36mas[39m [33mSchemaWidgetProps[39m } [36mfrom[39m [32m'@/lib/widgets/schema'[39m[33m;[39m[0m
+[0m [90m 18 | [39m[90m// ...existing code...[39m[0m
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./components/editor/GridCanvas.tsx
+./components/editor/Editor.tsx
+./app/page.tsx

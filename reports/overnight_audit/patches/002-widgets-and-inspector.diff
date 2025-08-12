@@ -1,0 +1,165 @@
+diff --git a/lib/widgets/schema.ts b/lib/widgets/schema.ts
+new file mode 100644
+--- /dev/null
++++ b/lib/widgets/schema.ts
+@@ -0,0 +1,29 @@
++import { z } from 'zod';
++
++export type WidgetProps = Record<string, unknown>;
++
++export type WidgetDefinition = {
++  type: string;
++  title: string;
++  version: number;
++  propertySchema: z.ZodTypeAny;
++  runtime: {
++    component: (props: any) => JSX.Element;
++  };
++  meta?: {
++    defaultConfig?: WidgetProps;
++  };
++};
++
++export type SchemaWidget = {
++  definition: WidgetDefinition;
++};
++
++export type Registry = Map<string, SchemaWidget>;
++
++export const zSymbolOnly = z.object({ symbol: z.string().optional() });
++
++export function defaultMeta() {
++  return { defaultConfig: { symbol: 'AAPL' } };
++}
++
++export { z };
++
++export default {};
+
+diff --git a/lib/widgets/registry.ts b/lib/widgets/registry.ts
+new file mode 100644
+--- /dev/null
++++ b/lib/widgets/registry.ts
+@@ -0,0 +1,35 @@
++import type { Registry, SchemaWidget, WidgetDefinition } from './schema';
++
++const registry: Registry = new Map();
++
++export function registerWidget(def: WidgetDefinition) {
++  registry.set(def.type, { definition: def });
++}
++
++export function getSchemaWidget(type: string): SchemaWidget | undefined {
++  return registry.get(type);
++}
++
++export function getAllWidgets(): SchemaWidget[] {
++  return Array.from(registry.values());
++}
++
++export default { registerWidget, getSchemaWidget, getAllWidgets };
+
+diff --git a/lib/widgets/coreWidgets.ts b/lib/widgets/coreWidgets.ts
+new file mode 100644
+--- /dev/null
++++ b/lib/widgets/coreWidgets.ts
+@@ -0,0 +1,58 @@
++import { registerWidget } from './registry';
++import { z, zSymbolOnly, defaultMeta } from './schema';
++import { KpiCard } from '@/components/widgets/KpiCard';
++import { DcfBasic } from '@/components/widgets/DcfBasic';
++import { VarEs } from '@/components/widgets/VarEs';
++
++let registered = false;
++
++export function registerCoreWidgets() {
++  if (registered) return;
++
++  registerWidget({
++    type: 'kpi-card',
++    title: 'KPI',
++    version: 1,
++    propertySchema: zSymbolOnly,
++    runtime: { component: (props: any) => KpiCard({ ...(props as any), symbol: (props?.config as any)?.symbol }) },
++    meta: defaultMeta(),
++  });
++
++  registerWidget({
++    type: 'dcf-basic',
++    title: 'DCF (Basic)',
++    version: 1,
++    propertySchema: z.object({ symbol: z.string().optional() }),
++    runtime: { component: (props: any) => DcfBasic(props as any) },
++    meta: defaultMeta(),
++  });
++
++  registerWidget({
++    type: 'var-es',
++    title: 'VaR/ES',
++    version: 1,
++    propertySchema: z.object({ symbol: z.string().optional() }),
++    runtime: { component: (props: any) => VarEs(props as any) },
++    meta: defaultMeta(),
++  });
++
++  registered = true;
++}
++
++export default { registerCoreWidgets };
+
+diff --git a/lib/ui/AutoForm.tsx b/lib/ui/AutoForm.tsx
+new file mode 100644
+--- /dev/null
++++ b/lib/ui/AutoForm.tsx
+@@ -0,0 +1,79 @@
++'use client';
++
++import React from 'react';
++import type { z } from 'zod';
++import { Input } from '@/components/ui/input';
++
++type AutoFormProps<T extends z.ZodTypeAny> = {
++  schema: T;
++  value: Record<string, unknown>;
++  onChange: (next: Record<string, unknown>) => void;
++};
++
++export default function AutoForm<T extends z.ZodTypeAny>({ schema, value, onChange }: AutoFormProps<T>) {
++  // very small subset: render string/number fields at top-level only
++  const shape = (schema as any)._def?.shape();
++  const entries = shape ? Object.entries(shape) : [];
++
++  return (
++    <div className="space-y-2">
++      {entries.map(([key, def]: [string, any]) => {
++        const t = def?._def?.typeName || def?._def?.innerType?._def?.typeName;
++        if (t === 'ZodString') {
++          return (
++            <div key={key} className="space-y-1">
++              <label className="text-xs text-muted-foreground">{key}</label>
++              <Input
++                value={String((value as any)[key] ?? '')}
++                onChange={(e) => onChange({ ...value, [key]: e.target.value })}
++                className="h-8"
++              />
++            </div>
++          );
++        }
++        if (t === 'ZodNumber') {
++          return (
++            <div key={key} className="space-y-1">
++              <label className="text-xs text-muted-foreground">{key}</label>
++              <Input
++                type="number"
++                value={Number((value as any)[key] ?? 0)}
++                onChange={(e) => onChange({ ...value, [key]: Number(e.target.value) })}
++                className="h-8"
++              />
++            </div>
++          );
++        }
++        return null;
++      })}
++    </div>
++  );
++}

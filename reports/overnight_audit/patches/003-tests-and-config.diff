@@ -1,0 +1,23 @@
+diff --git a/components/inspector/Inspector.tsx b/components/inspector/Inspector.tsx
+--- a/components/inspector/Inspector.tsx
++++ b/components/inspector/Inspector.tsx
+@@ -4,7 +4,7 @@
+ import { useWorkspaceStore } from '@/lib/store';
+ import { Button } from '@/components/ui/button';
+ import { Input } from '@/components/ui/input';
+ import { Textarea } from '@/components/ui/textarea';
+-import AutoForm from '@/lib/ui/AutoForm';
++import AutoForm from '@/lib/ui/AutoForm';
+ import { z } from 'zod';
+ import { X } from 'lucide-react';
+ 
+ export function Inspector() {
+@@ -56,7 +56,7 @@
+           <label className="text-xs text-muted-foreground">Properties</label>
+           <AutoForm
+-            schema={z.object({ symbol: z.string().optional() })}
++            schema={z.object({ symbol: z.string().optional() })}
+             value={props}
+             onChange={(next) => {
+               if (!owningSheet || !widget) return;
+               const safe = { ...next } as Record<string, unknown>;
