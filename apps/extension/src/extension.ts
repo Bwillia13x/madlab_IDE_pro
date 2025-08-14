@@ -3,7 +3,7 @@ import { FromWebviewMessage, ToWebviewMessage } from './messaging';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
-import * as https from 'https';
+// network helpers are provided in route modules
 
 // Storage for workspace state persistence
 let globalStorageUri: vscode.Uri;
@@ -21,6 +21,19 @@ export function activate(context: vscode.ExtensionContext) {
       if (!key) return;
       await context.secrets.store('alphaVantageApiKey', key);
       vscode.window.showInformationMessage('Alpha Vantage API key saved to SecretStorage.');
+    })
+  );
+  // Optional LLM key (Batch 15)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('madlab.setOpenAIKey', async () => {
+      const key = await vscode.window.showInputBox({
+        prompt: 'Enter OpenAI API Key',
+        ignoreFocusOut: true,
+        password: true,
+      });
+      if (!key) return;
+      await context.secrets.store('openaiApiKey', key);
+      vscode.window.showInformationMessage('OpenAI API key saved to SecretStorage.');
     })
   );
   context.subscriptions.push(
@@ -106,216 +119,20 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(disposable);
 }
 
+// Delegate some routes to extracted router while preserving existing ones
+import { routes } from './routes';
+
 async function handleWebviewMessage(
   msg: FromWebviewMessage,
   panel: vscode.WebviewPanel,
   context: vscode.ExtensionContext,
   workspaceRoot?: vscode.Uri
 ) {
-  // Extract request ID for response correlation
-  const requestId = (msg.payload as any)?._requestId;
-
-  const sendResponse = (type: string, payload: any) => {
-    const responsePayload = requestId ? { ...payload, _requestId: requestId } : payload;
-    panel.webview.postMessage({ type, payload: responsePayload });
-  };
-
-  switch (msg.type) {
-    case 'webview:ready': {
-      const ready: ToWebviewMessage = {
-        type: 'extension:ready',
-        payload: {
-          version: 1,
-          extensionId: context.extension.id,
-        },
-      };
-      panel.webview.postMessage(ready);
-      break;
-    }
-
-    case 'ping': {
-      const pong: ToWebviewMessage = { type: 'pong', payload: { when: Date.now() } };
-      panel.webview.postMessage(pong);
-      break;
-    }
-
-    case 'workspace:get': {
-      const workspaceData = await loadWorkspaceData(context);
-      sendResponse('workspace:data', { data: workspaceData });
-      break;
-    }
-
-    case 'workspace:sync': {
-      const success = await saveWorkspaceData(context, msg.payload.data);
-      // We could send a confirmation, but for now just log success
-      if (!success) {
-        console.warn('Failed to sync workspace data');
-      }
-      break;
-    }
-
-    case 'file:save': {
-      const { path: filePath, content } = msg.payload;
-      try {
-        let fullPath: vscode.Uri;
-        if (path.isAbsolute(filePath)) {
-          fullPath = vscode.Uri.file(filePath);
-        } else if (workspaceRoot) {
-          fullPath = vscode.Uri.joinPath(workspaceRoot, filePath);
-        } else {
-          throw new Error('No workspace open to resolve relative path');
-        }
-
-        await vscode.workspace.fs.writeFile(fullPath, new TextEncoder().encode(content));
-        sendResponse('file:saved', { success: true, path: filePath });
-      } catch (error) {
-        sendResponse('file:saved', {
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-      break;
-    }
-
-    case 'file:open': {
-      const { path: filePath } = msg.payload;
-      try {
-        let fullPath: vscode.Uri;
-        if (path.isAbsolute(filePath)) {
-          fullPath = vscode.Uri.file(filePath);
-        } else if (workspaceRoot) {
-          fullPath = vscode.Uri.joinPath(workspaceRoot, filePath);
-        } else {
-          throw new Error('No workspace open to resolve relative path');
-        }
-
-        const fileData = await vscode.workspace.fs.readFile(fullPath);
-        const content = new TextDecoder().decode(fileData);
-        sendResponse('file:opened', { success: true, content });
-      } catch (error) {
-        sendResponse('file:opened', {
-          success: false,
-          error: error instanceof Error ? error.message : 'File not found',
-        });
-      }
-      break;
-    }
-
-    case 'theme:get': {
-      const theme =
-        vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark
-          ? 'dark'
-          : vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast
-            ? 'high-contrast'
-            : 'light';
-
-      sendResponse('theme:data', { theme });
-      break;
-    }
-
-    case 'notification:show': {
-      const { message, type = 'info' } = msg.payload;
-      switch (type) {
-        case 'error':
-          vscode.window.showErrorMessage(message);
-          break;
-        case 'warning':
-          vscode.window.showWarningMessage(message);
-          break;
-        default:
-          vscode.window.showInformationMessage(message);
-      }
-      break;
-    }
-
-    case 'agent:request': {
-      // Simple mock agent response for now
-      // In a real implementation, this could integrate with language models
-      const { message, history } = msg.payload;
-      try {
-        const response = await mockAgentResponse(message, history);
-        sendResponse('agent:response', { response });
-      } catch (error) {
-        sendResponse('agent:response', {
-          response: 'Sorry, I encountered an error processing your request.',
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-      break;
-    }
-
-    case 'data:quote': {
-      const { symbol } = msg.payload as any;
-      const data = await fetchQuote(symbol);
-      sendResponse('data:quote', data);
-      break;
-    }
-    case 'data:prices': {
-      const { symbol, range = '6M' } = msg.payload as any;
-      let data: any;
-      try {
-        data = await fetchAlphaVantagePrices(context, symbol, range);
-      } catch (e) {
-        console.warn('Falling back to mock prices:', e);
-        data = await fetchPrices(symbol, range);
-      }
-      sendResponse('data:prices', data);
-      break;
-    }
-    case 'data:kpis': {
-      const { symbol } = msg.payload as any;
-      let data: any;
-      try {
-        data = await fetchAlphaVantageKpis(context, symbol);
-      } catch (e) {
-        console.warn('Falling back to mock kpis:', e);
-        data = await fetchKpis(symbol);
-      }
-      sendResponse('data:kpis', data);
-      break;
-    }
-    case 'data:financials': {
-      const { symbol } = msg.payload as any;
-      let data: any;
-      try {
-        data = await fetchAlphaVantageFinancials(context, symbol);
-      } catch (e) {
-        console.warn('Falling back to mock financials:', e);
-        data = await fetchFinancials(symbol);
-      }
-      sendResponse('data:financials', data);
-      break;
-    }
-    case 'data:vol': {
-      const { symbol } = msg.payload as any;
-      const data = await fetchVol(symbol);
-      sendResponse('data:vol', data);
-      break;
-    }
-
-    default:
-      console.warn('Unknown message type:', (msg as any).type);
+  if (routes[msg.type]) {
+    return routes[msg.type](msg, panel, context, workspaceRoot);
   }
-}
-
-async function loadWorkspaceData(context: vscode.ExtensionContext): Promise<any> {
-  try {
-    const data = context.globalState.get(WORKSPACE_STORAGE_KEY);
-    return data || null;
-  } catch (error) {
-    console.error('Failed to load workspace data:', error);
-    return null;
-  }
-}
-
-async function saveWorkspaceData(context: vscode.ExtensionContext, data: any): Promise<boolean> {
-  try {
-    await context.globalState.update(WORKSPACE_STORAGE_KEY, data);
-    return true;
-  } catch (error) {
-    console.error('Failed to save workspace data:', error);
-    return false;
-  }
+  // Unknown route: log and ignore
+  console.warn('Unknown message type:', (msg as any).type);
 }
 
 async function mockAgentResponse(message: string, history: any[]): Promise<string> {
@@ -374,304 +191,7 @@ function getWebviewContent(webview: vscode.Webview, webviewRoot: vscode.Uri): st
   return html;
 }
 
-function rewriteAssetUrls(html: string, mapUrl: (url: string) => string): string {
-  return html.replace(/(src|href)=["'](?!https?:\/\/)([^"']+)["']/g, (_m, attr, url) => {
-    return `${attr}="${mapUrl(url)}"`;
-  });
-}
+// Moved helpers to csp.ts and bridge.ts for clarity
+import { rewriteAssetUrls, addNonceToScriptTags } from './csp';
+import { buildBridgeScript as bridgeScript } from './bridge';
 
-function addNonceToScriptTags(html: string, nonce: string): string {
-  // Add nonce attribute to script tags that don't already have one
-  return html.replace(/<script(?![^>]*nonce=)([^>]*)>/gi, `<script nonce="${nonce}"$1>`);
-}
-
-function bridgeScript(nonce: string): string {
-  return `
-    <script nonce="${nonce}">
-      (function(){
-        const vscode = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : undefined;
-        const messageHandlers = new Map();
-        let requestId = 0;
-        const pendingRequests = new Map();
-        
-        // Enhanced bridge with promise-based methods
-        const bridge = {
-          // Basic messaging
-          post: (type, payload) => vscode && vscode.postMessage({ type, payload }),
-          onMessage: (handler) => window.addEventListener('message', (e) => handler(e.data)),
-          
-          // Promise-based methods for request/response patterns
-          request: (type, payload) => {
-            if (!vscode) return Promise.reject(new Error('VS Code API not available'));
-            
-            return new Promise((resolve, reject) => {
-              const id = ++requestId;
-              pendingRequests.set(id, { resolve, reject });
-              vscode.postMessage({ type, payload: { ...payload, _requestId: id } });
-              
-              // Timeout after 30 seconds
-              setTimeout(() => {
-                if (pendingRequests.has(id)) {
-                  pendingRequests.delete(id);
-                  reject(new Error('Request timeout'));
-                }
-              }, 30000);
-            });
-          },
-          
-          // Workspace methods
-          getWorkspace: () => bridge.request('workspace:get', {}),
-          syncWorkspace: (data) => {
-            if (vscode) {
-              vscode.postMessage({ type: 'workspace:sync', payload: { data } });
-              return Promise.resolve(true);
-            }
-            return Promise.resolve(false);
-          },
-          
-          // File operations
-          saveFile: (path, content) => bridge.request('file:save', { path, content }),
-          openFile: (path) => bridge.request('file:open', { path }),
-          
-          // Theme
-          getTheme: () => bridge.request('theme:get', {}),
-          
-          // Notifications
-          showNotification: (message, type = 'info') => {
-            if (vscode) {
-              vscode.postMessage({ type: 'notification:show', payload: { message, type } });
-            }
-          },
-          
-          // Agent requests
-          requestAgent: (message, history = []) => bridge.request('agent:request', { message, history })
-        };
-        
-        // Handle responses to requests
-        window.addEventListener('message', (event) => {
-          const message = event.data;
-          const payload = message?.payload;
-          const reqId = payload?._requestId;
-          if (reqId && pendingRequests.has(reqId)) {
-            const { resolve } = pendingRequests.get(reqId);
-            pendingRequests.delete(reqId);
-            resolve(payload);
-          }
-        });
-        
-        window.madlabBridge = bridge;
-        
-        if (vscode) {
-          vscode.postMessage({ type: 'webview:ready', payload: { version: 1 } });
-        }
-      })();
-    </script>
-  `;
-}
-
-// Simple in-memory cache with TTL
-type CacheEntry<T> = { data: T; ts: number; ttl: number };
-const memoryCache = new Map<string, CacheEntry<any>>();
-
-function getCached<T>(key: string): T | null {
-  const e = memoryCache.get(key);
-  if (!e) return null;
-  if (Date.now() - e.ts < e.ttl) return e.data as T;
-  memoryCache.delete(key);
-  return null;
-}
-
-function setCached<T>(key: string, data: T, ttl = 5 * 60 * 1000) {
-  memoryCache.set(key, { data, ts: Date.now(), ttl });
-}
-
-// Note: Use real adapters when keys present; otherwise fallback to mock
-
-function httpsJson(url: string): Promise<any> {
-  return new Promise((resolve, reject) => {
-    https
-      .get(url, (res) => {
-        if (res.statusCode && res.statusCode >= 400) {
-          reject(new Error(`HTTP ${res.statusCode}`));
-          return;
-        }
-        const chunks: Uint8Array[] = [];
-        res.on('data', (c) =>
-          chunks.push(Buffer.isBuffer(c) ? new Uint8Array(c) : new Uint8Array(Buffer.from(c)))
-        );
-        res.on('end', () => {
-          try {
-            const body = Buffer.concat(chunks as any).toString('utf8');
-            resolve(JSON.parse(body));
-          } catch (e) {
-            reject(e);
-          }
-        });
-      })
-      .on('error', reject);
-  });
-}
-
-// Basic free Yahoo endpoints (no key) as placeholder
-async function fetchPrices(symbol: string, range: string) {
-  const key = `prices:${symbol}:${range}`;
-  const cached = getCached<any>(key);
-  if (cached) return cached;
-  // Placeholder: return mock-shaped data to satisfy webview
-  const now = Date.now();
-  const n = 132;
-  const data = Array.from({ length: n }, (_, i) => ({
-    date: new Date(now - (n - i - 1) * 86400000).toISOString(),
-    open: 100 + Math.sin(i / 10) * 2,
-    high: 101 + Math.sin(i / 10) * 2,
-    low: 99 + Math.sin(i / 10) * 2,
-    close: 100 + Math.sin(i / 10) * 2,
-    volume: 1_000_000 + i * 10,
-  }));
-  setCached(key, data);
-  return data;
-}
-
-async function fetchQuote(symbol: string) {
-  const key = `quote:${symbol}`;
-  const cached = getCached<any>(key);
-  if (cached) return cached;
-  const data = {
-    symbol,
-    price: 100 + Math.random() * 5,
-    change: (Math.random() - 0.5) * 2,
-    changePercent: (Math.random() - 0.5) * 2,
-    timestamp: new Date().toISOString(),
-  };
-  setCached(key, data, 30_000);
-  return data;
-}
-
-// Helper to load secrets (without exposing to webview)
-async function getSecret(context: vscode.ExtensionContext, key: string) {
-  try {
-    return await context.secrets.get(key);
-  } catch {
-    return undefined;
-  }
-}
-
-async function fetchKpis(symbol: string) {
-  const key = `kpis:${symbol}`;
-  const cached = getCached<any>(key);
-  if (cached) return cached;
-  const data = {
-    symbol,
-    name: `${symbol} Corp`,
-    price: 123.45,
-    change: 1.23,
-    changePercent: 1.0,
-    volume: 1234567,
-    marketCap: 5_000_000_000,
-    timestamp: new Date().toISOString(),
-  };
-  setCached(key, data, 60_000);
-  return data;
-}
-
-async function fetchFinancials(symbol: string) {
-  const key = `fin:${symbol}`;
-  const cached = getCached<any>(key);
-  if (cached) return cached;
-  const data = {
-    symbol,
-    revenue: 1_000_000_000,
-    netIncome: 100_000_000,
-    cashFlow: 200_000_000,
-    fcf: 150_000_000,
-    timestamp: new Date().toISOString(),
-  };
-  setCached(key, data, 5 * 60_000);
-  return data;
-}
-
-async function fetchVol(symbol: string) {
-  const key = `vol:${symbol}`;
-  const cached = getCached<any>(key);
-  if (cached) return cached;
-  const points = [7, 14, 30, 60, 90]
-    .flatMap((d) =>
-      [90, 95, 100, 105, 110].map((strike) => ({
-        strike,
-        expiry: new Date(Date.now() + d * 86400000).toISOString(),
-        impliedVol: 0.2 + (Math.random() - 0.5) * 0.05,
-      }))
-    )
-    .flat();
-  const data = { symbol, underlyingPrice: 100, points, timestamp: new Date().toISOString() };
-  setCached(key, data, 5 * 60_000);
-  return data;
-}
-
-async function fetchAlphaVantagePrices(
-  context: vscode.ExtensionContext,
-  symbol: string,
-  range: string
-) {
-  const key = await getSecret(context, 'alphaVantageApiKey');
-  if (!key) throw new Error('Alpha Vantage API key missing');
-  const func =
-    range === '1D' || range === '5D' ? 'TIME_SERIES_INTRADAY' : 'TIME_SERIES_DAILY_ADJUSTED';
-  const interval = '60min';
-  const url =
-    func === 'TIME_SERIES_INTRADAY'
-      ? `https://www.alphavantage.co/query?function=${func}&symbol=${encodeURIComponent(symbol)}&interval=${interval}&outputsize=compact&apikey=${encodeURIComponent(key)}`
-      : `https://www.alphavantage.co/query?function=${func}&symbol=${encodeURIComponent(symbol)}&outputsize=compact&apikey=${encodeURIComponent(key)}`;
-  const raw = await httpsJson(url);
-  const seriesKey = Object.keys(raw).find((k) => k.includes('Time Series'));
-  if (!seriesKey) throw new Error('Unexpected AV response');
-  const points = raw[seriesKey];
-  const data = Object.entries(points).map(([ts, v]: any) => ({
-    date: new Date(ts).toISOString(),
-    open: Number((v as any)['1. open'] || (v as any).open),
-    high: Number((v as any)['2. high'] || (v as any).high),
-    low: Number((v as any)['3. low'] || (v as any).low),
-    close: Number((v as any)['4. close'] || (v as any).close),
-    volume: Number((v as any)['6. volume'] || (v as any).volume || (v as any)['5. volume'] || 0),
-  }));
-  data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  setCached(`prices:${symbol}:${range}`, data, 2 * 60 * 1000);
-  return data;
-}
-
-async function fetchAlphaVantageKpis(context: vscode.ExtensionContext, symbol: string) {
-  const key = await getSecret(context, 'alphaVantageApiKey');
-  if (!key) throw new Error('Alpha Vantage API key missing');
-  const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&apikey=${encodeURIComponent(key)}`;
-  const raw = await httpsJson(url);
-  const q = (raw as any)['Global Quote'] || {};
-  const data = {
-    symbol,
-    name: symbol,
-    price: Number(q['05. price'] || 0),
-    change: Number(q['09. change'] || 0),
-    changePercent: Number(String(q['10. change percent'] || '0').replace('%', '')),
-    volume: Number(q['06. volume'] || 0),
-    marketCap: 0,
-    timestamp: new Date().toISOString(),
-  };
-  setCached(`kpi:${symbol}`, data, 60 * 1000);
-  return data;
-}
-
-async function fetchAlphaVantageFinancials(context: vscode.ExtensionContext, symbol: string) {
-  const key = await getSecret(context, 'alphaVantageApiKey');
-  if (!key) throw new Error('Alpha Vantage API key missing');
-  const url = `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${encodeURIComponent(symbol)}&apikey=${encodeURIComponent(key)}`;
-  const raw = await httpsJson(url);
-  const data = {
-    symbol,
-    revenue: Number((raw as any).RevenueTTM || 0),
-    netIncome: Number((raw as any).QuarterlyNetIncomeTTM || 0),
-    cashFlow: Number((raw as any).OperatingCashflowTTM || 0),
-    fcf: Number((raw as any).FreeCashFlowTTM || 0),
-    timestamp: new Date().toISOString(),
-  };
-  setCached(`fin:${symbol}`, data, 5 * 60 * 1000);
-  return data;
-}

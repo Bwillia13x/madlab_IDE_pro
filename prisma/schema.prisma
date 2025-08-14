@@ -1,0 +1,47 @@
+// Prisma schema for MAD LAB Workbench
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Use SQLite by default; set DATABASE_URL to switch to Postgres in production
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Template {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  kind      String
+  title     String
+  widgets   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  title     String
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserPreference {
+  id                String   @id @default(cuid())
+  streamMode        String?
+  pollingIntervalMs Int?
+  cacheTtlMs        Int?
+  cacheMaxEntries   Int?
+  updatedAt         DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  type      String
+  severity  String
+  message   String
+  context   Json?
+  ts        DateTime @default(now())
+}

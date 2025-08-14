@@ -81,6 +81,47 @@ pnpm test:watch       # Run tests in watch mode
 pnpm e2e              # Run end-to-end tests
 ```
 
+### Streaming Modes
+
+The workbench supports SSE → WS → Polling fallback with user-controllable preferences.
+
+- Environment: set `NEXT_PUBLIC_WS_URL` to override the default `ws(s)://<host>/api/stream/ws`.
+- Settings: open the Settings panel to choose `streamMode` (`auto`, `websocket`, `polling`) and `pollingIntervalMs`.
+
+### Database (Prisma)
+
+Persistent storage for templates, workspaces, and preferences can be enabled.
+
+1. Install Prisma client:
+   - `pnpm add -D prisma`
+   - `pnpm add @prisma/client`
+2. Configure environment:
+   - `PRISMA_PROVIDER=postgresql` or `sqlite`
+   - `DATABASE_URL=postgresql://user:pass@host:5432/db` (or `file:./dev.db` for SQLite)
+   - `NEXT_PUBLIC_DB_MODE=db` to enable DB-backed APIs
+3. Migrate:
+   - `npx prisma migrate dev --name init`
+
+APIs:
+- `GET/POST/DELETE /api/templates`
+- `GET/POST/PUT/DELETE /api/workspaces`
+
+Healthcheck includes DB status at `/api/health`.
+
+### Metrics & Observability
+
+- `/api/metrics` returns timers (p50/p90/p99), counters, and error stats.
+- Minimal OpenTelemetry hooks instrument server handlers via `lib/otel/instrumentation.ts` when `@opentelemetry/api` is present.
+
+### Load Tests
+
+Artillery scripts in `tests/load/`:
+- `ws.artillery.yml`: WebSocket gateway
+- `market.artillery.yml`: Market API
+- `db.artillery.yml`: DB APIs
+
+Run locally (optional): `pnpm dlx artillery run tests/load/ws.artillery.yml`
+
 ## 🏗️ Project Structure
 
 ```text
@@ -171,6 +212,58 @@ NEXT_PUBLIC_API_URL=https://your-api.com
 NEXT_PUBLIC_AGENT_API_URL=https://your-agent-api.com
 ```
 
+### Performance Ops Quickstart
+
+- Web Workers
+  - VaR bootstrap runs off main thread via `/public/workers/varWorker.js`. Widget terminates worker on unmount.
+
+- Request Deduplication
+  - Client hooks dedupe concurrent loads for prices, financials, vol surface, correlation.
+  - Server `app/api/market` dedupes inflight GETs; `POST` supports batch symbols.
+  - REST provider (`FetchRESTProvider`) dedupes inflight by endpoint+query.
+
+- Memory Budget
+  - Central cache (`lib/data/cache.ts`) enforces entry and byte caps with LRU-like eviction.
+  - Env vars: `NEXT_PUBLIC_DATA_CACHE_MAX_BYTES`, `NEXT_PUBLIC_DATA_CACHE_MAX_ENTRIES`, `NEXT_PUBLIC_DATA_CACHE_TTL_MS`.
+
+- Streaming
+  - SSE endpoint has backpressure guard and server metrics; client throttles/batches and tracks update events.
+  - WebSocket route coalesces outbound ticks per symbol with a bounded send queue. Client coalesces outbound control messages and pings.
+
+- Monitoring
+  - Core Web Vitals and custom performance telemetry initialized on app load. Client samples JS heap usage to warn at >80MB; critical at >100MB (respecting consent/DNT via analytics).
+  - `/api/metrics` includes server memory and explicit WS gauges; `market:GET` p50/p90/p99 available in timers.
+
+#### Batch GET API
+
+`GET /api/market?type=prices&symbols=AAPL,MSFT&range=6M`
+
+- Supports `type=prices|kpis|vol` with `symbols` CSV. Returns a map `{ SYMBOL: ... }`.
+- Cache keys normalized (sorted uppercase symbols + params). Inflight dedup ensures concurrent identical requests coalesce.
+- Cache-Control: `public, s-maxage=300, max-age=60, stale-while-revalidate=60`; `Vary: Accept-Encoding`.
+
+For correlation, continue to use `type=correlation&symbols=...&period=...` which returns a matrix.
+
+#### Streaming backpressure
+
+- WS coalesces per-symbol updates and rate-limits dispatch; queue depth capped per flush. SSE retains guarded ticks. Configure endpoint with `NEXT_PUBLIC_WS_URL`.
+
+#### Memory budgets (client)
+
+Env overrides (bytes/ms/entries):
+
+```
+NEXT_PUBLIC_DATA_CACHE_MAX_BYTES=52428800
+NEXT_PUBLIC_DATA_CACHE_MAX_ENTRIES=100
+NEXT_PUBLIC_DATA_CACHE_TTL_MS=300000
+```
+
+#### Web Vitals
+
+- Reported via analytics using PerformanceObserver and basic web-vitals style events. Respect DNT/consent.
+
+For an in-depth overview of the VS Code extension architecture and routing, see [docs/extension-architecture.md](docs/extension-architecture.md).
+
 ### Theme Customization
 
 Modify `app/globals.css` to customize the VS Code theme:
@@ -210,6 +303,109 @@ pnpm e2e
 
 # Run E2E tests in UI mode
 pnpm e2e -- --ui
+
+# Collect full traces on all tests for flake triage
+TRACE_ALL=1 pnpm e2e
+
+# Or use the convenience script
+pnpm e2e:trace
+```
+
+### Testing in VS Code
+
+1. Build the webview assets: `pnpm build:webview`.
+2. Open the MAD LAB VS Code extension and run “MAD LAB: Open Workbench”.
+3. Open Webview DevTools (Command Palette: “Developer: Open Webview Developer Tools”).
+4. In the webview console, exercise the bridge routes:
+   - Show a notification:
+     ```ts
+     window.madlabBridge?.post?.('notification:show', { message: 'Hello from webview', type: 'info' });
+     ```
+   - Request theme and observe push events:
+     ```ts
+     window.madlabBridge?.request?.('theme:get', {});
+     // Then toggle VS Code theme (light/dark/high contrast) and observe `theme:data` messages.
+     ```
+
+## ⌨️ Keyboard Shortcuts
+
+The MAD LAB workbench supports extensive keyboard navigation and shortcuts for efficient financial analysis workflows:
+
+### Global Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl/Cmd + N` | Create new blank sheet |
+| `Ctrl/Cmd + W` | Close current sheet (if multiple sheets exist) |
+| `Ctrl/Cmd + T` | Open command palette/preset picker |
+| `Ctrl/Cmd + I` | Toggle Inspector panel |
+| `Ctrl/Cmd + K` | Open command palette |
+| `Ctrl/Cmd + 1-9` | Switch to sheet by index |
+| `Alt + 1` | Toggle Explorer panel |
+| `Alt + 3` | Toggle Agent Chat panel |
+| `Tab` | Navigate to next sheet |
+| `Shift + Tab` | Navigate to previous sheet |
+| `Escape` | Deselect widget / Close dialogs |
+
+### Widget Operations
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl/Cmd + D` | Duplicate selected widget |
+| `Delete` | Remove selected widget |
+| `Enter` | Configure selected widget (open Inspector) |
+
+### Accessibility Features
+
+- **Screen Reader Support**: All interactive elements include proper ARIA labels and roles
+- **Focus Management**: Logical tab order through all UI components
+- **Keyboard Navigation**: Full functionality available without mouse
+- **Focus Indicators**: Clear visual focus rings for keyboard users
+- **Skip Links**: Quick navigation to main content for screen readers
+
+### Navigation Tips
+
+- Use `Tab` and `Shift+Tab` to navigate between sheets efficiently
+- `Escape` key universally closes modals and deselects elements
+- All panel toggles use consistent Alt+Number patterns
+- Widget operations follow standard desktop application conventions
+
+## 🔐 Extension Keys & Provider Switching
+
+You can switch between Mock (synthetic) data and live Extension-backed data.
+
+1. Install and open the MAD LAB VS Code extension.
+2. Build webview assets in this repo so the extension can load them:
+
+   ```bash
+   pnpm build:webview
+   ```
+
+3. In VS Code, set your data API key(s):
+   - Command Palette: “MAD LAB: Set Alpha Vantage API Key”
+   - Optional: “MAD LAB: Set OpenAI API Key” (for agent features)
+
+4. Launch the MAD LAB Workbench (Command Palette: “MAD LAB: Open Workbench”).
+5. In the web app, use the status bar toggle to switch providers:
+   - Click the button labeled “Mock”/“Extension” at the right side of the status bar (`data-testid="provider-toggle"`).
+   - The selection persists and restores on reload.
+   - In Mock mode, a banner is shown: “Demo mode: synthetic data. Connect to extension for live data.”
+
+Troubleshooting:
+- If switching to Extension does nothing, ensure the webview is open and the `madlabBridge` is available (the extension provides it).
+- If live data calls fail, verify your API key is configured and you have network access.
+
+### Webview bridge snippets
+
+From widgets or pages, you can use the extension bridge when running inside VS Code:
+
+```ts
+// Show a notification in VS Code UI
+window.madlabBridge?.post?.('notification:show', { message: 'Export complete', type: 'info' });
+
+// Request the current host theme
+const theme = await window.madlabBridge?.request?.('theme:get', {});
+console.log('Host theme:', theme);
 ```
 
 ## 🚀 Deployment

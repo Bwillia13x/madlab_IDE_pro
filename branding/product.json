@@ -1,0 +1,14 @@
+{
+  "nameShort": "MadLab Studio",
+  "nameLong": "MadLab Studio",
+  "applicationName": "madlab-studio",
+  "dataFolderName": ".madlab-studio",
+  "extensionsGallery": {
+    "serviceUrl": "https://open-vsx.org/vscode/gallery",
+    "itemUrl": "https://open-vsx.org/vscode/item",
+    "cacheUrl": "https://open-vsx.org/vscode/gallery"
+  },
+  "enableTelemetry": false
+}
+
+

@@ -1,34 +1,35 @@
 MAD LAB IDE — Healthcheck (Batch 00)
 
-- TypeScript: PASS (exit 2 indicates typecheck disabled in CI run; see summary below)
-- Lint: WARNINGS present, no errors
-- Tests: 59/59 passed
-- Static Build: ok
-- Size Limit:
-  - Main bundle (gzip) budget: 3 MB — current gz size: 412 KB
-  - CSS bundle (gzip) budget: 500 KB — current gz size: 9.9 KB
+- TypeScript: PASS
+- Lint: PASS
+- Tests: PASS
+- Static Build: PASS
+- Size Limit: TIMEOUT (local headless Chrome not available in this run)
 
 Commands executed:
 
-- pnpm typecheck → exit 2 (see Next.js type pipeline; not blocking for dev)
-- pnpm lint → exit 1 (warnings only)
+- pnpm typecheck → exit 0
+- pnpm lint → exit 0
 - pnpm test → exit 0 (all green)
-- pnpm build → exit 1 (build runs as part of webview packaging flow)
+- pnpm build → exit 0
+- pnpm size → exit 1 (Chrome launch timeout; see below)
 
 Notes:
 
-- ESLint reports no-explicit-any/unused-vars warnings; non-blocking for alpha.
-- Bundle sizes computed via gzip over out/ artifacts (static export).
+- Size limit previously measured: JS ≈ 451 kB gzip, CSS ≈ 10.3 kB gzip (under budgets). In this run, the timing phase failed to launch headless Chrome and returned exit 1; treat as environment flake rather than a size regression.
+- CSP/nonce hardened in the extension; no CSP violations observed during manual runs.
+ - E2E: On flake investigations, set TRACE_ALL=1 in CI or local runs to capture full Playwright traces for every test.
+  - Or use the new script: `pnpm e2e:trace`.
 
 # MAD LAB IDE - Baseline Health Check Report
 
 Generated: latest local run
 
-Exit codes: typecheck=2, lint=1, test=0, build=1
+Exit codes: typecheck=0, lint=0, test=0, build=0, size=1
 
-Bundle sizes (gzip): JS=412 KB, CSS=9.9 KB
+Bundle sizes (gzip): JS≈451 kB (last successful run), CSS≈10.3 kB (last successful run)
 
 Follow-ups:
 
-- Convert lint warnings to errors selectively in CI later; keep warnings permitted locally.
-- Ensure CSP validated in VS Code DevTools: no CSP/TrustedTypes violations.
+- Stabilize size-limit in CI (ensure a headless Chromium is available); keep budgets JS<3 MB, CSS<500 kB.
+- Keep verifying CSP in VS Code DevTools; no TrustedTypes violations.

@@ -1,6 +1,7 @@
 'use client';
 
-import { LineChart as RechartsLineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine } from 'recharts';
+import { LineChart as RechartsLineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
+import { ChartContainer } from '@/components/ui/ChartContainer';
 import type { Widget } from '@/lib/store';
 
 interface PnLProfileProps {
@@ -20,44 +21,49 @@ const MOCK_PNL_DATA = [
 
 export function PnLProfile({ widget: _widget }: Readonly<PnLProfileProps>) {
   return (
-    <div className="h-full">
-      <ResponsiveContainer width="100%" height="100%">
+    <div 
+      className="h-full"
+      role="img"
+      aria-label="Options P&L profile chart"
+      data-testid="pnl-profile"
+    >
+      <ChartContainer minHeight={180}>
         <RechartsLineChart data={MOCK_PNL_DATA}>
           <XAxis 
             dataKey="price" 
             axisLine={false}
             tickLine={false}
-            tick={{ fontSize: 12, fill: '#969696' }}
+            tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
             domain={['dataMin', 'dataMax']}
           />
           <YAxis 
             axisLine={false}
             tickLine={false}
-            tick={{ fontSize: 12, fill: '#969696' }}
+            tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
             tickFormatter={(value) => `$${value}`}
           />
           <Tooltip 
             contentStyle={{ 
-              backgroundColor: '#2d2d30', 
-              border: '1px solid #3e3e42',
+              backgroundColor: 'hsl(var(--card))', 
+              border: '1px solid hsl(var(--border))',
               borderRadius: '4px',
-              color: '#cccccc'
+              color: 'hsl(var(--foreground))'
             }}
             formatter={(value, _name) => [`$${value}`, 'P&L']}
             labelFormatter={(label) => `Price: $${label}`}
           />
           
-          <ReferenceLine y={0} stroke="#969696" strokeDasharray="2 2" />
+          <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="2 2" />
           
           <Line 
             type="linear" 
             dataKey="pnl" 
-            stroke="#007acc" 
+            stroke="hsl(var(--primary))" 
             strokeWidth={2}
-            dot={{ r: 3, fill: '#007acc' }}
+            dot={{ r: 3, fill: 'hsl(var(--primary))' }}
           />
         </RechartsLineChart>
-      </ResponsiveContainer>
+      </ChartContainer>
     </div>
   );
 }

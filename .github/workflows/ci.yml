@@ -10,12 +10,14 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      TZ: UTC
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup PNPM
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
           version: 9.15.9
 
@@ -34,14 +36,58 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Run unit tests
+        run: pnpm test
+
       - name: Build webview and extension
-        run: pnpm -w build
+        run: pnpm build
+
+      - name: Check bundle sizes
+        run: pnpm size
+      
+      - name: (Optional) Load test smoke WS
+        if: ${{ false }}
+        run: pnpm load:ws
+      
+      - name: (Optional) Load test smoke Market
+        if: ${{ false }}
+        run: pnpm load:market
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps
 
-      - name: Run unit tests
-        run: pnpm test
-
       - name: Run E2E tests
         run: pnpm e2e
+
+      - name: Coverage (v8)
+        run: COVERAGE=1 pnpm test:cov
+
+      - name: Run E2E tests with full trace (optional)
+        if: ${{ false }} # flip to true or remove for diagnostic runs
+        env:
+          TRACE_ALL: '1'
+        run: pnpm e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload JUnit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-results-${{ github.run_id }}
+          path: playwright-report/results.xml
+          retention-days: 30

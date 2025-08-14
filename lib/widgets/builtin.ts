@@ -1,0 +1,340 @@
+/**
+ * Built-in widget definitions (legacy) — DEPRECATED
+ * Keeping file to avoid import errors if referenced externally.
+ * Prefer schema-based definitions in components and register via coreWidgets.ts.
+ */
+
+export const builtinWidgets: Array<Record<string, unknown>> = [
+  {
+    type: 'kpi-card',
+    name: 'KPI Card',
+    description: 'Display key performance indicators and financial metrics',
+    category: 'kpi',
+    version: '1.0.0',
+    component: 'KpiCard',
+    defaultTitle: 'KPI Card',
+    defaultSize: { w: 4, h: 3 },
+    capabilities: {
+      resizable: true,
+      configurable: true,
+      exportable: true,
+      realTimeData: true,
+    },
+    dataRequirements: {
+      symbols: true,
+      kpiData: true,
+    },
+    configSchema: {
+      symbol: {
+        type: 'string',
+        label: 'Symbol',
+        description: 'Stock symbol to display KPIs for',
+        required: true,
+        default: 'AAPL',
+      },
+      showChange: {
+        type: 'boolean',
+        label: 'Show Price Change',
+        description: 'Display price change and percentage',
+        default: true,
+      },
+      showVolume: {
+        type: 'boolean',
+        label: 'Show Volume',
+        description: 'Display trading volume',
+        default: true,
+      },
+    },
+    tags: ['finance', 'metrics', 'kpi'],
+    thumbnail: '/widgets/thumbnails/kpi-card.png',
+  },
+  
+  {
+    type: 'line-chart',
+    name: 'Line Chart',
+    description: 'Display time series data as a line chart',
+    category: 'charting',
+    version: '1.0.0',
+    component: 'LineChart',
+    defaultTitle: 'Price Chart',
+    defaultSize: { w: 8, h: 6 },
+    capabilities: {
+      resizable: true,
+      configurable: true,
+      exportable: true,
+      realTimeData: true,
+    },
+    dataRequirements: {
+      symbols: true,
+      priceData: true,
+    },
+    configSchema: {
+      symbol: {
+        type: 'string',
+        label: 'Symbol',
+        description: 'Stock symbol to chart',
+        required: true,
+        default: 'AAPL',
+      },
+      period: {
+        type: 'select',
+        label: 'Time Period',
+        description: 'Historical data range to display',
+        options: [
+          { value: '1D', label: '1 Day' },
+          { value: '5D', label: '5 Days' },
+          { value: '1M', label: '1 Month' },
+          { value: '3M', label: '3 Months' },
+          { value: '6M', label: '6 Months' },
+          { value: '1Y', label: '1 Year' },
+        ],
+        default: '6M',
+      },
+      showVolume: {
+        type: 'boolean',
+        label: 'Show Volume',
+        description: 'Display volume bars below chart',
+        default: false,
+      },
+    },
+    tags: ['chart', 'timeseries', 'price', 'technical'],
+    thumbnail: '/widgets/thumbnails/line-chart.png',
+  },
+  
+  {
+    type: 'vol-cone',
+    name: 'Volatility Cone',
+    description: 'Display implied volatility across different time periods',
+    category: 'options',
+    version: '1.0.0',
+    component: 'VolCone',
+    defaultTitle: 'Volatility Cone',
+    defaultSize: { w: 6, h: 5 },
+    capabilities: {
+      resizable: true,
+      configurable: true,
+      exportable: true,
+      realTimeData: true,
+    },
+    dataRequirements: {
+      symbols: true,
+      volData: true,
+    },
+    configSchema: {
+      symbol: {
+        type: 'string',
+        label: 'Symbol',
+        description: 'Stock symbol for volatility analysis',
+        required: true,
+        default: 'AAPL',
+      },
+      showPercentiles: {
+        type: 'boolean',
+        label: 'Show Percentiles',
+        description: 'Display 10th, 25th, 75th, and 90th percentiles',
+        default: true,
+      },
+      highlightCurrent: {
+        type: 'boolean',
+        label: 'Highlight Current',
+        description: 'Emphasize current implied volatility',
+        default: true,
+      },
+    },
+    tags: ['volatility', 'options', 'risk', 'implied-vol'],
+    thumbnail: '/widgets/thumbnails/vol-cone.png',
+  },
+  
+  {
+    type: 'var-es',
+    name: 'VaR & Expected Shortfall',
+    description: 'Calculate and display Value at Risk and Expected Shortfall metrics',
+    category: 'risk',
+    version: '1.0.0',
+    component: 'VarEs',
+    defaultTitle: 'Risk Metrics',
+    defaultSize: { w: 5, h: 4 },
+    capabilities: {
+      resizable: true,
+      configurable: true,
+      exportable: true,
+      realTimeData: false,
+    },
+    dataRequirements: {
+      symbols: true,
+      priceData: true,
+    },
+    configSchema: {
+      symbol: {
+        type: 'string',
+        label: 'Symbol',
+        description: 'Stock symbol for risk calculation',
+        required: true,
+        default: 'AAPL',
+      },
+      confidenceLevel: {
+        type: 'select',
+        label: 'Confidence Level',
+        description: 'Statistical confidence level for VaR calculation',
+        options: [
+          { value: 0.95, label: '95%' },
+          { value: 0.99, label: '99%' },
+        ],
+        default: 0.95,
+      },
+      timeHorizon: {
+        type: 'select',
+        label: 'Time Horizon',
+        description: 'Time period for risk calculation',
+        options: [
+          { value: 1, label: '1 Day' },
+          { value: 7, label: '1 Week' },
+          { value: 30, label: '1 Month' },
+        ],
+        default: 1,
+      },
+    },
+    tags: ['risk', 'var', 'expected-shortfall', 'portfolio'],
+    thumbnail: '/widgets/thumbnails/var-es.png',
+  },
+  
+  {
+    type: 'data-table',
+    name: 'Data Table',
+    description: 'Display tabular data with sorting and filtering',
+    category: 'utility',
+    version: '1.0.0',
+    component: 'DataTable',
+    defaultTitle: 'Data Table',
+    defaultSize: { w: 8, h: 6 },
+    capabilities: {
+      resizable: true,
+      configurable: true,
+      exportable: true,
+      realTimeData: false,
+    },
+    configSchema: {
+      dataSource: {
+        type: 'select',
+        label: 'Data Source',
+        description: 'Source of data to display',
+        options: [
+          { value: 'symbols', label: 'Symbol List' },
+          { value: 'kpis', label: 'KPI Data' },
+          { value: 'custom', label: 'Custom Data' },
+        ],
+        default: 'symbols',
+      },
+      pageSize: {
+        type: 'number',
+        label: 'Page Size',
+        description: 'Number of rows per page',
+        default: 10,
+      },
+      showSearch: {
+        type: 'boolean',
+        label: 'Show Search',
+        description: 'Enable search functionality',
+        default: true,
+      },
+    },
+    tags: ['table', 'data', 'utility', 'sorting'],
+    thumbnail: '/widgets/thumbnails/data-table.png',
+  },
+  
+  {
+    type: 'correlation-matrix',
+    name: 'Correlation Matrix',
+    description: 'Display correlation matrix between multiple assets',
+    category: 'analysis',
+    version: '1.0.0',
+    component: 'CorrelationMatrix',
+    defaultTitle: 'Correlation Matrix',
+    defaultSize: { w: 6, h: 6 },
+    capabilities: {
+      resizable: true,
+      configurable: true,
+      exportable: true,
+      realTimeData: true,
+    },
+    dataRequirements: {
+      symbols: true,
+      priceData: true,
+      customData: ['correlation'],
+    },
+    configSchema: {
+      symbols: {
+        type: 'string',
+        label: 'Symbols',
+        description: 'Comma-separated list of symbols',
+        required: true,
+        default: 'AAPL,GOOGL,MSFT',
+      },
+      period: {
+        type: 'select',
+        label: 'Period',
+        description: 'Time period for correlation calculation',
+        options: [
+          { value: '1M', label: '1 Month' },
+          { value: '3M', label: '3 Months' },
+          { value: '6M', label: '6 Months' },
+          { value: '1Y', label: '1 Year' },
+        ],
+        default: '1Y',
+      },
+      colorScheme: {
+        type: 'select',
+        label: 'Color Scheme',
+        description: 'Color scheme for the heatmap',
+        options: [
+          { value: 'blue-red', label: 'Blue-Red' },
+          { value: 'green-red', label: 'Green-Red' },
+          { value: 'viridis', label: 'Viridis' },
+        ],
+        default: 'blue-red',
+      },
+    },
+    tags: ['correlation', 'analysis', 'portfolio', 'heatmap'],
+    thumbnail: '/widgets/thumbnails/correlation-matrix.png',
+  },
+  
+  {
+    type: 'portfolio-summary',
+    name: 'Portfolio Summary',
+    description: 'Overview of portfolio performance and allocation',
+    category: 'kpi',
+    version: '1.0.0',
+    component: 'PortfolioSummary',
+    defaultTitle: 'Portfolio Overview',
+    defaultSize: { w: 6, h: 4 },
+    capabilities: {
+      resizable: true,
+      configurable: true,
+      exportable: true,
+      realTimeData: true,
+    },
+    configSchema: {
+      portfolioId: {
+        type: 'string',
+        label: 'Portfolio ID',
+        description: 'Portfolio identifier',
+        required: true,
+        default: 'default',
+      },
+      showAllocation: {
+        type: 'boolean',
+        label: 'Show Allocation',
+        description: 'Display asset allocation breakdown',
+        default: true,
+      },
+      showPerformance: {
+        type: 'boolean',
+        label: 'Show Performance',
+        description: 'Display performance metrics',
+        default: true,
+      },
+    },
+    tags: ['portfolio', 'summary', 'performance', 'allocation'],
+    thumbnail: '/widgets/thumbnails/portfolio-summary.png',
+  },
+];

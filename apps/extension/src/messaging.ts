@@ -19,7 +19,10 @@ export type FromWebviewMessage =
     }
   | { type: 'data:kpis'; payload: { symbol: string } & { _requestId?: number } }
   | { type: 'data:financials'; payload: { symbol: string } & { _requestId?: number } }
-  | { type: 'data:vol'; payload: { symbol: string } & { _requestId?: number } };
+  | { type: 'data:vol'; payload: { symbol: string } & { _requestId?: number } }
+  | { type: 'agent:llm'; payload: { prompt: string; tools?: any[] } & { _requestId?: number } }
+  | { type: 'llm:available'; payload: {} }
+  | { type: 'agent:plan'; payload: { text: string } & { _requestId?: number } };
 
 export type ToWebviewMessage =
   | { type: 'extension:ready'; payload: { version: number; extensionId: string } }
@@ -28,7 +31,8 @@ export type ToWebviewMessage =
   | { type: 'file:saved'; payload: { success: boolean; path?: string; error?: string } }
   | { type: 'file:opened'; payload: { success: boolean; content?: string; error?: string } }
   | { type: 'theme:data'; payload: { theme: 'dark' | 'light' | 'high-contrast' } }
-  | { type: 'agent:response'; payload: { response: string; error?: string } };
+  | { type: 'agent:response'; payload: { response: string; error?: string } }
+  | { type: 'llm:available'; payload: { ok: boolean } };
 
 export interface WebviewBridge {
   post(type: string, payload?: any): void;

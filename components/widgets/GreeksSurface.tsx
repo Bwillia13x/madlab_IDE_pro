@@ -1,6 +1,8 @@
 'use client';
 
 import type { Widget } from '@/lib/store';
+import type { WidgetProps } from '@/lib/widgets/schema';
+import { AccessibleWidget } from '@/components/ui/AccessibleWidget';
 
 interface GreeksSurfaceProps {
   widget: Widget;
@@ -15,10 +17,10 @@ const MOCK_GREEKS_DATA = [
 ];
 
 export function GreeksSurface({ widget: _widget }: Readonly<GreeksSurfaceProps>) {
-  return (
-    <div className="h-full overflow-auto">
+  const content = (
+    <div className="h-full overflow-auto" role="table" aria-label="Options Greeks table" data-testid="greeks-surface">
       <div className="min-w-full">
-        <div className="grid grid-cols-5 gap-2 text-xs text-[#969696] mb-2 font-medium">
+        <div className="grid grid-cols-5 gap-2 text-xs text-muted-foreground mb-2 font-medium">
           <div>Strike</div>
           <div>Delta</div>
           <div>Gamma</div>
@@ -27,8 +29,8 @@ export function GreeksSurface({ widget: _widget }: Readonly<GreeksSurfaceProps>)
         </div>
         
         {MOCK_GREEKS_DATA.map((row, index) => (
-          <div key={index} className="grid grid-cols-5 gap-2 text-xs mb-2 p-2 bg-[#2d2d30] rounded">
-            <div className="text-[#cccccc] font-medium">{row.strike}</div>
+          <div key={index} className="grid grid-cols-5 gap-2 text-xs mb-2 p-2 bg-card rounded" role="row">
+            <div className="text-foreground font-medium">{row.strike}</div>
             <div className="text-green-400">{row.delta}</div>
             <div className="text-blue-400">{row.gamma}</div>
             <div className="text-red-400">{row.theta}</div>
@@ -37,10 +39,20 @@ export function GreeksSurface({ widget: _widget }: Readonly<GreeksSurfaceProps>)
         ))}
       </div>
       
-      <div className="text-xs text-[#969696] mt-3 text-center">
+      <div className="text-xs text-muted-foreground mt-3 text-center">
         Current Spot: $102.45 | DTE: 30
       </div>
     </div>
+  );
+
+  return (
+    <AccessibleWidget
+      widgetType="greeks-surface"
+      title="Greeks Surface"
+      helpText="Tabular display of option Greeks across strikes."
+    >
+      {content}
+    </AccessibleWidget>
   );
 }
 
@@ -51,3 +63,10 @@ export function GreeksSurface({ widget: _widget }: Readonly<GreeksSurfaceProps>)
 // - Implied volatility surface integration
 // - Portfolio Greeks aggregation
 // - Real-time Greeks updates
+
+// Default export for lazy import via getLazyWidget('GreeksSurface')
+export default function GreeksSurfaceDefault(props: WidgetProps) {
+  const cfg = (props.config as any) || {};
+  const stub = { id: props.id, type: 'greeks-surface', title: cfg.title || 'Greeks Surface', layout: { i: props.id, x: 0, y: 0, w: 6, h: 6 } } as unknown as Widget;
+  return <GreeksSurface widget={stub} />;
+}

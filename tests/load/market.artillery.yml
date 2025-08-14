@@ -1,0 +1,19 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 30
+      arrivalRate: 10
+scenarios:
+  - flow:
+      - get:
+          url: "/api/market?symbol=AAPL&type=prices&range=6M"
+      - get:
+          url: "/api/market?symbol=MSFT&type=kpis"
+      - post:
+          url: "/api/market"
+          json:
+            symbols: ["AAPL","MSFT","GOOG"]
+            type: "batch"
+            range: "6M"
+
+

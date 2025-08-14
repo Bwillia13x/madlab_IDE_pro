@@ -1,0 +1,40 @@
+
+> mad-lab-workbench@0.1.0 build /Users/benjaminwilliams/madlab_IDE_proto/madlab_IDE_proto
+> pnpm -w build:webview && pnpm --filter @madlab/extension build
+
+
+> mad-lab-workbench@0.1.0 build:webview /Users/benjaminwilliams/madlab_IDE_proto/madlab_IDE_proto
+> next build && rm -rf apps/extension/dist/webview && mkdir -p apps/extension/dist && cp -R out apps/extension/dist/webview
+
+   Creating an optimized production build...
+ ✓ Compiled successfully
+   Skipping linting
+   Checking validity of types...
+   Collecting page data...
+   Generating static pages (0/5)...
+   Generating static pages (1/5)
+
+Time 6.34725
+Time 5.869875
+   Generating static pages (2/5)
+
+   Generating static pages (3/5)
+
+ ✓ Generating static pages (5/5)
+   Finalizing page optimization...
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    204 kB          355 kB
+├ ○ /_not-found                          875 B          80.8 kB
+└ λ /api/market                          0 B                0 B
++ First Load JS shared by all            80 kB
+  ├ chunks/270-835523613da4b1a7.js       26.7 kB
+  ├ chunks/a122118a-b13d7705d2fdbf67.js  50.9 kB
+  ├ chunks/main-app-efd05a0e2b527413.js  222 B
+  └ chunks/webpack-945e0c3f9df49604.js   2.13 kB
+
+
+λ  (Server)  server-side renders at runtime (uses getInitialProps or getServerSideProps)
+○  (Static)  automatically rendered as static HTML (uses no initial props)
+
+No projects matched the filters in "/Users/benjaminwilliams/madlab_IDE_proto/madlab_IDE_proto"

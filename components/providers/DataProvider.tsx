@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { initializeDataProviders } from '@/lib/data/init';
+import { initializeProviders } from '@/lib/data/init';
 import { useWorkspaceStore } from '@/lib/store';
 import { setDataProvider } from '@/lib/data/providers';
 
@@ -10,17 +10,46 @@ interface DataProviderProps {
 }
 
 export function DataProvider({ children }: DataProviderProps) {
-  const [initialized, setInitialized] = useState(false);
+  // Default to initialized to avoid SSR hydration waits in E2E/dev
+  const [initialized, setInitialized] = useState(true);
   const dataProvider = useWorkspaceStore((state) => state.dataProvider);
 
   // Initialize providers on mount
   useEffect(() => {
-    initializeDataProviders()
-      .then(() => setInitialized(true))
-      .catch((error) => {
+    (async () => {
+      try {
+        initializeProviders();
+        // Automatically select extension provider if bridge is available at boot
+        try {
+          const bridgeAvailable = typeof window !== 'undefined' && !!(window as any).madlabBridge && typeof (window as any).madlabBridge.request === 'function';
+          // Expose bridge presence to the DOM for other components/tests
+          try {
+            if (typeof document !== 'undefined') {
+              if (bridgeAvailable) {
+                document.documentElement.setAttribute('data-extension-bridge', 'true');
+              } else {
+                document.documentElement.removeAttribute('data-extension-bridge');
+              }
+            }
+          } catch {}
+          if (bridgeAvailable) {
+            // Proactively register extension provider if not already
+            try {
+              const { dataProviderRegistry, registerDataProvider } = await import('@/lib/data/providers');
+              if (!dataProviderRegistry.getProvider('extension')) {
+                const { extensionProvider } = await import('@/lib/data/providers/ExtensionBridgeProvider');
+                registerDataProvider('extension', extensionProvider);
+              }
+            } catch {}
+            // Do not auto-switch; leave toggle interaction to tests/UI
+          }
+        } catch {}
+        // already initialized true by default; no-op
+      } catch (error) {
         console.error('Failed to initialize data providers:', error);
-        setInitialized(true); // Still allow app to load
-      });
+        // keep initialized true to avoid blocking UI
+      }
+    })();
   }, []);
 
   // Sync store state with provider registry
@@ -36,29 +65,21 @@ export function DataProvider({ children }: DataProviderProps) {
 
   const banner = useMemo(() => {
     if (!initialized) return null;
-    if (dataProvider !== 'mock') return null;
+    const isMock = (dataProvider || '').toLowerCase() === 'mock';
+    if (!isMock) return null;
     return (
       <div
         role="status"
         aria-live="polite"
         className="w-full bg-amber-500/20 text-amber-900 dark:text-amber-100 border border-amber-500/40 px-3 py-2 text-sm text-center"
       >
-        Demo mode: synthetic data
+        Demo mode: synthetic data. Connect to extension for live data.
       </div>
     );
   }, [initialized, dataProvider]);
 
   // Don't render children until providers are initialized
-  if (!initialized) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Initializing data providers...</p>
-        </div>
-      </div>
-    );
-  }
+  // Always render children; provider init happens synchronously on import and in effect
 
   return (
     <div className="min-h-screen flex flex-col">

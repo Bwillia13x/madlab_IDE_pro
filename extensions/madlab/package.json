@@ -1,0 +1,40 @@
+{
+  "name": "madlab",
+  "displayName": "MadLab",
+  "publisher": "madlab",
+  "version": "0.0.1",
+  "engines": { "vscode": "^1.90.0" },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onCommand:madlab.open",
+    "*"
+  ],
+  "contributes": {
+    "commands": [
+      { "command": "madlab.open", "title": "MadLab: Open Finance Panel" }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "madlab",
+          "title": "MadLab",
+          "icon": "./media/madlab.svg"
+        }
+      ]
+    },
+    "views": {
+      "madlab": [
+        { "id": "madlab.financePanel", "name": "Finance Panel" },
+        { "id": "madlab.models", "name": "Models" }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "tsc -p ./",
+    "watch": "tsc -w -p ./"
+  },
+  "devDependencies": {
+    "typescript": "~5.6.3",
+    "@types/vscode": "^1.90.0"
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "name": "madlab-workbench",
+  "name": "@madlab/extension",
   "displayName": "MAD LAB Workbench",
   "description": "Opens the MAD LAB web UI in a VS Code Webview",
   "publisher": "madlab",

@@ -1,0 +1,17 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 20
+      arrivalRate: 5
+scenarios:
+  - flow:
+      - post:
+          url: "/api/workspaces"
+          json:
+            title: "Load Test WS"
+            data:
+              sheets: []
+      - get:
+          url: "/api/templates"
+
+

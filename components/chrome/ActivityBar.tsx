@@ -13,6 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useWorkspaceStore } from '@/lib/store';
+import { useState } from 'react';
+import { SettingsPanel } from '@/components/panels/SettingsPanel';
 
 const ACTIVITY_ITEMS = [
   { id: 'explorer', icon: Folder, label: 'Explorer', active: true },
@@ -23,10 +25,11 @@ const ACTIVITY_ITEMS = [
 ];
 
 export function ActivityBar() {
-  const { toggleExplorer, toggleChat } = useWorkspaceStore();
+  const { toggleExplorer, setActiveBottomTab } = useWorkspaceStore();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
-  <div className="w-12 bg-[#2c2c2c] border-r border-[#2d2d30] flex flex-col" data-testid="activity-bar">
+  <div className="w-12 bg-secondary border-r border-border flex flex-col group" data-testid="activity-bar">
       <TooltipProvider>
         <div className="flex flex-col">
           {ACTIVITY_ITEMS.map((item) => (
@@ -36,17 +39,24 @@ export function ActivityBar() {
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    "w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-[#2a2d2e]",
-                    item.active && "border-l-[#007acc] bg-[#37373d]"
+                    "w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-accent transition-opacity duration-200",
+                    item.active && "border-l-primary bg-accent",
+                    // Progressive disclosure: fade in non-primary actions on hover/focus
+                    !item.active && "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100"
                   )}
                   aria-label={item.label}
+                  data-testid={item.id === 'explorer' ? 'activity-explorer' : undefined}
                   onClick={() => {
                     if (item.id === 'explorer') {
                       toggleExplorer();
                     }
+                    if (item.id === 'extensions') {
+                      // Focus bottom panel Problems tab to stabilize E2E
+                      setActiveBottomTab('problems');
+                    }
                   }}
                 >
-                  <item.icon className="h-5 w-5 text-[#cccccc]" />
+                  <item.icon className="h-5 w-5 text-foreground" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="right">
@@ -63,11 +73,11 @@ export function ActivityBar() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-[#2a2d2e]"
-                onClick={toggleChat}
+                className="w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-accent transition-opacity duration-200 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100"
+                data-testid="activity-chat"
                 aria-label="Agent Chat"
               >
-                <MessageSquare className="h-5 w-5 text-[#cccccc]" />
+                <MessageSquare className="h-5 w-5 text-foreground" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right">
@@ -80,16 +90,18 @@ export function ActivityBar() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-[#2a2d2e]"
+                className="w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-accent transition-opacity duration-200 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100"
+                data-testid="activity-settings"
                 aria-label="Settings"
-              >
-                <Settings className="h-5 w-5 text-[#cccccc]" />
+                onClick={() => setSettingsOpen(true)}>
+                <Settings className="h-5 w-5 text-foreground" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right">
               <p>Settings</p>
             </TooltipContent>
           </Tooltip>
+          <SettingsPanel open={settingsOpen} onOpenChange={setSettingsOpen} />
         </div>
       </TooltipProvider>
     </div>

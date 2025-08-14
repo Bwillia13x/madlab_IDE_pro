@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useWorkspaceStore } from '@/lib/store';
-import { useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 const MOCK_EXPLORER_DATA: { data: TreeItem[]; models: TreeItem[] } = {
   data: [
@@ -60,10 +60,12 @@ function ExplorerItem({ item, level }: ExplorerItemProps) {
         variant="ghost"
         size="sm"
         className={cn(
-          "w-full h-6 justify-start px-1 py-0 font-normal text-xs text-[#cccccc] hover:bg-[#2a2d2e]",
+          "w-full h-6 justify-start px-1 py-0 font-normal text-xs text-foreground hover:bg-accent",
           `pl-${level * 4 + 1}`
         )}
         onClick={() => hasChildren && setExpanded(!expanded)}
+        data-testid={`explorer-item-${item.type}`}
+        aria-label={`${item.type}:${item.name}`}
       >
         {hasChildren && (
           <div className="w-4 flex justify-center">
@@ -75,7 +77,7 @@ function ExplorerItem({ item, level }: ExplorerItemProps) {
           </div>
         )}
         <item.icon className="h-3 w-3 mr-1" />
-        <span className="truncate">{item.name}</span>
+        <span className="truncate" data-testid="explorer-item-name">{item.name}</span>
       </Button>
 
     {expanded && hasChildren && item.children && (
@@ -90,19 +92,87 @@ function ExplorerItem({ item, level }: ExplorerItemProps) {
 }
 
 export function Explorer() {
-  const { explorerCollapsed } = useWorkspaceStore();
+  const { explorerCollapsed, explorerWidth, setExplorerWidth } = useWorkspaceStore();
+  // Ensure toggle works across renders by not memoizing collapsed renders. No change required.
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const startX = useRef(0);
+  const startWidth = useRef(0);
+
+  const onMouseMove = useCallback((e: MouseEvent) => {
+    const delta = e.clientX - startX.current;
+    const next = Math.max(200, Math.min(600, startWidth.current + delta));
+    setExplorerWidth(next);
+  }, [setExplorerWidth]);
+
+  const onMouseUp = useCallback(() => {
+    setIsResizing(false);
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', onMouseUp);
+  }, [onMouseMove]);
+
+  const onMouseDownHandle = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    startX.current = e.clientX;
+    startWidth.current = containerRef.current?.getBoundingClientRect().width || explorerWidth;
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, [explorerWidth, onMouseMove, onMouseUp]);
   const [dataExpanded, setDataExpanded] = useState(true);
   const [modelsExpanded, setModelsExpanded] = useState(true);
 
-  if (explorerCollapsed) return null;
+  // Ensure the hidden attribute reflects state immediately for E2E determinism
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (explorerCollapsed) {
+      el.setAttribute('hidden', '');
+      el.setAttribute('aria-hidden', 'true');
+    } else {
+      el.removeAttribute('hidden');
+      el.setAttribute('aria-hidden', 'false');
+    }
+  }, [explorerCollapsed]);
 
   return (
-    <div className="w-60 bg-[#252526] border-r border-[#2d2d30] flex flex-col" data-testid="explorer">
+    <div
+      ref={containerRef}
+      className={cn("relative bg-secondary border-r border-border flex flex-col select-none group", isResizing && "cursor-col-resize")}
+      style={{ width: Math.max(200, Math.min(600, explorerWidth)) }}
+      data-testid="explorer-panel"
+      hidden={explorerCollapsed}
+      aria-hidden={explorerCollapsed ? 'true' : 'false'}
+    >
       {/* Header */}
-      <div className="h-9 px-3 flex items-center justify-between border-b border-[#2d2d30]">
-        <span className="text-xs font-medium text-[#cccccc] uppercase tracking-wider">
+      <div className="h-9 px-3 flex items-center justify-between border-b border-border">
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           EXPLORER
         </span>
+        {/* Subtle section toggles appear on hover/focus for progressive disclosure */}
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-xs"
+            onClick={() => setDataExpanded((v) => !v)}
+            aria-pressed={dataExpanded}
+            aria-label="Toggle Data section"
+          >
+            Data
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-xs"
+            onClick={() => setModelsExpanded((v) => !v)}
+            aria-pressed={modelsExpanded}
+            aria-label="Toggle Models section"
+          >
+            Models
+          </Button>
+        </div>
       </div>
 
       <ScrollArea className="flex-1">
@@ -112,7 +182,7 @@ export function Explorer() {
             <Button
               variant="ghost"
               size="sm"
-              className="w-full h-6 justify-start px-1 py-0 font-medium text-xs text-[#cccccc] hover:bg-[#2a2d2e]"
+              className="w-full h-6 justify-start px-1 py-0 font-medium text-xs text-foreground hover:bg-accent"
               onClick={() => setDataExpanded(!dataExpanded)}
             >
               {dataExpanded ? (
@@ -138,7 +208,7 @@ export function Explorer() {
             <Button
               variant="ghost"
               size="sm"
-              className="w-full h-6 justify-start px-1 py-0 font-medium text-xs text-[#cccccc] hover:bg-[#2a2d2e]"
+              className="w-full h-6 justify-start px-1 py-0 font-medium text-xs text-foreground hover:bg-accent"
               onClick={() => setModelsExpanded(!modelsExpanded)}
             >
               {modelsExpanded ? (
@@ -160,6 +230,25 @@ export function Explorer() {
           </div>
         </div>
       </ScrollArea>
+
+      {/* Resize handle - reveal subtly on hover/focus to reduce visual noise */}
+      <div
+        onMouseDown={onMouseDownHandle}
+        data-testid="explorer-resize-handle"
+        className="absolute top-0 right-0 h-full w-2 cursor-col-resize hover:bg-accent/50 active:bg-accent opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200"
+        aria-label="Resize Explorer"
+        role="separator"
+        onKeyDown={(e) => {
+          // Keyboard nudge: arrow left/right to adjust width
+          if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+            e.preventDefault();
+            const delta = e.key === 'ArrowLeft' ? -10 : 10;
+            const next = Math.max(200, Math.min(600, explorerWidth + delta));
+            setExplorerWidth(next);
+          }
+        }}
+        tabIndex={0}
+      />
     </div>
   );
 }

@@ -1,0 +1,20 @@
+config:
+  target: "ws://localhost:3000"
+  phases:
+    - duration: 30
+      arrivalRate: 5
+scenarios:
+  - engine: ws
+    flow:
+      - connect: "/api/stream/ws?symbols=AAPL,MSFT,GOOG&interval=500"
+      - think: 5
+      - send: '{"type":"subscribe","symbols":["TSLA","NVDA"]}'
+      - think: 10
+      - send: '{"type":"unsubscribe","symbols":["TSLA"]}'
+      - think: 5
+      - loop:
+          - send: '{"type":"ping"}'
+          - think: 10
+        count: 3
+
+

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":renovatePrefix",
+    ":timezone(UTC)"
+  ],
+  "rangeStrategy": "bump",
+  "dependencyDashboard": true,
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "matchManagers": ["npm"],
+      "matchPackagePatterns": ["@types/", "eslint", "vitest", "playwright"],
+      "groupName": "dev-dependencies (types/tests/lint)"
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchPackagePatterns": ["@radix-ui/"],
+      "groupName": "radix-ui"
+    },
+    {
+      "matchPackagePatterns": ["next", "react", "react-dom"],
+      "groupName": "framework core",
+      "rangeStrategy": "replace"
+    }
+  ],
+  "schedule": ["after 9pm on sunday"],
+  "prHourlyLimit": 5,
+  "prConcurrentLimit": 10
+}
+

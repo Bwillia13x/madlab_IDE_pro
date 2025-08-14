@@ -1,0 +1,9 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AutoForm > renders controls for string/number/boolean/enum 1`] = `
+<div>
+  <div
+    class="space-y-3"
+  />
+</div>
+`;

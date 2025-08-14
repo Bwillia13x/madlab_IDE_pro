@@ -1,6 +1,7 @@
 'use client';
 
-import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from 'recharts';
+import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
+import { ChartContainer } from '@/components/ui/ChartContainer';
 import type { Widget } from '@/lib/store';
 
 interface FactorExposuresProps {
@@ -9,7 +10,7 @@ interface FactorExposuresProps {
 }
 
 const MOCK_FACTOR_DATA = [
-  { factor: 'Market', exposure: 0.85, color: '#007acc' },
+  { factor: 'Market', exposure: 0.85, color: 'hsl(var(--primary))' },
   { factor: 'Size', exposure: -0.12, color: '#ff6b6b' },
   { factor: 'Value', exposure: 0.34, color: '#51cf66' },
   { factor: 'Momentum', exposure: 0.18, color: '#ffd43b' },
@@ -18,30 +19,35 @@ const MOCK_FACTOR_DATA = [
 
 export function FactorExposures({ widget: _widget }: Readonly<FactorExposuresProps>) {
   return (
-    <div className="h-full">
-      <ResponsiveContainer width="100%" height="100%">
+    <div 
+      className="h-full"
+      role="img"
+      aria-label="Factor exposures bar chart"
+      data-testid="factor-exposures"
+    >
+      <ChartContainer minHeight={180}>
         <RechartsBarChart data={MOCK_FACTOR_DATA} layout="horizontal">
           <XAxis 
             type="number" 
             domain={[-0.5, 1]}
             axisLine={false}
             tickLine={false}
-            tick={{ fontSize: 12, fill: '#969696' }}
+            tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
           />
           <YAxis 
             type="category" 
             dataKey="factor" 
             axisLine={false}
             tickLine={false}
-            tick={{ fontSize: 12, fill: '#969696' }}
+            tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
             width={60}
           />
           <Tooltip 
-            contentStyle={{ 
-              backgroundColor: '#2d2d30', 
-              border: '1px solid #3e3e42',
+            contentStyle={{
+              backgroundColor: 'hsl(var(--card))',
+              border: '1px solid hsl(var(--border))',
               borderRadius: '4px',
-              color: '#cccccc'
+              color: 'hsl(var(--foreground))'
             }}
             formatter={(value: number | string) => {
               const num = typeof value === 'number' ? value : Number(value);
@@ -55,7 +61,7 @@ export function FactorExposures({ widget: _widget }: Readonly<FactorExposuresPro
             ))}
           </Bar>
         </RechartsBarChart>
-      </ResponsiveContainer>
+      </ChartContainer>
     </div>
   );
 }

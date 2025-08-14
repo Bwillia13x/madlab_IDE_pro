@@ -1,44 +1,46 @@
 'use client';
 
-import { Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Area, AreaChart } from 'recharts';
+import { Line, XAxis, YAxis, Tooltip, Area, AreaChart } from 'recharts';
+import { ChartContainer } from '@/components/ui/ChartContainer';
 import type { Widget } from '@/lib/store';
+import { useVolSurface } from '@/lib/data/hooks';
+import type { WidgetProps } from '@/lib/widgets/schema';
 
 interface VolConeProps {
   widget: Widget;
   onTitleChange?: (title: string) => void;
+  symbol?: string;
 }
 
-const MOCK_VOL_CONE_DATA = [
-  { dte: 7, p10: 0.15, p25: 0.18, p50: 0.22, p75: 0.26, p90: 0.32, current: 0.24 },
-  { dte: 14, p10: 0.16, p25: 0.19, p50: 0.23, p75: 0.27, p90: 0.33, current: 0.25 },
-  { dte: 30, p10: 0.17, p25: 0.20, p50: 0.24, p75: 0.28, p90: 0.34, current: 0.26 },
-  { dte: 60, p10: 0.18, p25: 0.21, p50: 0.25, p75: 0.29, p90: 0.35, current: 0.27 },
-  { dte: 90, p10: 0.19, p25: 0.22, p50: 0.26, p75: 0.30, p90: 0.36, current: 0.28 },
-];
-
-export function VolCone({ widget: _widget }: Readonly<VolConeProps>) {
+export function VolCone({ widget: _widget, symbol }: Readonly<VolConeProps>) {
+  const { data } = useVolSurface(symbol)
   return (
-    <div className="h-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={MOCK_VOL_CONE_DATA}>
+    <div 
+      className="h-full"
+      role="img"
+      aria-label={`Volatility cone for ${symbol || 'selected asset'}`}
+      data-testid="vol-cone"
+    >
+      <ChartContainer minHeight={200}>
+        <AreaChart data={data?.points ?? []}>
           <XAxis 
             dataKey="dte" 
             axisLine={false}
             tickLine={false}
-            tick={{ fontSize: 12, fill: '#969696' }}
+            tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
           />
           <YAxis 
             axisLine={false}
             tickLine={false}
-            tick={{ fontSize: 12, fill: '#969696' }}
+            tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
             tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
           />
           <Tooltip 
             contentStyle={{ 
-              backgroundColor: '#2d2d30', 
-              border: '1px solid #3e3e42',
+              backgroundColor: 'hsl(var(--card))', 
+              border: '1px solid hsl(var(--border))',
               borderRadius: '4px',
-              color: '#cccccc'
+              color: 'hsl(var(--foreground))'
             }}
             labelFormatter={(label) => `${label} DTE`}
             formatter={(value: number | string, name) => {
@@ -48,21 +50,21 @@ export function VolCone({ widget: _widget }: Readonly<VolConeProps>) {
             }}
           />
           
-          <Area dataKey="p90" stackId="1" stroke="none" fill="#ef4444" fillOpacity={0.1} />
-          <Area dataKey="p75" stackId="1" stroke="none" fill="#f97316" fillOpacity={0.2} />
-          <Area dataKey="p50" stackId="1" stroke="none" fill="#eab308" fillOpacity={0.3} />
-          <Area dataKey="p25" stackId="1" stroke="none" fill="#22c55e" fillOpacity={0.2} />
-          <Area dataKey="p10" stackId="1" stroke="none" fill="#3b82f6" fillOpacity={0.1} />
+          <Area dataKey="p90" stackId="1" stroke="none" fill="hsl(var(--destructive))" fillOpacity={0.1} />
+          <Area dataKey="p75" stackId="1" stroke="none" fill="var(--chart-orange)" fillOpacity={0.2} />
+          <Area dataKey="p50" stackId="1" stroke="none" fill="var(--chart-yellow)" fillOpacity={0.3} />
+          <Area dataKey="p25" stackId="1" stroke="none" fill="var(--chart-green)" fillOpacity={0.2} />
+          <Area dataKey="p10" stackId="1" stroke="none" fill="var(--chart-blue)" fillOpacity={0.1} />
           
           <Line 
             type="monotone" 
             dataKey="current" 
-            stroke="#007acc" 
+            stroke="hsl(var(--primary))" 
             strokeWidth={2}
-            dot={{ r: 3, fill: '#007acc' }}
+            dot={{ r: 3, fill: 'hsl(var(--primary))' }}
           />
         </AreaChart>
-      </ResponsiveContainer>
+      </ChartContainer>
     </div>
   );
 }
@@ -74,3 +76,11 @@ export function VolCone({ widget: _widget }: Readonly<VolConeProps>) {
 // - Real-time volatility surface updates
 // - Volatility forecasting models
 // - Integration with options pricing
+
+// Default export for lazy import via getLazyWidget('VolCone')
+export default function VolConeDefault(props: WidgetProps) {
+  const cfg = (props.config as any) || {};
+  const symbol = typeof cfg.symbol === 'string' ? cfg.symbol : undefined;
+  const stub = { id: props.id, type: 'vol-cone', title: cfg.title || 'Volatility Cone', layout: { i: props.id, x: 0, y: 0, w: 6, h: 5 } } as unknown as Widget;
+  return <VolCone widget={stub} symbol={symbol} />;
+}

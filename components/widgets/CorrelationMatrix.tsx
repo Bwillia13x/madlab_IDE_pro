@@ -1,7 +1,9 @@
 'use client';
 
 import type { Widget } from '@/lib/store';
+import type { WidgetProps } from '@/lib/widgets/schema';
 import { cn } from '@/lib/utils';
+import { AccessibleWidget } from '@/components/ui/AccessibleWidget';
 
 interface CorrelationMatrixProps {
   widget: Widget;
@@ -27,9 +29,9 @@ function getCorrelationColor(value: number): string {
 }
 
 export function CorrelationMatrix({ widget: _widget }: Readonly<CorrelationMatrixProps>) {
-  return (
-    <div className="h-full flex flex-col">
-      <div className="grid grid-cols-6 gap-1 text-xs text-[#969696] mb-2">
+  const content = (
+    <div className="h-full flex flex-col" role="img" aria-label="Asset correlation matrix" data-testid="correlation-matrix">
+      <div className="grid grid-cols-6 gap-1 text-xs text-muted-foreground mb-2">
         <div></div>
         {ASSETS.map((asset) => (
           <div key={asset} className="text-center">{asset}</div>
@@ -39,14 +41,14 @@ export function CorrelationMatrix({ widget: _widget }: Readonly<CorrelationMatri
       <div className="flex-1">
         {MOCK_CORRELATION_DATA.map((row, rowIndex) => (
           <div key={rowIndex} className="grid grid-cols-6 gap-1 mb-1">
-            <div className="text-xs text-[#969696] flex items-center">
+            <div className="text-xs text-muted-foreground flex items-center">
               {ASSETS[rowIndex]}
             </div>
             {row.map((value, colIndex) => (
               <div
                 key={colIndex}
                 className={cn(
-                  "aspect-square rounded text-xs font-medium text-white flex items-center justify-center",
+                  "aspect-square rounded text-xs font-medium text-foreground flex items-center justify-center",
                   getCorrelationColor(value)
                 )}
               >
@@ -57,10 +59,20 @@ export function CorrelationMatrix({ widget: _widget }: Readonly<CorrelationMatri
         ))}
       </div>
       
-      <div className="text-xs text-[#969696] mt-2 text-center">
+      <div className="text-xs text-muted-foreground mt-2 text-center">
         30-Day Rolling Correlation
       </div>
     </div>
+  );
+
+  return (
+    <AccessibleWidget
+      widgetType="correlation-matrix"
+      title="Correlation Matrix"
+      helpText="Matrix of pairwise asset correlations over a rolling window."
+    >
+      {content}
+    </AccessibleWidget>
   );
 }
 
@@ -71,3 +83,10 @@ export function CorrelationMatrix({ widget: _widget }: Readonly<CorrelationMatri
 // - Rolling window correlation analysis
 // - Conditional correlation models
 // - Export correlation matrices
+
+// Default export for lazy import via getLazyWidget('CorrelationMatrix')
+export default function CorrelationMatrixDefault(props: WidgetProps) {
+  const cfg = (props.config as any) || {};
+  const stub = { id: props.id, type: 'correlation-matrix', title: cfg.title || 'Correlation Matrix', layout: { i: props.id, x: 0, y: 0, w: 6, h: 6 } } as unknown as Widget;
+  return <CorrelationMatrix widget={stub} />;
+}

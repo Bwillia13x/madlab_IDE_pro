@@ -189,5 +189,12 @@ describe('Mock Data Provider', () => {
     it('has correct provider name', () => {
       expect(mockProvider.name).toBe('mock');
     });
+    
+    it('REST provider inflight dedup keying smoke', async () => {
+      const { FetchRESTProvider } = await import('@/lib/data/providers/FetchRESTProvider')
+      const provider: any = new FetchRESTProvider({ id: 't', name: 'test', options: { baseUrl: 'https://example.com', endpoint: '/api' } } as any)
+      // We cannot hit network in unit tests; just ensure inflight map exists and is used
+      expect(typeof provider.inflight).toBe('object')
+    })
   });
 });

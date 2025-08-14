@@ -1,4 +1,6 @@
-import type { SheetKind, Widget } from './store';
+import type { Widget } from './types';
+
+export type SheetKind = 'valuation' | 'charting' | 'risk' | 'options' | 'blank';
 
 export const SHEET_PRESETS: Record<SheetKind, { 
   label: string; 

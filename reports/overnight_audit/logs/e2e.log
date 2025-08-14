@@ -1,0 +1,12 @@
+
+> mad-lab-workbench@0.1.0 e2e /Users/benjaminwilliams/madlab_IDE_proto/madlab_IDE_proto
+> playwright test
+
+Error: Timed out waiting 60000ms from config.webServer.
+
+[1A[2K
+To open last HTML report run:
+[36m[39m
+[36m  pnpm exec playwright show-report[39m
+[36m[39m
+ ELIFECYCLE  Command failed with exit code 1.

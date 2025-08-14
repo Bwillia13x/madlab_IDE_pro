@@ -1,0 +1,99 @@
+name: Build MadLab Studio (Code-OSS)
+
+on:
+  push:
+    branches:
+      - studio/**
+  pull_request:
+    branches:
+      - studio/**
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-13, windows-2022, ubuntu-22.04]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install yarn
+        run: corepack enable
+
+      - name: Install build deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq libx11-dev libxkbfile-dev libsecret-1-dev rpm fakeroot
+
+      - name: Install build deps (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install jq
+
+      - name: Install build deps (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: choco install -y jq
+
+      - name: Yarn install in vscode
+        working-directory: vscode
+        run: yarn --frozen-lockfile
+
+      - name: Patch product.json
+        shell: bash
+        run: scripts/patch-product.sh
+
+      - name: Stage branding
+        shell: bash
+        run: scripts/stage-branding.sh
+
+      - name: Stage built-in extensions
+        shell: bash
+        run: scripts/stage-extensions.sh
+
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        working-directory: vscode
+        run: yarn gulp vscode-darwin-arm64-min
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        working-directory: vscode
+        shell: bash
+        run: yarn gulp vscode-win32-x64-min
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        working-directory: vscode
+        run: yarn gulp vscode-linux-x64-min
+
+      - name: Checksums
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          find vscode/.build -type f -maxdepth 2 -name "*.zip" -o -name "*.tar.gz" -o -name "*.dmg" -o -name "*.exe" | while read f; do
+            cp "$f" artifacts/
+          done
+          cd artifacts
+          shasum -a 256 * > SHA256SUMS.txt || certutil -hashfile * SHA256 > SHA256SUMS.txt || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: madlab-studio-${{ runner.os }}
+          path: artifacts
+
+

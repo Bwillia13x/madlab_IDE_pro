@@ -10,10 +10,16 @@ export default defineConfig({
     setupFiles: ['./tests/setup.ts'],
   // Exclude default folders (node_modules, dist, etc.) and our e2e tests
   exclude: [...configDefaults.exclude, 'tests/e2e/**'],
+  coverage: {
+    reporter: ['text', 'json', 'html'],
+    provider: 'v8',
+    enabled: !!process.env.COVERAGE,
+  },
   },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
+      vscode: path.resolve(__dirname, './tests/mocks/vscode.ts'),
     },
   },
 })

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MAD LAB · IDE Mock Render v3 — Gemini‑aligned</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://microsoft.github.io/vscode-codicons/dist/codicon.css">
+  <style>
+    :root{
+      /* Light UI (Gemini/Claude Code-adjacent) */
+      --bg: #f7f5ef; /* warm paper */
+      --pane: #ffffff; /* cards */
+      --pane-2: #fafafa; /* subtle panels */
+      --ink: #1f2937; /* text */
+      --muted: #6b7280; /* secondary */
+      --border: #e6e4dc; /* warm border */
+      --border-2: #d9d7ce; /* stronger */
+      --accent: #2563eb; /* blue */
+      --accent-2: #8b5cf6; /* violet */
+      --accent-3: #06b6d4; /* cyan */
+      --good: #16a34a;
+      --warn: #d97706;
+      --bad: #ef4444;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
+      --shadow-md: 0 8px 28px rgba(0,0,0,.08);
+      --radius: 12px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";overflow:hidden}
+    /* App scaffold */
+    .app{display:grid;grid-template-rows:48px 1fr 24px;height:100vh}
+    /* Titlebar */
+    .titlebar{display:flex;align-items:center;gap:10px;padding:0 12px;background:linear-gradient(180deg,#fffefb,#f4f1e8);border-bottom:1px solid var(--border);}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
+    .badge-env{margin-left:4px;font-size:12px;padding:3px 8px;border-radius:999px;background:#eef2ff;border:1px solid #dbe2ff;color:#334155}
+    .spacer{flex:1}
+    .btn{background:var(--pane);border:1px solid var(--border);box-shadow:var(--shadow-sm);color:var(--ink);padding:6px 10px;border-radius:10px;cursor:pointer}
+    .btn:hover{border-color:var(--border-2)}
+    .kbd{font-size:12px;padding:1px 6px;border-radius:6px;border:1px solid var(--border-2);background:#f1efe8}
+    /* Main frame: Activity bar | Assistant (Explorer) | Editor | Right tools */
+    .frame{display:grid;grid-template-columns:52px auto 1fr 360px;grid-template-rows:180px 1fr 220px;height:100%}
+    /* Activity bar */
+    .activity{grid-row:1/-1;grid-column:1;background:linear-gradient(180deg,#f5f2e9,#efeade);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:10px}
+    .icon{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;color:#6b7280;cursor:pointer}
+    .icon.active,.icon:hover{background:#ede9fe;color:var(--accent-2)}
+    /* Assistant / Explorer (left column) */
+    .assistant{grid-column:2;grid-row:1/3;min-width:280px;max-width:520px;background:var(--pane);border-right:1px solid var(--border);display:grid;grid-template-rows:auto 1fr;position:relative}
+    .assistant .head{padding:8px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+    .assistant .head h3{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:#475569}
+    .resizer{position:absolute;top:0;right:-3px;width:6px;height:100%;cursor:ew-resize}
+    /* Gemini banner */
+    .gemini{
+      height:140px;display:grid;place-items:center;background:linear-gradient(180deg,#fff, #faf7ef);
+      border-bottom:1px solid var(--border);
+    }
+    .gemini .word{
+      font: 900 44px/1.0 ui-sans-serif, Inter, system-ui; letter-spacing:4px;
+      background: repeating-linear-gradient(45deg,#6ee7f9 0 16px,#a78bfa 16px 32px,#f59e0b 32px 48px,#60a5fa 48px 64px);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 1px 0 rgba(0,0,0,.06)) drop-shadow(0 8px 18px rgba(139,92,246,.18));
+      text-transform: uppercase;
+    }
+    /* Tips & chat */
+    .tips{padding:10px;display:grid;gap:8px}
+    .card{background:var(--pane-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px}
+    .card h4{margin:0 0 6px 0;font-size:12px;letter-spacing:.5px;color:#475569;text-transform:uppercase}
+    .cmdline{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:#f3f0e6;border:1px dashed var(--border-2);padding:6px 8px;border-radius:8px}
+    /* Editor header row under banner: tabs + breadcrumbs */
+    .editor-tabs{grid-column:3;grid-row:1;background:var(--pane);border-bottom:1px solid var(--border);display:flex;align-items:end;justify-content:space-between}
+    .tabs{display:flex;gap:6px;align-items:center;padding:8px}
+    .tab{display:flex;align-items:center;gap:8px;height:28px;padding:0 10px;border-radius:10px;border:1px solid transparent;color:#334155;background:#fff}
+    .tab.active{border-color:var(--border-2);box-shadow:var(--shadow-sm)}
+    .crumbs{padding:0 10px 6px;color:#64748b;font-size:12px}
+    /* Editor */
+    .editor{grid-column:3;grid-row:2;background:var(--pane);border-left:1px solid var(--border);border-right:1px solid var(--border);box-shadow:var(--shadow-sm) inset 0 1px 0 #fff;position:relative;overflow:auto}
+    .code{display:grid;grid-template-columns:56px 1fr;min-height:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.8px}
+    .gutter{background:#fbfaf4;border-right:1px solid var(--border);color:#9aa1a9; padding:8px 6px;text-align:right}
+    .gutter div{height:20px}
+    .src{padding:8px 14px}
+    .tok-c{color:#94a3b8}
+    .tok-k{color:#7c3aed;font-weight:600}
+    .tok-f{color:#2563eb}
+    .tok-str{color:#047857}
+    .tok-num{color:#b45309}
+    .hl{background:linear-gradient(90deg,#fef3c7,transparent)}
+    /* Right Side: Problems / Changes / Assistant process */
+    .right{grid-column:4;grid-row:1/3;background:var(--pane);border-left:1px solid var(--border);display:grid;grid-template-rows:auto 1fr}
+    .right .head{padding:8px 10px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center}
+    .pill{font-size:12px;border:1px solid var(--border);padding:3px 8px;border-radius:999px;background:#faf7ef;color:#475569}
+    .pane-list{padding:10px;overflow:auto;display:grid;gap:10px}
+    .row{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:10px;padding:8px;background:var(--pane-2)}
+    .row.good{border-color:#d1f1dd;background:#f6fef8}
+    .row.warn{border-color:#ffe8bb;background:#fffcf2}
+    .row.bad{border-color:#ffd0d0;background:#fff6f6}
+    .row .tag{font-size:11px;padding:2px 6px;border-radius:999px;border:1px solid var(--border-2);background:#fff;color:#64748b}
+    /* Bottom Console */
+    .bottom{grid-column:2/5;grid-row:3;background:var(--pane);border-top:1px solid var(--border);display:grid;grid-template-rows:34px 1fr}
+    .bottom .tabs{display:flex;gap:6px;align-items:center;padding:0 8px;border-bottom:1px solid var(--border)}
+    .bottom .tab{height:26px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:#fff;color:#475569}
+    .bottom .tab.active{border-color:var(--border-2)}
+    .terminal{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;padding:10px;overflow:auto;background:#fbfaf5}
+    /* Status bar */
+    .status{display:flex;align-items:center;justify-content:space-between;background:#f0ede4;border-top:1px solid var(--border);color:#475569;padding:0 10px;font-size:12px}
+    /* Palette */
+    .overlay{position:fixed;inset:0;display:none;place-items:start center;padding-top:12vh;background:rgba(0,0,0,.25);backdrop-filter:blur(2px)}
+    .overlay.open{display:grid}
+    .palette{width:min(820px,92vw);background:#fff;border:1px solid var(--border-2);border-radius:14px;box-shadow:var(--shadow-md);overflow:hidden}
+    .palette .search{padding:8px;border-bottom:1px solid var(--border)}
+    .palette input{width:100%;background:#f7f5ef;border:1px solid var(--border);color:#111;padding:10px 12px;border-radius:10px}
+    .palette .list{max-height:48vh;overflow:auto}
+    .cmd{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer}
+    .cmd:hover{background:#f8f6ef}
+    .hidden{display:none !important}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Titlebar -->
+    <header class="titlebar">
+      <div class="brand">MAD LAB <span class="badge-env">node · sandbox</span></div>
+      <div class="spacer"></div>
+      <button class="btn" id="btnCmd">Command <span class="kbd">⌘K</span></button>
+    </header>
+    <section class="frame">
+      <!-- Activity -->
+      <nav class="activity" aria-label="Activity">
+        <div class="icon active" title="Assistant"></div>
+        <div class="icon" title="Explorer"></div>
+        <div class="icon" title="Search"></div>
+        <div class="icon codicon codicon-git-branch" title="Source Control"></div>
+        <div class="icon" title="Run & Debug">▶︎</div>
+        <div class="icon" title="Extensions"></div>
+        <div style="margin-top:auto" class="icon" title="Settings">⚙️</div>
+      </nav>
+      <!-- Assistant / Explorer Column -->
+      <aside class="assistant" id="assistant">
+        <div class="gemini"><div class="word">GEMINI</div></div>
+        <div class="tips">
+          <div class="card">
+            <h4>Tips for getting started</h4>
+            <div>1. Ask questions, edit files, or run commands.</div>
+            <div>2. Be specific for best results.</div>
+            <div>3. <span class="cmdline">/help</span> for more information.</div>
+          </div>
+          <div class="card">
+            <div class="cmdline">&gt; /auth</div>
+          </div>
+        </div>
+        <div class="resizer" id="resizeAssist"></div>
+      </aside>
+      <!-- Editor tabs + crumbs -->
+      <div class="editor-tabs">
+        <div class="tabs">
+          <div class="tab active">store.migrate.test.ts <span class="kbd">TS</span></div>
+          <div class="tab">lib/store.ts</div>
+          <div class="tab">components/commands/CommandPalette.tsx</div>
+        </div>
+        <div class="crumbs">madlab_IDE_proto ▶ tests ▶ store.migrate.test.ts</div>
+      </div>
+      <!-- Editor -->
+      <main class="editor" id="editor">
+        <div class="code">
+          <div class="gutter" id="gutter"></div>
+          <pre class="src">
+<span class="tok-k">describe</span>(<span class="tok-str">'zustand persist migrations'</span>, () =&gt; {
+  <span class="tok-k">it</span>(<span class="tok-str">'migrates legacy state to schema v1'</span>, () =&gt; {
+    <span class="tok-k">const</span> legacy = {
+      sheets: [
+        { id: <span class="tok-str">'s-1'</span>, title: <span class="tok-str">'Valuation'</span>,
+          widgets: [
+            { id: <span class="tok-str">'w-1'</span>, kind: <span class="tok-str">'UnknownTile'</span>, x:0,y:0,w:3,h:1 }
+          ]
+        }
+      ]
+    };
+    <span class="tok-k">const</span> next = <span class="tok-f">migrateV1</span>(legacy);
+    <span class="tok-f">expect</span>(next.schemaVersion).<span class="tok-f">toBe</span>(<span class="tok-num">1</span>);
+    <span class="tok-f">expect</span>(next.sheets[<span class="tok-num">0</span>].widgets[<span class="tok-num">0</span>].kind).<span class="tok-f">toBe</span>(<span class="tok-str">'BlankTile'</span>);
+  });
+});
+<span class="hl">// TODO: add import/export round‑trip tests</span>
+          </pre>
+        </div>
+      </main>
+      <!-- Right side panels (Problems, Changes, Planner) -->
+      <aside class="right" id="right">
+        <div class="head"><strong>Panels</strong> <span class="pill">Problems</span> <span class="pill">Changes</span> <span class="pill">Thought Process</span></div>
+        <div class="pane-list">
+          <div class="row good">✓ Created <span class="tag">store.migrate.test.ts</span> <span class="tag">+1 new</span></div>
+          <div class="row warn">⚠ Lint <span class="tag">1 warning</span> — implicit any in test util</div>
+          <div class="row"> Planned for 9s <span class="tag">View Plan</span></div>
+          <div class="row"> Searched filesystem <span class="tag">1 result</span></div>
+        </div>
+      </aside>
+      <!-- Bottom console / tests -->
+      <section class="bottom" id="bottom">
+        <div class="tabs">
+          <div class="tab active">Terminal</div>
+          <div class="tab">Output</div>
+          <div class="tab">Tests</div>
+        </div>
+        <div class="terminal" id="term">
+[10:22:31] pnpm test
+ PASS tests/store.migrate.test.ts
+  ✓ migrates legacy state to schema v1 (24 ms)
+  ✓ import/export round‑trip (16 ms)
+› Coverage: store 87% · widgets 62%
+        </div>
+      </section>
+    </section>
+    <!-- Status bar -->
+    <footer class="status">
+      <div>Valuation · 3 files edited · 2 pending</div>
+      <div id="clock">Local · --:--</div>
+    </footer>
+  </div>
+  <!-- Command Palette -->
+  <div class="overlay" id="overlay">
+    <div class="palette">
+      <div class="search"><input id="search" placeholder="Type a command… (New Sheet, Toggle Assistant, Run Tests)"/></div>
+      <div class="list" id="cmdList"></div>
+    </div>
+  </div>
+  <script>
+    // Clock
+    function tick(){const n=new Date();const hh=String(n.getHours()).padStart(2,'0');const mm=String(n.getMinutes()).padStart(2,'0');document.getElementById('clock').textContent=`Local · ${hh}:${mm}`}
+    tick(); setInterval(tick,60000);
+    // Gutter numbers
+    const gutter=document.getElementById('gutter'); for(let i=1;i<=42;i++){const d=document.createElement('div'); d.textContent=String(i).padStart(2,' '); gutter.appendChild(d)}
+    // Resize assistant panel
+    const assist=document.getElementById('assistant'); const resizer=document.getElementById('resizeAssist'); let drag=false;
+    resizer.addEventListener('mousedown',()=>{drag=true;document.body.style.cursor='ew-resize'});
+    window.addEventListener('mouseup',()=>{drag=false;document.body.style.cursor=''});
+    window.addEventListener('mousemove',(e)=>{ if(!drag) return; const rect=assist.getBoundingClientRect(); const left=rect.left; let w=Math.min(520, Math.max(280, e.clientX-left)); assist.style.gridTemplateColumns = 'auto'; assist.style.width=w+'px'; });
+    // Palette
+    const overlay=document.getElementById('overlay'); const list=document.getElementById('cmdList');
+    const commands=[
+      {title:'New Sheet · Valuation', run:()=>log('sheet:new:valuation')},
+      {title:'Toggle Assistant', run:()=>document.getElementById('assistant').classList.toggle('hidden')},
+      {title:'Toggle Right Panel', run:()=>document.getElementById('right').classList.toggle('hidden')},
+      {title:'Toggle Bottom Panel', run:()=>document.getElementById('bottom').classList.toggle('hidden')},
+      {title:'Run Tests', run:()=>log('test:run')},
+      {title:'Export Workspace (mock)', run:()=>log('export:workspace')},
+      {title:'Import Workspace (mock)', run:()=>log('import:workspace')}
+    ];
+    function render(filter=''){list.innerHTML='';commands.filter(c=>c.title.toLowerCase().includes(filter.toLowerCase())).forEach(c=>{const el=document.createElement('div'); el.className='cmd'; el.innerHTML=`<span>${c.title}</span><span class="kbd">↩︎</span>`; el.addEventListener('click',()=>{c.run();togglePalette(false)}); list.appendChild(el)})}
+    function togglePalette(open){ if(open){overlay.classList.add('open'); document.getElementById('search').focus(); render('')} else overlay.classList.remove('open')}
+    document.getElementById('btnCmd').addEventListener('click',()=>togglePalette(true));
+    document.getElementById('search').addEventListener('input', e=>render(e.target.value));
+    window.addEventListener('keydown',(e)=>{const cmd=(e.metaKey||e.ctrlKey); if(cmd&&e.key.toLowerCase()==='k'){e.preventDefault(); togglePalette(true)} if(e.altKey&&e.key==='1'){e.preventDefault(); document.getElementById('assistant').classList.toggle('hidden')} if(e.altKey&&e.key==='3'){e.preventDefault(); document.getElementById('right').classList.toggle('hidden')} if(e.altKey&&e.key.toLowerCase()==='b'){e.preventDefault(); document.getElementById('bottom').classList.toggle('hidden')}});
+    // Terminal logger (mock)
+    function log(msg){const t=document.getElementById('term'); const now=new Date(); const ts=`[${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}]`; t.textContent += `
+${ts} ${msg}`; t.scrollTop=t.scrollHeight}
+  </script>
+</body>
+</html>

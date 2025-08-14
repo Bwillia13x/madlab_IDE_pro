@@ -1,0 +1,16 @@
+{
+  "timestamp": "2025-08-14T01:41:58.514Z",
+  "overall": false,
+  "checks": {
+    "bundleSize": true,
+    "buildTime": false,
+    "testTime": true,
+    "lintTime": true
+  },
+  "budgets": {
+    "bundleSize": 3145728,
+    "buildTime": 60000,
+    "testTime": 120000,
+    "lintTime": 30000
+  }
+}

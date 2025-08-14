@@ -1,0 +1,111 @@
+
+> mad-lab-workbench@0.1.0 test /Users/benjaminwilliams/madlab_IDE_proto/madlab_IDE_proto
+> vitest run
+
+
+ RUN  v1.6.1 /Users/benjaminwilliams/madlab_IDE_proto/madlab_IDE_proto
+
+ ✓ tests/store.test.ts  (16 tests) 12ms
+ ✓ tests/store.import-export.test.ts  (4 tests) 18ms
+stdout | tests/performance.budget.test.ts > Performance Budgets > should pass performance budget check for CI/CD
+Performance Report:
+ Performance Score: 83.3/100
+Critical Issues: 1
+Warnings: 0
+
+Metrics:
+- LCP: N/Ams (budget: 2500ms)
+- FID: N/Ams (budget: 100ms)
+- CLS: N/A (budget: 0.1)
+- Widget Render: 300.02ms (budget: 200ms)
+
+CRITICAL ALERTS:
+- widgetRenderTime: 300.02 > 200
+
+stdout | tests/performance.budget.test.ts > Performance Budgets - Integration > should maintain sub-3s load time budget
+✅ Load time budget set to 3000ms as per expert recommendations
+
+stdout | tests/performance.budget.test.ts > Performance Budgets - Integration > should maintain bundle size under 3MB
+✅ Bundle size budget set to 3145728 bytes (3MB) as per expert recommendations
+
+stdout | tests/performance.budget.test.ts > Performance Budgets - Integration > should track production readiness metrics
+✅ All critical stabilization metrics meet production readiness targets
+
+ ✓ tests/performance.budget.test.ts  (12 tests) 468ms
+ ✓ tests/export.system.test.ts  (13 tests) 272ms
+ ❯ tests/accessibility.integration.test.tsx  (15 tests | 1 failed) 710ms
+   ❯ tests/accessibility.integration.test.tsx > Accessibility Integration Tests > AccessibleChart Component > should provide alternative table view
+     → Unable to find an element with the text: /show.*table/i. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"relative"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33maria-describedby[39m=[32m"Stock Price Chart-description"[39m
+        [33maria-label[39m=[32m"Stock Price Chart"[39m
+        [33mclass[39m=[32m"focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"[39m
+        [33mrole[39m=[32m"img"[39m
+        [33mstyle[39m=[32m"width: 400px; height: 300px;"[39m
+        [33mtabindex[39m=[32m"0"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mdata-testid[39m=[32m"mock-chart"[39m
+        [36m>[39m
+          [0mChart Content[0m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"sr-only"[39m
+        [33mid[39m=[32m"Stock Price Chart-description"[39m
+      [36m>[39m
+        [0mStock Price Chart line chart showing data from 2025-05-05 to 2025-05-24. The value decreased from 153.96 to 145.79 by 5.3 percent. Minimum value: 145.79, Maximum value: 154.29, Total data points: 20[0m
+      [36m</div>[39m
+      [36m<div[39m
+        [33maria-live[39m=[32m"polite"[39m
+        [33mclass[39m=[32m"sr-only"[39m
+      [36m>[39m
+        [0mUse arrow keys to navigate data points. Press Enter to select a point. Press T to toggle data table view. Press Escape to exit navigation mode.[0m
+      [36m</div>[39m
+      [36m<div[39m
+        [33maria-atomic[39m=[32m"true"[39m
+        [33maria-live[39m=[32m"polite"[39m
+        [33mclass[39m=[32m"sr-only"[39m
+        [33mid[39m=[32m"Stock Price Chart-live-region"[39m
+      [36m/>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ✓ tests/store.migrate.test.ts  (3 tests) 5ms
+ ✓ tests/data.mock.test.ts  (14 tests) 1332ms
+ ✓ tests/store.templates.test.ts  (2 tests) 7ms
+stdout | tests/registry.versioning.test.ts > Widget registry versioning > registers and retrieves by type; preserves meta.version
+Registered widget: test-widget-1755008738196 (test-widget-1755008738196)
+
+stdout | tests/registry.versioning.test.ts > Widget registry versioning > overwrites on duplicate type registration (latest wins)
+Registered widget: dup-widget-1755008738198 (dup-widget-1755008738198)
+Registered widget: dup-widget-1755008738198 (dup-widget-1755008738198)
+
+ ✓ tests/registry.versioning.test.ts  (2 tests) 3ms
+ ✓ tests/dcf.test.ts  (5 tests) 15ms
+ ✓ tests/store.presets.test.ts  (3 tests) 4ms
+ ✓ tests/provider.registry.test.ts  (2 tests) 3ms
+ ✓ tests/panels.a11y.snapshot.test.tsx  (6 tests) 612ms
+ ✓ tests/inspector.integration.test.tsx  (1 test) 68ms
+ ✓ tests/blackScholes.test.ts  (2 tests) 2ms
+ ✓ tests/risk.test.ts  (4 tests) 5ms
+ ✓ tests/vol.test.ts  (2 tests) 2ms
+ ✓ tests/dcf.widget.test.tsx  (1 test) 503ms
+ ✓ tests/autoform.snapshot.test.tsx  (1 test) 13ms
+ ✓ tests/provider.toggle.e2e.stub.test.ts  (1 test) 4ms
+ ✓ tests/linechart.widget.test.tsx  (1 test) 44ms
+ ✓ tests/widgets.a11y.snapshot.test.tsx  (14 tests) 3164ms
+
+ Test Files  1 failed | 21 passed (22)
+      Tests  1 failed | 123 passed (124)
+   Start at  08:25:34
+   Duration  6.88s (transform 1.45s, setup 3.06s, collect 6.95s, tests 7.27s, environment 16.18s, prepare 3.33s)
+
+ ELIFECYCLE  Test failed. See above for more details.
