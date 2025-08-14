@@ -1,3 +1,8 @@
+/**
+ * Inputs for a single-stage DCF model where:
+ * - Free cash flow grows at a constant rate for a finite horizon
+ * - Terminal value is computed as a simple multiple of final-year FCF
+ */
 export interface DcfInput {
   fcf0: number;
   growth: number; // annual growth rate (0.0 - 1.0)
@@ -7,17 +12,28 @@ export interface DcfInput {
   shares: number; // diluted shares outstanding
 }
 
+/**
+ * Decomposition of DCF present value
+ */
 export interface DcfResultBreakdown {
   pvStage: number;
   pvTerminal: number;
 }
 
+/**
+ * DCF output containing equity value and per-share value
+ */
 export interface DcfResult {
   equityValue: number;
   perShare: number;
   breakdown: DcfResultBreakdown;
 }
 
+/**
+ * Inputs for earnings power value approximation.
+ * Uses after-tax EBIT and reinvestment rate to proxy free cash flow,
+ * then capitalizes by WACC.
+ */
 export interface EpvInput {
   ebit: number; // current EBIT
   taxRate: number; // (0.0 - 1.0)
@@ -26,67 +42,78 @@ export interface EpvInput {
   shares: number;
 }
 
+/**
+ * EPV output
+ */
 export interface EpvResult {
   epv: number; // enterprise present value proxy
   perShare: number;
 }
 
+/**
+ * Error thrown when inputs fail validation in imperative guards.
+ * Note: Zod schemas are provided for structured validation in UI.
+ */
 export class InputValidationError extends Error {
   constructor(message: string) {
-    super(message)
-    this.name = 'InputValidationError'
+    super(message);
+    this.name = 'InputValidationError';
   }
 }
 
 function assertFinitePositive(name: string, value: number): void {
   if (!Number.isFinite(value) || value <= 0) {
-    throw new InputValidationError(`${name} must be a finite number > 0`)
+    throw new InputValidationError(`${name} must be a finite number > 0`);
   }
 }
 
 function assertFiniteNonNegative(name: string, value: number): void {
   if (!Number.isFinite(value) || value < 0) {
-    throw new InputValidationError(`${name} must be a finite number >= 0`)
+    throw new InputValidationError(`${name} must be a finite number >= 0`);
   }
 }
 
 function assertRate(name: string, value: number): void {
   if (!Number.isFinite(value) || value < 0 || value >= 1) {
-    throw new InputValidationError(`${name} must be in [0, 1)`) // allow 0, disallow 1
+    throw new InputValidationError(`${name} must be in [0, 1)`); // allow 0, disallow 1
   }
 }
 
 function assertIntegerMin(name: string, value: number, min: number): void {
   if (!Number.isInteger(value) || value < min) {
-    throw new InputValidationError(`${name} must be an integer >= ${min}`)
+    throw new InputValidationError(`${name} must be an integer >= ${min}`);
   }
 }
 
 export function dcf(input: DcfInput): DcfResult {
-  const { fcf0, growth, wacc, horizon, terminalMultiple, shares } = input
+  const { fcf0, growth, wacc, horizon, terminalMultiple, shares } = input;
 
-  assertFinitePositive('fcf0', fcf0)
-  assertRate('growth', growth)
-  assertRate('wacc', wacc)
-  assertIntegerMin('horizon', horizon, 1)
-  assertFinitePositive('terminalMultiple', terminalMultiple)
-  assertFinitePositive('shares', shares)
+  assertFinitePositive('fcf0', fcf0);
+  if (!(growth > -0.5 && growth < 1 && Number.isFinite(growth))) {
+    throw new InputValidationError('growth must be finite and within (-0.5, 1)');
+  }
+  if (!(wacc > 0 && wacc < 1 && Number.isFinite(wacc))) {
+    throw new InputValidationError('wacc must be finite and within (0, 1)');
+  }
+  assertIntegerMin('horizon', horizon, 1);
+  assertFinitePositive('terminalMultiple', terminalMultiple);
+  assertFinitePositive('shares', shares);
 
   // Forecast FCFs: FCF_t = fcf0 * (1 + growth)^t, t=1..horizon
   // Discount factor per year: (1 + wacc)^t
-  let presentValueStage = 0
+  let presentValueStage = 0;
   for (let t = 1; t <= horizon; t += 1) {
-    const cashFlow = fcf0 * Math.pow(1 + growth, t)
-    const discounted = cashFlow / Math.pow(1 + wacc, t)
-    presentValueStage += discounted
+    const cashFlow = fcf0 * Math.pow(1 + growth, t);
+    const discounted = cashFlow / Math.pow(1 + wacc, t);
+    presentValueStage += discounted;
   }
 
-  const fcfTerminalYear = fcf0 * Math.pow(1 + growth, horizon)
-  const terminalValue = terminalMultiple * fcfTerminalYear
-  const presentValueTerminal = terminalValue / Math.pow(1 + wacc, horizon)
+  const fcfTerminalYear = fcf0 * Math.pow(1 + growth, horizon);
+  const terminalValue = terminalMultiple * fcfTerminalYear;
+  const presentValueTerminal = terminalValue / Math.pow(1 + wacc, horizon);
 
-  const equityValue = presentValueStage + presentValueTerminal
-  const perShare = equityValue / shares
+  const equityValue = presentValueStage + presentValueTerminal;
+  const perShare = equityValue / shares;
 
   return {
     equityValue,
@@ -95,31 +122,38 @@ export function dcf(input: DcfInput): DcfResult {
       pvStage: presentValueStage,
       pvTerminal: presentValueTerminal,
     },
-  }
+  };
 }
 
 export function epv(input: EpvInput): EpvResult {
-  const { ebit, taxRate, reinvestmentRate, wacc, shares } = input
+  const { ebit, taxRate, reinvestmentRate, wacc, shares } = input;
 
-  assertFinitePositive('ebit', ebit)
-  assertRate('taxRate', taxRate)
-  assertRate('reinvestmentRate', reinvestmentRate)
-  assertRate('wacc', wacc)
-  assertFinitePositive('shares', shares)
+  assertFinitePositive('ebit', ebit);
+  if (!(taxRate >= 0 && taxRate < 1 && Number.isFinite(taxRate))) {
+    throw new InputValidationError('taxRate must be finite and within [0, 1)');
+  }
+  if (!(reinvestmentRate >= 0 && reinvestmentRate < 1 && Number.isFinite(reinvestmentRate))) {
+    throw new InputValidationError('reinvestmentRate must be finite and within [0, 1)');
+  }
+  if (!(wacc > 0 && wacc < 1 && Number.isFinite(wacc))) {
+    throw new InputValidationError('wacc must be finite and within (0, 1)');
+  }
+  assertFinitePositive('shares', shares);
 
   // EPV approximation:
   // After-tax operating income = EBIT * (1 - taxRate)
   // Free cash flow proxy = afterTaxOperatingIncome * (1 - reinvestmentRate)
   // Capitalize by WACC: EPV = FCF_proxy / wacc
-  const afterTaxOperatingIncome = ebit * (1 - taxRate)
-  const freeCashFlowProxy = afterTaxOperatingIncome * (1 - reinvestmentRate)
-  const epvValue = freeCashFlowProxy / wacc
-  const perShare = epvValue / shares
+  const afterTaxOperatingIncome = ebit * (1 - taxRate);
+  const freeCashFlowProxy = afterTaxOperatingIncome * (1 - reinvestmentRate);
+  const epvValue = freeCashFlowProxy / wacc;
+  const perShare = epvValue / shares;
 
-  return { epv: epvValue, perShare }
+  return { epv: epvValue, perShare };
 }
 
 // CSP-safe HTML helper for VS Code Webviews
+/** CSP-safe HTML generation options for VS Code Webview */
 export interface WebviewHtmlOptions {
   title: string;
   cspSource: string; // webview.cspSource
@@ -130,7 +164,7 @@ export interface WebviewHtmlOptions {
 }
 
 export function buildCspHtml(options: WebviewHtmlOptions): string {
-  const { title, cspSource, nonce, scriptUris, styleUris = [], bodyHtml = '' } = options
+  const { title, cspSource, nonce, scriptUris, styleUris = [], bodyHtml = '' } = options;
 
   const metaCsp = [
     `default-src 'none'`,
@@ -139,13 +173,13 @@ export function buildCspHtml(options: WebviewHtmlOptions): string {
     `font-src ${cspSource}`,
     `script-src 'nonce-${nonce}'`,
     `connect-src ${cspSource}`,
-  ].join('; ')
+  ].join('; ');
 
   const scripts = scriptUris
     .map((src) => `<script nonce="${nonce}" src="${src}"></script>`) // no inline code
-    .join('\n')
+    .join('\n');
 
-  const styles = styleUris.map((href) => `<link rel="stylesheet" href="${href}" />`).join('\n')
+  const styles = styleUris.map((href) => `<link rel="stylesheet" href="${href}" />`).join('\n');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -160,28 +194,7 @@ export function buildCspHtml(options: WebviewHtmlOptions): string {
     ${bodyHtml}
     ${scripts}
   </body>
-  </html>`
+  </html>`;
 }
 
-import { z } from 'zod'
-export { z }
-
-// Optional zod schemas for payload validation used by the extension panel
-export const DcfInputSchema = z.object({
-  fcf0: z.number().positive(),
-  growth: z.number().min(0).lt(1),
-  wacc: z.number().min(0).lt(1),
-  horizon: z.number().int().min(1),
-  terminalMultiple: z.number().positive(),
-  shares: z.number().positive(),
-})
-
-export const EpvInputSchema = z.object({
-  ebit: z.number().positive(),
-  taxRate: z.number().min(0).lt(1),
-  reinvestmentRate: z.number().min(0).lt(1),
-  wacc: z.number().min(0).lt(1),
-  shares: z.number().positive(),
-})
-
-
+// Schemas exported via subpath: @madlab/core/schemas

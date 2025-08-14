@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ES2020",
+    "moduleResolution": "bundler",
+    "outDir": "dist",
+    "declaration": false,
+    "noEmit": false
+  },
+  "include": ["src/index.ts", "src/schemas.ts", "src/adapters/compute.ts"],
+  "exclude": ["node_modules", "dist", "dist-esm", "dist-cjs", "tests", "src/**/*.test.ts"]
+}

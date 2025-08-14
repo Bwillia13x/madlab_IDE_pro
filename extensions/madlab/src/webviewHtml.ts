@@ -15,9 +15,10 @@ export function getWebviewContent({
   const csp = [
     "default-src 'none'",
     `img-src ${cspSource} data:`,
-    `style-src ${cspSource} 'nonce-${nonce}'`,
     `script-src 'nonce-${nonce}'`,
-    `font-src ${cspSource} data:`,
+    `style-src ${cspSource} 'nonce-${nonce}'`,
+    `font-src ${cspSource}`,
+    "connect-src 'none'",
   ].join('; ');
 
   const script = scriptUri.toString();
@@ -38,5 +39,3 @@ export function getWebviewContent({
   </body>
   </html>`;
 }
-
-

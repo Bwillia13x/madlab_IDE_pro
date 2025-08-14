@@ -1,0 +1,53 @@
+{
+  "dcf": [
+    {
+      "name": "Base case",
+      "input": {
+        "fcf0": 100,
+        "growth": 0.05,
+        "wacc": 0.1,
+        "horizon": 5,
+        "terminalMultiple": 12,
+        "shares": 50
+      }
+    },
+    {
+      "name": "Near-parity growth/wacc",
+      "input": {
+        "fcf0": 100,
+        "growth": 0.099,
+        "wacc": 0.1,
+        "horizon": 10,
+        "terminalMultiple": 15,
+        "shares": 100
+      }
+    },
+    {
+      "name": "Long horizon",
+      "input": {
+        "fcf0": 100,
+        "growth": 0.03,
+        "wacc": 0.08,
+        "horizon": 30,
+        "terminalMultiple": 10,
+        "shares": 100
+      }
+    }
+  ],
+  "epv": [
+    {
+      "name": "Base case",
+      "input": {
+        "ebit": 200,
+        "taxRate": 0.21,
+        "reinvestmentRate": 0.3,
+        "wacc": 0.09,
+        "shares": 100
+      }
+    },
+    {
+      "name": "Low reinvestment",
+      "input": { "ebit": 150, "taxRate": 0.25, "reinvestmentRate": 0.1, "wacc": 0.08, "shares": 80 }
+    }
+  ]
+}

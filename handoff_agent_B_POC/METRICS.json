@@ -1,0 +1,19 @@
+{
+  "version": "0.1",
+  "agent": "B",
+  "commit": "",
+  "webview": {
+    "cspNonceUsed": true,
+    "remoteUrlsDetected": 0,
+    "initialRenderMs": { "p50": 0, "p95": 0 }
+  },
+  "ui": {
+    "recomputeMs": { "p50": 0, "p95": 0 },
+    "idleRendererMB": 0
+  },
+  "a11y": {
+    "keyboardPathComplete": true,
+    "critical": 0,
+    "serious": 0
+  }
+}

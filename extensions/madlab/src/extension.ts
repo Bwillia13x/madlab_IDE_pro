@@ -2,16 +2,14 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { getWebviewContent } from './webviewHtml';
 import { ModelsProvider } from './modelsProvider';
-import { handleCalc } from './logic';
+import { handleCalc } from './compute';
 
 export function activate(context: vscode.ExtensionContext) {
   const financeViewId = 'madlab.financePanel';
   const modelsViewId = 'madlab.models';
 
   const modelsProvider = new ModelsProvider();
-  context.subscriptions.push(
-    vscode.window.registerTreeDataProvider(modelsViewId, modelsProvider)
-  );
+  context.subscriptions.push(vscode.window.registerTreeDataProvider(modelsViewId, modelsProvider));
 
   let currentView: vscode.WebviewView | undefined;
 
@@ -24,9 +22,7 @@ export function activate(context: vscode.ExtensionContext) {
           const { webview } = view;
           webview.options = {
             enableScripts: true,
-            localResourceRoots: [
-              vscode.Uri.file(path.join(context.extensionPath, 'media')),
-            ],
+            localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'media'))],
           };
           const nonce = Date.now().toString(36);
           const scriptUri = webview.asWebviewUri(
@@ -54,7 +50,10 @@ export function activate(context: vscode.ExtensionContext) {
           webview.postMessage(init);
 
           webview.onDidReceiveMessage(async (msg) => {
-            if (!msg || typeof msg !== 'object') return;
+            if (!msg || typeof msg !== 'object' || typeof (msg as any).type !== 'string') {
+              console.warn('[madlab] unknown message', msg);
+              return;
+            }
             switch (msg.type) {
               case 'CALC': {
                 try {
@@ -70,6 +69,8 @@ export function activate(context: vscode.ExtensionContext) {
                 webview.postMessage({ type: 'LOAD_MODEL', payload: msg.payload });
                 break;
               }
+              default:
+                console.warn('[madlab] unknown message', (msg as any).type);
             }
           });
         },
@@ -133,5 +134,3 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {}
-
-

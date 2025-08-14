@@ -4,15 +4,56 @@
   "private": true,
   "description": "Pure TypeScript finance core for MadLab Studio (DCF/EPV) with CSP helpers",
   "license": "MIT",
-  "main": "dist/index.js",
+  "author": "MadLab Team",
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "dist-cjs/index.cjs",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "schemas": [
+        "dist/schemas.d.ts"
+      ],
+      "adapters": [
+        "dist/adapters/compute.d.ts"
+      ]
+    }
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist-cjs/index.cjs",
+      "import": "./dist/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas.d.ts",
+      "require": "./dist-cjs/schemas.cjs",
+      "import": "./dist/schemas.js"
+    },
+    "./adapters": {
+      "types": "./dist/adapters/compute.d.ts",
+      "require": "./dist-cjs/adapters/compute.cjs",
+      "import": "./dist/adapters/compute.js"
+    }
+  },
+  "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "dist-cjs",
+    "LICENSE",
+    "README.md",
+    "NOTICE"
   ],
   "scripts": {
-    "build": "tsc -p .",
+    "build": "pnpm run build:cjs && pnpm run build:esm && pnpm run build:types",
+    "build:cjs": "tsc -p tsconfig.cjs.json && node ./scripts/rename-cjs.mjs",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "build:types": "tsc -p tsconfig.types.json",
     "clean": "rm -rf dist",
     "test": "vitest run --config ../../vitest.config.ts",
+    "test:cov": "vitest run --coverage --config ../../vitest.config.ts",
     "test:watch": "vitest --config ../../vitest.config.ts"
   },
   "dependencies": {
@@ -23,5 +64,3 @@
     "vitest": "^1.0.0"
   }
 }
-
-

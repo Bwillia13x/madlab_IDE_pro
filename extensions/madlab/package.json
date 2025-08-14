@@ -5,34 +5,60 @@
   "publisher": "madlab",
   "version": "0.0.1",
   "private": true,
-  "engines": { "vscode": "^1.85.0" },
-  "categories": ["Other"],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
   "activationEvents": [
     "onCommand:madlab.open",
-    "onView:madlab.financePanel",
-    "*"
+    "onView:madlab.financePanel"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
-      { "command": "madlab.open", "title": "MadLab: Open Finance Panel" },
-      { "command": "madlab.newModel", "title": "MadLab: New Model" }
+      {
+        "command": "madlab.open",
+        "title": "MadLab: Open Finance Panel"
+      },
+      {
+        "command": "madlab.newModel",
+        "title": "MadLab: New Model"
+      }
     ],
     "viewsContainers": {
       "activitybar": [
-        { "id": "madlab", "title": "MadLab", "icon": "images/icon.svg" }
+        {
+          "id": "madlab",
+          "title": "MadLab",
+          "icon": "images/icon.svg"
+        }
       ]
     },
     "views": {
       "madlab": [
-        { "id": "madlab.financePanel", "name": "Finance Panel" },
-        { "id": "madlab.models", "name": "Models" }
+        {
+          "type": "webview",
+          "id": "madlab.financePanel",
+          "name": "Finance Panel"
+        },
+        {
+          "id": "madlab.models",
+          "name": "Models"
+        }
       ]
     },
     "menus": {
       "commandPalette": [
-        { "command": "madlab.open", "when": "true" },
-        { "command": "madlab.newModel", "when": "true" }
+        {
+          "command": "madlab.open",
+          "when": "true"
+        },
+        {
+          "command": "madlab.newModel",
+          "when": "true"
+        }
       ]
     }
   },
@@ -47,5 +73,8 @@
     "esbuild": "^0.21.5",
     "rimraf": "^5.0.5",
     "typescript": "5.2.2"
+  },
+  "dependencies": {
+    "@madlab/core": "workspace:*"
   }
 }

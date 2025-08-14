@@ -14,9 +14,16 @@ fi
 EXT_SRC="$ROOT_DIR/extensions/madlab"
 EXT_DST="$VS_DIR/extensions/madlab"
 
+# Ensure webview bundle exists
+if [ ! -f "$EXT_SRC/media/main.js" ]; then
+  echo "[stage-extensions] webview bundle missing: $EXT_SRC/media/main.js"
+  exit 1
+fi
+
 rm -rf "$EXT_DST"
 mkdir -p "$EXT_DST"
-rsync -a --exclude node_modules --exclude .git --exclude out "${EXT_SRC}/" "$EXT_DST/"
+# include compiled JS in out/ and web assets
+rsync -a --exclude node_modules --exclude .git "${EXT_SRC}/" "$EXT_DST/"
 
 echo "[stage-extensions] Done."
 

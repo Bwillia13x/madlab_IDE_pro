@@ -1,0 +1,8 @@
+{
+  "fcf0": 100,
+  "growth": 0.03,
+  "wacc": 0.1,
+  "horizon": 5,
+  "terminalMultiple": 12,
+  "shares": 100
+}

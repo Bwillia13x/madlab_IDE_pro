@@ -1,18 +1,19 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
+'use strict';
+Object.defineProperty(exports, '__esModule', { value: true });
 exports.getWebviewContent = void 0;
-function getWebviewContent({ webview, scriptUri, styleUri, nonce, }) {
-    const cspSource = webview.cspSource;
-    const csp = [
-        "default-src 'none'",
-        `img-src ${cspSource} data:`,
-        `style-src ${cspSource} 'nonce-${nonce}'`,
-        `script-src 'nonce-${nonce}'`,
-        `font-src ${cspSource} data:`,
-    ].join('; ');
-    const script = scriptUri.toString();
-    const style = styleUri.toString();
-    return `<!DOCTYPE html>
+function getWebviewContent({ webview, scriptUri, styleUri, nonce }) {
+  const cspSource = webview.cspSource;
+  const csp = [
+    "default-src 'none'",
+    `img-src ${cspSource} data:`,
+    `script-src 'nonce-${nonce}'`,
+    `style-src ${cspSource} 'nonce-${nonce}'`,
+    `font-src ${cspSource}`,
+    "connect-src 'none'",
+  ].join('; ');
+  const script = scriptUri.toString();
+  const style = styleUri.toString();
+  return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />

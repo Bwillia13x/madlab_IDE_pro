@@ -275,6 +275,10 @@ importers:
         version: 5.9.2
 
   extensions/madlab:
+    dependencies:
+      '@madlab/core':
+        specifier: workspace:*
+        version: link:../../packages/madlab-core
     devDependencies:
       '@types/node':
         specifier: 20.6.2

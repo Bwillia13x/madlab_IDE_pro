@@ -80,7 +80,16 @@ jobs:
 
       - name: Core package unit tests (workspace)
         shell: bash
-        run: pnpm -w --filter @madlab/core test
+        run: |
+          pnpm -w --filter @madlab/core test
+          COVERAGE=1 pnpm -w --filter @madlab/core test:cov || true
+          node packages/madlab-core/scripts/ci-guard.mjs
+
+      - name: Core import smoke (CJS & ESM)
+        shell: bash
+        run: |
+          node -e "require(process.cwd() + '/packages/madlab-core/dist-cjs/index.cjs').dcf({fcf0:1,growth:0.05,wacc:0.1,horizon:5,terminalMultiple:10,shares:1})"
+          node --input-type=module -e "const m=await import(process.cwd()+'/packages/madlab-core/dist/index.js'); m.epv({ebit:1,taxRate:0.2,reinvestmentRate:0.3,wacc:0.1,shares:1});"
 
       - name: Package (macOS)
         if: runner.os == 'macOS'

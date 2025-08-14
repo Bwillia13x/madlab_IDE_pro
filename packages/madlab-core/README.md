@@ -5,13 +5,33 @@ Pure TypeScript finance core for MadLab Studio with deterministic DCF and EPV ca
 ## API
 
 ```ts
-export interface DcfInput { fcf0:number; growth:number; wacc:number; horizon:number; terminalMultiple:number; shares:number; }
-export interface DcfResult { equityValue:number; perShare:number; breakdown:{pvStage:number; pvTerminal:number}; }
-export function dcf(input:DcfInput): DcfResult;
+export interface DcfInput {
+  fcf0: number;
+  growth: number;
+  wacc: number;
+  horizon: number;
+  terminalMultiple: number;
+  shares: number;
+}
+export interface DcfResult {
+  equityValue: number;
+  perShare: number;
+  breakdown: { pvStage: number; pvTerminal: number };
+}
+export function dcf(input: DcfInput): DcfResult;
 
-export interface EpvInput { ebit:number; taxRate:number; reinvestmentRate:number; wacc:number; shares:number; }
-export interface EpvResult { epv:number; perShare:number; }
-export function epv(input:EpvInput): EpvResult;
+export interface EpvInput {
+  ebit: number;
+  taxRate: number;
+  reinvestmentRate: number;
+  wacc: number;
+  shares: number;
+}
+export interface EpvResult {
+  epv: number;
+  perShare: number;
+}
+export function epv(input: EpvInput): EpvResult;
 ```
 
 - Throws `InputValidationError` on invalid values.
@@ -24,4 +44,8 @@ pnpm -w --filter @madlab/core build
 pnpm -w --filter @madlab/core test
 ```
 
+Adapter usage (Agent B):
 
+```ts
+import { computeDcf, computeEpv } from '@madlab/core/adapters';
+```
