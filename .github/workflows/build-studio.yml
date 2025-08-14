@@ -60,13 +60,17 @@ jobs:
         shell: bash
         run: scripts/stage-branding.sh
 
+      - name: Build built-in extension
+        shell: bash
+        run: scripts/build-extensions.sh
+
       - name: Stage built-in extensions
         shell: bash
         run: scripts/stage-extensions.sh
 
-      - name: Build built-in extension
+      - name: Core package unit tests (workspace)
         shell: bash
-        run: scripts/build-extensions.sh
+        run: pnpm -w --filter @madlab/core test
 
       - name: Package (macOS)
         if: runner.os == 'macOS'
