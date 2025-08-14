@@ -90,6 +90,18 @@ jobs:
           cd vscode/.build
           find . -maxdepth 2 -type f \( -name '*.zip' -o -name '*.tar.gz' -o -name '*.dmg' -o -name '*.exe' \) -exec shasum -a 256 {} \; | tee SHA256SUMS.txt
 
+      - name: Assert extension staged in packaged app
+        shell: bash
+        run: |
+          test -d "$(echo vscode/.build/*/resources/app/extensions/madlab)" || (echo "madlab extension missing" && exit 1)
+
+      - name: Assert product.json keys
+        shell: bash
+        run: |
+          grep -q '"serviceUrl": *"https://open-vsx.org/vscode/gallery"' vscode/product.json
+          grep -q '"itemUrl": *"https://open-vsx.org/vscode/item"' vscode/product.json
+          grep -q '"enableTelemetry": *false' vscode/product.json
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
