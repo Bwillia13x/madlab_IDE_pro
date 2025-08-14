@@ -1,88 +1,10 @@
 import * as vscode from 'vscode';
-
-export function activate(context: vscode.ExtensionContext) {
-  const openCmd = vscode.commands.registerCommand('madlab.open', async () => {
-    const view = await vscode.commands.executeCommand('madlab.financePanel.focus');
-    return view;
-  });
-
-  const provider = new FinanceWebviewProvider(context);
-  context.subscriptions.push(
-    openCmd,
-    vscode.window.registerWebviewViewProvider('madlab.financePanel', provider, {
-      webviewOptions: { retainContextWhenHidden: true },
-    })
-  );
-
-  const treeProvider = new ModelsProvider();
-  context.subscriptions.push(
-    vscode.window.registerTreeDataProvider('madlab.models', treeProvider)
-  );
-}
-
-export function deactivate() {}
-
-class FinanceWebviewProvider implements vscode.WebviewViewProvider {
-  constructor(private readonly context: vscode.ExtensionContext) {}
-  resolveWebviewView(webviewView: vscode.WebviewView): void | Thenable<void> {
-    const { webview } = webviewView;
-    webview.options = { enableScripts: true, localResourceRoots: [this.context.extensionUri] };
-    const nonce = getNonce();
-    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'main.js'));
-    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'styles.css'));
-    webview.html = /* html */ `
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} data:; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link href="${styleUri}" rel="stylesheet" />
-    <title>MadLab Finance Panel</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script nonce="${nonce}" src="${scriptUri}"></script>
-  </body>
-</html>`;
-
-    webview.onDidReceiveMessage((msg) => {
-      // Placeholder message handler
-      switch (msg?.type) {
-        case 'PING':
-          webview.postMessage({ type: 'PONG' });
-          break;
-      }
-    });
-  }
-}
-
-class ModelsProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
-  private readonly emitter = new vscode.EventEmitter<void>();
-  readonly onDidChangeTreeData = this.emitter.event;
-  getTreeItem(element: vscode.TreeItem): vscode.TreeItem { return element; }
-  async getChildren(): Promise<vscode.TreeItem[]> {
-    return [new vscode.TreeItem('Sample Model', vscode.TreeItemCollapsibleState.None)];
-  }
-}
-
-function getNonce(): string {
-  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let text = '';
-  for (let i = 0; i < 32; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
-}
-
-import * as vscode from 'vscode';
 import * as path from 'path';
 import { getWebviewContent } from './webviewHtml';
 import { ModelsProvider } from './modelsProvider';
 import { handleCalc } from './logic';
 
 export function activate(context: vscode.ExtensionContext) {
-  const containerId = 'madlab';
   const financeViewId = 'madlab.financePanel';
   const modelsViewId = 'madlab.models';
 
@@ -125,9 +47,9 @@ export function activate(context: vscode.ExtensionContext) {
                 wacc: 0.1,
                 horizon: 5,
                 terminalMultiple: 12,
-                shares: 100
-              }
-            }
+                shares: 100,
+              },
+            },
           } as const;
           webview.postMessage(init);
 
@@ -150,7 +72,7 @@ export function activate(context: vscode.ExtensionContext) {
               }
             }
           });
-        }
+        },
       },
       { webviewOptions: { retainContextWhenHidden: true } }
     )
@@ -171,14 +93,18 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const uri = vscode.Uri.joinPath(ws.uri, 'example.mlab.json');
-      const template = JSON.stringify({
-        fcf0: 120,
-        growth: 0.03,
-        wacc: 0.1,
-        horizon: 5,
-        terminalMultiple: 10,
-        shares: 100
-      }, null, 2);
+      const template = JSON.stringify(
+        {
+          fcf0: 120,
+          growth: 0.03,
+          wacc: 0.1,
+          horizon: 5,
+          terminalMultiple: 10,
+          shares: 100,
+        },
+        null,
+        2
+      );
       await vscode.workspace.fs.writeFile(uri, Buffer.from(template));
       const doc = await vscode.workspace.openTextDocument(uri);
       await vscode.window.showTextDocument(doc);

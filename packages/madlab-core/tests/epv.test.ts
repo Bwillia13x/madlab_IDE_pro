@@ -3,10 +3,15 @@ import { epv, InputValidationError } from '../src/index'
 
 describe('epv', () => {
   it('computes EPV and per-share deterministically', () => {
-    const result = epv({ ebit: 200, taxRate: 0.21, reinvestmentRate: 0.3, wacc: 0.09, shares: 100 })
-    // after-tax = 158, fcf proxy = 110.6, epv = 1228.888..., perShare ~ 12.2889
-    expect(result.epv).toBeCloseTo(1228.888, 3)
-    expect(result.perShare).toBeCloseTo(result.epv / 100, 6)
+    const input = { ebit: 200, taxRate: 0.21, reinvestmentRate: 0.3, wacc: 0.09, shares: 100 }
+    const result = epv(input)
+
+    const afterTaxOperatingIncome = input.ebit * (1 - input.taxRate)
+    const freeCashFlowProxy = afterTaxOperatingIncome * (1 - input.reinvestmentRate)
+    const expectedEpv = freeCashFlowProxy / input.wacc
+
+    expect(result.epv).toBeCloseTo(expectedEpv, 6)
+    expect(result.perShare).toBeCloseTo(expectedEpv / input.shares, 6)
   })
 
   it('validates inputs', () => {
