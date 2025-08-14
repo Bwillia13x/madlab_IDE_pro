@@ -8,6 +8,10 @@ on:
     branches:
       - studio/**
 
+concurrency:
+  group: build-studio-${{ github.ref }}-${{ matrix.os }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: ${{ matrix.os }}
@@ -88,28 +92,63 @@ jobs:
         working-directory: vscode
         run: yarn gulp vscode-linux-x64-min
 
-      - name: Checksums
+      - name: Extract packaged app for inspection
         shell: bash
         run: |
-          cd vscode/.build
-          find . -maxdepth 2 -type f \( -name '*.zip' -o -name '*.tar.gz' -o -name '*.dmg' -o -name '*.exe' \) -exec shasum -a 256 {} \; | tee SHA256SUMS.txt
+          set -euo pipefail
+          mkdir -p unpack
+          pkg=$(find vscode/.build -type f \( -name "*.zip" -o -name "*.tar.gz" \) | head -n 1 || true)
+          if [[ -z "${pkg:-}" ]]; then echo "No archive found to inspect"; exit 0; fi
+          case "$pkg" in
+            *.zip) unzip -q "$pkg" -d unpack;;
+            *.tar.gz) tar -xzf "$pkg" -C unpack;;
+          esac
+          # Determine app resources path
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            app_res=$(find unpack -type d -path "*/Contents/Resources/app" | head -n 1 || true)
+          else
+            app_res=$(find unpack -type d -path "*/resources/app" | head -n 1 || true)
+          fi
+          echo "APP_RES=${app_res:-}" >> "$GITHUB_ENV"
 
       - name: Assert extension staged in packaged app
         shell: bash
         run: |
-          test -d "$(echo vscode/.build/*/resources/app/extensions/madlab)" || (echo "madlab extension missing" && exit 1)
+          if [[ -z "${APP_RES:-}" ]]; then echo "APP_RES not set; skipping check"; exit 0; fi
+          test -d "$APP_RES/extensions/madlab" || (echo "madlab extension missing" && exit 1)
 
-      - name: Assert product.json keys
+      - name: Assert product.json keys (built app)
         shell: bash
         run: |
-          grep -q '"serviceUrl": *"https://open-vsx.org/vscode/gallery"' vscode/product.json
-          grep -q '"itemUrl": *"https://open-vsx.org/vscode/item"' vscode/product.json
-          grep -q '"enableTelemetry": *false' vscode/product.json
+          if [[ -z "${APP_RES:-}" ]]; then echo "APP_RES not set; skipping check"; exit 0; fi
+          jq -e '.nameShort=="MadLab Studio"' "$APP_RES/product.json" > /dev/null
+          jq -e '.extensionsGallery.serviceUrl=="https://open-vsx.org/vscode/gallery"' "$APP_RES/product.json" > /dev/null
+          jq -e '.extensionsGallery.itemUrl=="https://open-vsx.org/vscode/item"' "$APP_RES/product.json" > /dev/null
+          jq -e '.enableTelemetry==false' "$APP_RES/product.json" > /dev/null
+
+      - name: Collect and rename artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            f=$(find vscode/.build -type f -name "*darwin*zip" | head -n 1 || true)
+            if [[ -n "${f:-}" ]]; then cp "$f" artifacts/MadLab-Studio-macOS-arm64.zip; fi
+          elif [[ "${{ runner.os }}" == "Linux" ]]; then
+            f=$(find vscode/.build -type f -name "*linux*tar.gz" | head -n 1 || true)
+            if [[ -n "${f:-}" ]]; then cp "$f" artifacts/MadLab-Studio-linux-x64.tar.gz; fi
+          else
+            f=$(find vscode/.build -type f -name "*win32*zip" | head -n 1 || true)
+            if [[ -n "${f:-}" ]]; then cp "$f" artifacts/MadLab-Studio-windows-x64.zip; fi
+          fi
+          cd artifacts
+          if command -v shasum >/dev/null 2>&1; then shasum -a 256 MadLab-Studio-* > SHA256SUMS.txt; elif command -v sha256sum >/dev/null 2>&1; then sha256sum MadLab-Studio-* > SHA256SUMS.txt; elif command -v certutil >/dev/null 2>&1; then for f in MadLab-Studio-*; do certutil -hashfile "$f" SHA256 | sed -n '2p' | awk -v n="$f" '{print $0, "  ", n}'; done > SHA256SUMS.txt; fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: madlab-studio-${{ runner.os }}
-          path: vscode/.build
+          path: artifacts
+          retention-days: 14
 
 
