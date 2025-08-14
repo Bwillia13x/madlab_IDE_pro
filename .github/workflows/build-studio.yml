@@ -52,10 +52,6 @@ jobs:
         working-directory: vscode
         run: yarn --frozen-lockfile
 
-      - name: Build built-in extension
-        shell: bash
-        run: scripts/build-extensions.sh
-
       - name: Patch product.json
         shell: bash
         run: scripts/patch-product.sh
@@ -67,6 +63,10 @@ jobs:
       - name: Stage built-in extensions
         shell: bash
         run: scripts/stage-extensions.sh
+
+      - name: Build built-in extension
+        shell: bash
+        run: scripts/build-extensions.sh
 
       - name: Package (macOS)
         if: runner.os == 'macOS'
