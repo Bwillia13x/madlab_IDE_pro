@@ -8,12 +8,11 @@ on:
     branches:
       - studio/**
 
-concurrency:
-  group: build-studio-${{ github.ref }}-${{ matrix.os }}
-  cancel-in-progress: true
-
 jobs:
   build:
+    concurrency:
+      group: build-studio-${{ github.ref }}-${{ matrix.os }}
+      cancel-in-progress: true
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120

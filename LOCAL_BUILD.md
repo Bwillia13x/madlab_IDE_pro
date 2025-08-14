@@ -16,3 +16,10 @@ If you hit permission issues:
 ```bash
 chmod +x scripts/*.sh
 ```
+
+## Troubleshooting
+
+- jq missing: `brew install jq` (macOS) or `sudo apt-get install -y jq` (Linux)
+- Submodule not initialized: `git submodule update --init --recursive`
+- Gulp task errors in `vscode/`: ensure `corepack enable && (cd vscode && yarn --frozen-lockfile)` first
+- Extension not present in packaged app: rerun `./scripts/build-extensions.sh` before `./scripts/stage-extensions.sh` and packaging
