@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+VS_DIR="$ROOT_DIR/vscode"
+
+if [ ! -d "$VS_DIR" ]; then
+  echo "[stage-branding] Skipping: Code-OSS submodule not found at $VS_DIR"
+  exit 0
+fi
+
+echo "[stage-branding] (placeholder) Branding staging done."
+
+#!/usr/bin/env bash
+set -euo pipefail
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
 VSCODE_RES="${ROOT_DIR}/vscode/resources"
 BRANDING_ICONS="${ROOT_DIR}/branding/icons"

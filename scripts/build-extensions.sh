@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+echo "[build-extensions] Building built-in extensions..."
+
+pushd "$ROOT_DIR/extensions/madlab" >/dev/null
+pnpm install --silent
+pnpm build
+popd >/dev/null
+
+echo "[build-extensions] Done."
+
+#!/usr/bin/env bash
+set -euo pipefail
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
 EXT_DIR="${ROOT_DIR}/extensions/madlab"
 
