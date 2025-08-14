@@ -40,6 +40,9 @@ jobs:
       - name: Enable corepack
         run: corepack enable
 
+      - name: Pin Yarn classic (v1)
+        run: corepack prepare yarn@1.22.22 --activate
+
       - name: Install deps (Linux)
         if: runner.os == 'Linux'
         run: |
