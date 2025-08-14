@@ -8,6 +8,10 @@ on:
     branches:
       - studio/**
 
+concurrency:
+  group: build-studio-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     concurrency:
@@ -91,7 +95,8 @@ jobs:
         working-directory: vscode
         run: yarn gulp vscode-linux-x64-min
 
-      - name: Extract packaged app for inspection
+      - name: Extract packaged app for inspection (non-Windows)
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
