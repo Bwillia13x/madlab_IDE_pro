@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*.*.*'
+      - 'v*.*.*-*' # prerelease tags like v1.2.3-alpha.1
 
 jobs:
   package:
