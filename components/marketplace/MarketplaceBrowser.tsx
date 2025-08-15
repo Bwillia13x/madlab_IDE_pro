@@ -1,20 +1,37 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Filter, Download, Star, Shield, Clock, Package, Tags, DollarSign, Lock } from 'lucide-react';
+import {
+  Search,
+  Filter,
+  Download,
+  Star,
+  Shield,
+  Clock,
+  Package,
+  Tags,
+  DollarSign,
+  Lock,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  marketplaceManager, 
-  type MarketplaceWidget, 
+// Tabs UI is not used here; remove to satisfy CI lint strictness
+import {
+  marketplaceManager,
+  type MarketplaceWidget,
   type MarketplaceFilter,
-  type WidgetCategory 
+  type WidgetCategory,
 } from '@/lib/marketplace';
 import { useWorkspaceStore } from '@/lib/store';
 import { analytics } from '@/lib/analytics';
@@ -33,9 +50,13 @@ export function MarketplaceBrowser({ onWidgetInstall, onClose }: MarketplaceBrow
   const { onboardingCompleted } = useWorkspaceStore();
   const learningProgress = useWorkspaceStore((s) => s.learningProgress);
   const [showRec, setShowRec] = useState<boolean>(() => {
-    try { return localStorage.getItem('madlab_market_rec_dismissed') !== 'true'; } catch { return true; }
+    try {
+      return localStorage.getItem('madlab_market_rec_dismissed') !== 'true';
+    } catch {
+      return true;
+    }
   });
-  
+
   // Filter state
   const [filter, setFilter] = useState<MarketplaceFilter>({
     search: '',
@@ -79,53 +100,75 @@ export function MarketplaceBrowser({ onWidgetInstall, onClose }: MarketplaceBrow
           return aAdv ? 1 : -1;
         });
     // Recommended band: surface a small curated subset on top based on learningProgress
-    const recommended = beginnerFirst.filter(w => {
-      if (!learningProgress?.configuredWidget) return /kpi|table|markdown|chart/i.test(w.displayName + ' ' + (w.tags||[]).join(' '));
-      if (!learningProgress?.exportedWorkspace) return /export|table|chart/i.test(w.description + ' ' + (w.tags||[]).join(' '));
-      if (!learningProgress?.savedTemplate) return /template|snapshot|save/i.test(w.description + ' ' + (w.tags||[]).join(' '));
-      return /options|risk|greeks|var/i.test(w.displayName + ' ' + (w.tags||[]).join(' '));
-    }).slice(0, 3);
+    const recommended = beginnerFirst
+      .filter((w) => {
+        if (!learningProgress?.configuredWidget)
+          return /kpi|table|markdown|chart/i.test(w.displayName + ' ' + (w.tags || []).join(' '));
+        if (!learningProgress?.exportedWorkspace)
+          return /export|table|chart/i.test(w.description + ' ' + (w.tags || []).join(' '));
+        if (!learningProgress?.savedTemplate)
+          return /template|snapshot|save/i.test(w.description + ' ' + (w.tags || []).join(' '));
+        return /options|risk|greeks|var/i.test(w.displayName + ' ' + (w.tags || []).join(' '));
+      })
+      .slice(0, 3);
     // De-duplicate
-    const ids = new Set(recommended.map(r => r.id));
-    const rest = beginnerFirst.filter(w => !ids.has(w.id));
+    const ids = new Set(recommended.map((r) => r.id));
+    const rest = beginnerFirst.filter((w) => !ids.has(w.id));
     setFilteredWidgets([...recommended, ...rest]);
   }, [filter, onboardingCompleted]);
 
   // Handle widget installation
   const handleInstall = async (widget: MarketplaceWidget) => {
-    setInstalling(prev => {
+    setInstalling((prev) => {
       const next = new Set(prev);
       next.add(widget.id);
       return next;
     });
-    
+
     try {
       await marketplaceManager.installWidget(widget.id);
       toast.success(`${widget.displayName} installed successfully!`);
       onWidgetInstall?.(widget);
       try {
         useWorkspaceStore.getState().celebrate?.('Widget installed');
-        useWorkspaceStore.getState().safeUpdate?.({ learningProgress: { ...useWorkspaceStore.getState().learningProgress, installedWidget: true } });
+        useWorkspaceStore
+          .getState()
+          .safeUpdate?.({
+            learningProgress: {
+              ...useWorkspaceStore.getState().learningProgress,
+              installedWidget: true,
+            },
+          });
       } catch {}
-      
-      analytics.track('marketplace_widget_installed', {
-        widget_id: widget.id,
-        widget_name: widget.displayName,
-        category: widget.category,
-      }, 'feature_usage');
+
+      analytics.track(
+        'marketplace_widget_installed',
+        {
+          widget_id: widget.id,
+          widget_name: widget.displayName,
+          category: widget.category,
+        },
+        'feature_usage'
+      );
       try {
-        if (typeof localStorage !== 'undefined' && localStorage.getItem('madlab_first_install') !== 'true') {
+        if (
+          typeof localStorage !== 'undefined' &&
+          localStorage.getItem('madlab_first_install') !== 'true'
+        ) {
           const { getOnboardingVariant } = require('@/lib/analytics/experiments');
-          analytics.track('conversion', { event: 'first_install', variant: getOnboardingVariant() }, 'user_flow');
+          analytics.track(
+            'conversion',
+            { event: 'first_install', variant: getOnboardingVariant() },
+            'user_flow'
+          );
           localStorage.setItem('madlab_first_install', 'true');
         }
       } catch {}
-      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Installation failed';
       toast.error(`Failed to install ${widget.displayName}: ${errorMessage}`);
     } finally {
-      setInstalling(prev => {
+      setInstalling((prev) => {
         const newSet = new Set(prev);
         newSet.delete(widget.id);
         return newSet;
@@ -168,7 +211,12 @@ export function MarketplaceBrowser({ onWidgetInstall, onClose }: MarketplaceBrow
               </div>
             )}
             <div className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200">
-              <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              >
                 Back to top
               </Button>
             </div>
@@ -183,7 +231,7 @@ export function MarketplaceBrowser({ onWidgetInstall, onClose }: MarketplaceBrow
               <Input
                 placeholder="Search widgets..."
                 value={filter.search || ''}
-                onChange={(e) => setFilter(prev => ({ ...prev, search: e.target.value }))}
+                onChange={(e) => setFilter((prev) => ({ ...prev, search: e.target.value }))}
                 className="pl-8"
               />
             </div>
@@ -195,10 +243,12 @@ export function MarketplaceBrowser({ onWidgetInstall, onClose }: MarketplaceBrow
           <div className="grid grid-cols-4 gap-2 text-xs">
             <Select
               value={filter.category || 'all'}
-              onValueChange={(value) => setFilter(prev => ({ 
-                ...prev, 
-                category: value === 'all' ? undefined : value as WidgetCategory 
-              }))}
+              onValueChange={(value) =>
+                setFilter((prev) => ({
+                  ...prev,
+                  category: value === 'all' ? undefined : (value as WidgetCategory),
+                }))
+              }
             >
               <SelectTrigger className="h-8">
                 <SelectValue placeholder="Category" />
@@ -215,10 +265,12 @@ export function MarketplaceBrowser({ onWidgetInstall, onClose }: MarketplaceBrow
 
             <Select
               value={filter.priceType || 'all'}
-              onValueChange={(value) => setFilter(prev => ({ 
-                ...prev, 
-                priceType: value === 'all' ? 'all' : value as 'free' | 'paid'
-              }))}
+              onValueChange={(value) =>
+                setFilter((prev) => ({
+                  ...prev,
+                  priceType: value === 'all' ? 'all' : (value as 'free' | 'paid'),
+                }))
+              }
             >
               <SelectTrigger className="h-8">
                 <SelectValue placeholder="Price" />
@@ -232,10 +284,12 @@ export function MarketplaceBrowser({ onWidgetInstall, onClose }: MarketplaceBrow
 
             <Select
               value={filter.sortBy || 'popularity'}
-              onValueChange={(value) => setFilter(prev => ({ 
-                ...prev, 
-                sortBy: value as MarketplaceFilter['sortBy']
-              }))}
+              onValueChange={(value) =>
+                setFilter((prev) => ({
+                  ...prev,
+                  sortBy: value as MarketplaceFilter['sortBy'],
+                }))
+              }
             >
               <SelectTrigger className="h-8">
                 <SelectValue placeholder="Sort by" />
@@ -252,12 +306,16 @@ export function MarketplaceBrowser({ onWidgetInstall, onClose }: MarketplaceBrow
               <Switch
                 id="verified-only"
                 checked={filter.verified || false}
-                onCheckedChange={(checked) => setFilter(prev => ({ 
-                  ...prev, 
-                  verified: checked ? true : undefined 
-                }))}
+                onCheckedChange={(checked) =>
+                  setFilter((prev) => ({
+                    ...prev,
+                    verified: checked ? true : undefined,
+                  }))
+                }
               />
-              <label htmlFor="verified-only" className="text-xs">Verified</label>
+              <label htmlFor="verified-only" className="text-xs">
+                Verified
+              </label>
             </div>
           </div>
         </div>
@@ -273,7 +331,9 @@ export function MarketplaceBrowser({ onWidgetInstall, onClose }: MarketplaceBrow
               className="text-[11px] underline text-muted-foreground hover:text-foreground"
               onClick={() => {
                 setShowRec(false);
-                try { localStorage.setItem('madlab_market_rec_dismissed', 'true'); } catch {}
+                try {
+                  localStorage.setItem('madlab_market_rec_dismissed', 'true');
+                } catch {}
               }}
             >
               Dismiss
@@ -329,12 +389,13 @@ interface WidgetCardProps {
 }
 
 function WidgetCard({ widget, isInstalling, onInstall, highlightBeginner }: WidgetCardProps) {
-  const isInstalled = marketplaceManager.getInstalledWidgets()
-    .some(installation => installation.widgetId === widget.id);
+  const isInstalled = marketplaceManager
+    .getInstalledWidgets()
+    .some((installation) => installation.widgetId === widget.id);
   const learningProgress = useWorkspaceStore((s) => s.learningProgress);
   const gated = (() => {
     try {
-      if ((widget.tags || []).some(t => /options|greeks|derivative/i.test(t))) {
+      if ((widget.tags || []).some((t) => /options|greeks|derivative/i.test(t))) {
         return !(learningProgress?.configuredWidget && learningProgress?.exportedWorkspace);
       }
     } catch {}
@@ -359,9 +420,7 @@ function WidgetCard({ widget, isInstalling, onInstall, highlightBeginner }: Widg
         </div>
 
         {/* Description */}
-        <p className="text-xs text-muted-foreground line-clamp-2">
-          {widget.description}
-        </p>
+        <p className="text-xs text-muted-foreground line-clamp-2">{widget.description}</p>
 
         {/* Metadata */}
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -392,13 +451,20 @@ function WidgetCard({ widget, isInstalling, onInstall, highlightBeginner }: Widg
               +{widget.tags.length - 3}
             </Badge>
           )}
-          {highlightBeginner && !(widget.tags || []).some(t => /advanced/i.test(t)) && (
-            <Badge variant="outline" className="text-[10px] px-1 py-0 text-emerald-600 border-emerald-500">
+          {highlightBeginner && !(widget.tags || []).some((t) => /advanced/i.test(t)) && (
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1 py-0 text-emerald-600 border-emerald-500"
+            >
               beginner
             </Badge>
           )}
           {gated && (
-            <Badge variant="outline" className="text-[10px] px-1 py-0 text-yellow-700 border-yellow-600 inline-flex items-center gap-1" title="Unlock by completing: Configure a widget and Export workspace">
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1 py-0 text-yellow-700 border-yellow-600 inline-flex items-center gap-1"
+              title="Unlock by completing: Configure a widget and Export workspace"
+            >
               <Lock className="h-3 w-3" /> locked
             </Badge>
           )}
@@ -408,33 +474,35 @@ function WidgetCard({ widget, isInstalling, onInstall, highlightBeginner }: Widg
         <div className="flex items-center justify-between">
           <div className="text-xs">
             {widget.pricing.type === 'free' ? (
-              <Badge variant="outline" className="text-green-600">Free</Badge>
+              <Badge variant="outline" className="text-green-600">
+                Free
+              </Badge>
             ) : widget.pricing.type === 'paid' ? (
               <div className="flex items-center gap-1">
                 <DollarSign className="h-3 w-3" />
                 <span>{widget.pricing.price}</span>
               </div>
             ) : (
-              <Badge variant="outline" className="text-blue-600">Subscription</Badge>
+              <Badge variant="outline" className="text-blue-600">
+                Subscription
+              </Badge>
             )}
           </div>
 
           <Button
             size="sm"
-            variant={isInstalled ? "outline" : "default"}
+            variant={isInstalled ? 'outline' : 'default'}
             disabled={isInstalling || isInstalled || gated}
             onClick={onInstall}
             className="text-xs h-6"
           >
-            {gated ? (
-              'Unlock by completing X'
-            ) : isInstalling ? (
-              'Installing...'
-            ) : isInstalled ? (
-              'Installed'
-            ) : (
-              'Install'
-            )}
+            {gated
+              ? 'Unlock by completing X'
+              : isInstalling
+                ? 'Installing...'
+                : isInstalled
+                  ? 'Installed'
+                  : 'Install'}
           </Button>
         </div>
       </div>
