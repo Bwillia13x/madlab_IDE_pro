@@ -2,7 +2,7 @@
 
 import { useWorkspaceStore, Widget } from '@/lib/store';
 import { Button } from '@/components/ui/button';
-import { PanelLeftClose, PanelLeftOpen, RotateCcw, CheckCircle2, Clipboard } from 'lucide-react';
+import { PanelLeftClose, RotateCcw, CheckCircle2, Clipboard } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -77,7 +77,10 @@ function WidgetProperties({ widget, sheetId }: { widget: Widget; sheetId: string
               const current = (widget.props ?? {}) as unknown;
               const validation = validateWidgetConfig(widget.type, current);
               if (validation.valid) {
-                updateWidget(sheetId, { id: widget.id, props: validation.data as Record<string, unknown> });
+                updateWidget(sheetId, {
+                  id: widget.id,
+                  props: validation.data as Record<string, unknown>,
+                });
                 toast.success('Configuration is valid');
               } else {
                 const first = validation.errors?.issues?.[0];
@@ -123,19 +126,14 @@ function WidgetProperties({ widget, sheetId }: { widget: Widget; sheetId: string
 }
 
 export function Inspector() {
-  const {
-    inspectorOpen,
-    setInspectorOpen,
-    selectedWidgetId,
-    activeSheetId,
-    sheets,
-  } = useWorkspaceStore((state) => ({
-    inspectorOpen: state.inspectorOpen,
-    setInspectorOpen: state.setInspectorOpen,
-    selectedWidgetId: state.selectedWidgetId,
-    activeSheetId: state.activeSheetId,
-    sheets: state.sheets,
-  }));
+  const { inspectorOpen, setInspectorOpen, selectedWidgetId, activeSheetId, sheets } =
+    useWorkspaceStore((state) => ({
+      inspectorOpen: state.inspectorOpen,
+      setInspectorOpen: state.setInspectorOpen,
+      selectedWidgetId: state.selectedWidgetId,
+      activeSheetId: state.activeSheetId,
+      sheets: state.sheets,
+    }));
 
   const activeSheet = sheets.find((s) => s.id === activeSheetId);
   const selectedWidget = activeSheet?.widgets.find((w) => w.id === selectedWidgetId);

@@ -3,7 +3,14 @@
 import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useWorkspaceStore } from '@/lib/store';
 import { SHEET_PRESETS, type SheetKind } from '@/lib/presets';
 import { cn } from '@/lib/utils';
@@ -11,7 +18,15 @@ import { useEffect, useState } from 'react';
 import { PresetPicker } from './PresetPicker';
 
 export function SheetTabs() {
-  const { sheets, activeSheetId, addSheet, closeSheet, setActiveSheet, saveTemplate, createSheetFromTemplate } = useWorkspaceStore();
+  const {
+    sheets,
+    activeSheetId,
+    addSheet,
+    closeSheet,
+    setActiveSheet,
+    saveTemplate,
+    createSheetFromTemplate,
+  } = useWorkspaceStore();
 
   const handleAddSheet = (kind: SheetKind) => {
     const preset = SHEET_PRESETS[kind];
@@ -24,7 +39,8 @@ export function SheetTabs() {
   };
 
   const handleMiddleClick = (e: React.MouseEvent, sheetId: string) => {
-    if (e.button === 1) { // Middle click
+    if (e.button === 1) {
+      // Middle click
       e.preventDefault();
       closeSheet(sheetId);
     }
@@ -32,9 +48,11 @@ export function SheetTabs() {
 
   const [presetOpen, setPresetOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const activeSheet = sheets.find(s => s.id === activeSheetId);
+  const activeSheet = sheets.find((s) => s.id === activeSheetId);
   const [templateName, setTemplateName] = useState<string>('');
-  const isAutomation = typeof navigator !== 'undefined' && (navigator as any).webdriver;
+  const isAutomation =
+    typeof navigator !== 'undefined' &&
+    (navigator as unknown as { webdriver?: boolean }).webdriver === true;
 
   useEffect(() => {
     // Default template name to current sheet title
@@ -43,7 +61,10 @@ export function SheetTabs() {
 
   // In WebDriver (E2E), auto-open the preset picker to stabilize selector timing
   useEffect(() => {
-    if (typeof navigator !== 'undefined' && (navigator as any).webdriver) {
+    if (
+      typeof navigator !== 'undefined' &&
+      (navigator as unknown as { webdriver?: boolean }).webdriver === true
+    ) {
       const t = setTimeout(() => setPresetOpen(true), 0);
       return () => clearTimeout(t);
     }
@@ -53,7 +74,10 @@ export function SheetTabs() {
   useEffect(() => {
     try {
       const sp = new URLSearchParams(window.location.search);
-      const isE2E = sp.get('e2e') === '1' || ((navigator as any)?.webdriver === true);
+      const isE2E =
+        sp.get('e2e') === '1' ||
+        (typeof navigator !== 'undefined' &&
+          (navigator as unknown as { webdriver?: boolean }).webdriver === true);
       if (!isE2E) return;
       if (!sheets || sheets.length === 0) {
         const label = SHEET_PRESETS['valuation']?.label || 'Valuation Workbench';
@@ -85,14 +109,19 @@ export function SheetTabs() {
   return (
     <div className="h-9 bg-secondary border-b border-border flex items-center">
       {/* Sheet Tabs */}
-      <div className="flex overflow-x-auto scrollbar-none" role="tablist" aria-label="Sheets" aria-orientation="horizontal">
+      <div
+        className="flex overflow-x-auto scrollbar-none"
+        role="tablist"
+        aria-label="Sheets"
+        aria-orientation="horizontal"
+      >
         {sheets.map((sheet) => (
           <button
             key={sheet.id}
             data-testid="sheet-tab"
             className={cn(
-              "flex items-center h-9 px-3 border-r border-border cursor-pointer group hover:bg-accent min-w-0",
-              activeSheetId === sheet.id && "bg-background"
+              'flex items-center h-9 px-3 border-r border-border cursor-pointer group hover:bg-accent min-w-0',
+              activeSheetId === sheet.id && 'bg-background'
             )}
             onClick={() => setActiveSheet(sheet.id)}
             onKeyDown={(e) => {
@@ -102,11 +131,14 @@ export function SheetTabs() {
               }
               if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
                 e.preventDefault();
-                const currentIndex = sheets.findIndex(s => s.id === sheet.id);
+                const currentIndex = sheets.findIndex((s) => s.id === sheet.id);
                 if (currentIndex !== -1) {
-                  const nextIndex = e.key === 'ArrowRight'
-                    ? (currentIndex + 1) % sheets.length
-                    : (currentIndex === 0 ? sheets.length - 1 : currentIndex - 1);
+                  const nextIndex =
+                    e.key === 'ArrowRight'
+                      ? (currentIndex + 1) % sheets.length
+                      : currentIndex === 0
+                        ? sheets.length - 1
+                        : currentIndex - 1;
                   setActiveSheet(sheets[nextIndex].id);
                   // Move focus to the next/prev tab button
                   const nextTabId = `sheet-tab-${sheets[nextIndex].id}`;
@@ -123,9 +155,7 @@ export function SheetTabs() {
             aria-controls={`sheet-panel-${sheet.id}`}
             tabIndex={activeSheetId === sheet.id ? 0 : -1}
           >
-            <span className="text-xs text-muted-foreground truncate max-w-32">
-              {sheet.title}
-            </span>
+            <span className="text-xs text-muted-foreground truncate max-w-32">{sheet.title}</span>
             <Button
               data-testid="sheet-tab-close"
               variant="ghost"
@@ -163,15 +193,17 @@ export function SheetTabs() {
           onClick={() => setPresetOpen(true)}
           aria-haspopup="menu"
           aria-expanded={presetOpen}
-            {...(typeof navigator !== 'undefined' && (navigator as any).webdriver
-              ? { onMouseDown: (e: React.MouseEvent) => {
+          {...(typeof navigator !== 'undefined' && (navigator as any).webdriver
+            ? {
+                onMouseDown: (e: React.MouseEvent) => {
                   // E2E inline helper: if helpers exist, call to ensure a sheet is created
                   try {
                     const id = 'valuation';
                     (window as any).madlab?.addSheetByKind?.(id);
                   } catch {}
-                } }
-              : {})}
+                },
+              }
+            : {})}
         >
           <Plus className="h-4 w-4 text-foreground" />
         </Button>
@@ -190,7 +222,10 @@ export function SheetTabs() {
             <button
               key={kind}
               data-testid={`preset-item-${kind}`}
-              onClick={() => { handleAddSheet(kind as SheetKind); setPresetOpen(false); }}
+              onClick={() => {
+                handleAddSheet(kind as SheetKind);
+                setPresetOpen(false);
+              }}
               className="w-full text-left px-3 py-2 text-sm hover:bg-accent"
             >
               <div className="font-medium">{preset.label}</div>
@@ -222,10 +257,7 @@ export function SheetTabs() {
             }}
           />
           <DialogFooter>
-            <Button
-              variant="secondary"
-              onClick={() => setSaveDialogOpen(false)}
-            >
+            <Button variant="secondary" onClick={() => setSaveDialogOpen(false)}>
               Cancel
             </Button>
             <Button
