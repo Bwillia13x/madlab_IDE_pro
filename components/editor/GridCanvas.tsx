@@ -10,7 +10,14 @@ import { measureWidgetRender } from '@/lib/performance/monitor';
 import { Plus, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 // import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 // Make GridLayout responsive
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -37,14 +44,28 @@ function EmptySheetState() {
           <span>to open commands</span>
         </div>
         <div className="flex items-center gap-2 mt-2">
-          <Button size="sm" onClick={() => store.addSheet('valuation', 'Valuation Workbench')}>Load Valuation Demo</Button>
-          <Button size="sm" variant="outline" onClick={() => window.dispatchEvent(new Event('madlab:open-command-palette'))}>Browse Widgets</Button>
-          <Button size="sm" variant="ghost" onClick={() => {
-            try {
-              localStorage.removeItem('madlab_onboarding_completed');
-              window.location.reload();
-            } catch {}
-          }}>Start Tutorial</Button>
+          <Button size="sm" onClick={() => store.addSheet('valuation', 'Valuation Workbench')}>
+            Load Valuation Demo
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => window.dispatchEvent(new Event('madlab:open-command-palette'))}
+          >
+            Browse Widgets
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              try {
+                localStorage.removeItem('madlab_onboarding_completed');
+                window.location.reload();
+              } catch {}
+            }}
+          >
+            Start Tutorial
+          </Button>
         </div>
       </div>
     </EmptyState>
@@ -52,19 +73,29 @@ function EmptySheetState() {
 }
 
 export function GridCanvas({ sheet }: GridCanvasProps) {
-  const { updateLayout, selectedWidgetId, setSelectedWidget, activeSheetId, duplicateWidget, removeWidget } = useWorkspaceStore();
+  const {
+    updateLayout,
+    selectedWidgetId,
+    setSelectedWidget,
+    activeSheetId,
+    duplicateWidget,
+    removeWidget,
+  } = useWorkspaceStore();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
-  const handleLayoutChange = useCallback((layout: Layout[]) => {
-    updateLayout(sheet.id, layout);
-  }, [sheet.id, updateLayout]);
+  const handleLayoutChange = useCallback(
+    (layout: Layout[]) => {
+      updateLayout(sheet.id, layout);
+    },
+    [sheet.id, updateLayout]
+  );
 
   const layouts = {
-    lg: sheet.widgets.map(w => ({ ...w.layout, i: w.id })),
-    md: sheet.widgets.map(w => ({ ...w.layout, i: w.id })),
-    sm: sheet.widgets.map(w => ({ ...w.layout, i: w.id })),
-    xs: sheet.widgets.map(w => ({ ...w.layout, i: w.id })),
-    xxs: sheet.widgets.map(w => ({ ...w.layout, i: w.id }))
+    lg: sheet.widgets.map((w) => ({ ...w.layout, i: w.id })),
+    md: sheet.widgets.map((w) => ({ ...w.layout, i: w.id })),
+    sm: sheet.widgets.map((w) => ({ ...w.layout, i: w.id })),
+    xs: sheet.widgets.map((w) => ({ ...w.layout, i: w.id })),
+    xxs: sheet.widgets.map((w) => ({ ...w.layout, i: w.id })),
   };
 
   return (
@@ -104,7 +135,9 @@ export function GridCanvas({ sheet }: GridCanvasProps) {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setConfirmDeleteOpen(false)}>Cancel</Button>
+            <Button variant="secondary" onClick={() => setConfirmDeleteOpen(false)}>
+              Cancel
+            </Button>
             <Button
               data-testid="confirm-delete-ok"
               onClick={() => {
@@ -156,7 +189,7 @@ export function GridCanvas({ sheet }: GridCanvasProps) {
                 }
                 if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
                   e.preventDefault();
-                  const idx = sheet.widgets.findIndex(w => w.id === widget.id);
+                  const idx = sheet.widgets.findIndex((w) => w.id === widget.id);
                   let nextIdx = idx;
                   if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
                     nextIdx = (idx + 1) % sheet.widgets.length;
@@ -166,7 +199,9 @@ export function GridCanvas({ sheet }: GridCanvasProps) {
                   const nextId = sheet.widgets[nextIdx]?.id;
                   if (nextId) {
                     setSelectedWidget(nextId);
-                    const el = document.querySelector(`[data-testid="widget-tile-${nextId}"]`) as HTMLElement | null;
+                    const el = document.querySelector(
+                      `[data-testid="widget-tile-${nextId}"]`
+                    ) as HTMLElement | null;
                     el?.focus();
                   }
                 }
@@ -183,7 +218,15 @@ export function GridCanvas({ sheet }: GridCanvasProps) {
   );
 }
 
-function EditorKeybinds({ onDuplicate, onRemove, onClear }: { onDuplicate: () => void; onRemove: () => void; onClear: () => void }) {
+function EditorKeybinds({
+  onDuplicate,
+  onRemove,
+  onClear,
+}: {
+  onDuplicate: () => void;
+  onRemove: () => void;
+  onClear: () => void;
+}) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       // Skip when typing in inputs/textarea/contenteditable

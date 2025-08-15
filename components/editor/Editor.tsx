@@ -10,7 +10,7 @@ import { ContinueCallout } from '@/components/ui/empty-state';
 
 export function Editor() {
   const { sheets, activeSheetId } = useWorkspaceStore();
-  const activeSheet = sheets.find(s => s.id === activeSheetId);
+  const activeSheet = sheets.find((s) => s.id === activeSheetId);
   // Import Inspector statically to ensure immediate availability for E2E selectors
   // and avoid timing issues with dynamic loading during tests.
   const Inspector = require('./Inspector').Inspector as React.ComponentType;
@@ -21,8 +21,17 @@ export function Editor() {
       const isAutomation = (() => {
         try {
           const sp = new URLSearchParams(window.location.search);
-          return sp.get('e2e') === '1' || ((navigator as any)?.webdriver === true);
-        } catch { return (typeof navigator !== 'undefined' && (navigator as any)?.webdriver === true); }
+          return (
+            sp.get('e2e') === '1' ||
+            (typeof navigator !== 'undefined' &&
+              (navigator as unknown as { webdriver?: boolean }).webdriver === true)
+          );
+        } catch {
+          return (
+            typeof navigator !== 'undefined' &&
+            (navigator as unknown as { webdriver?: boolean }).webdriver === true
+          );
+        }
       })();
       if (!isAutomation) return;
       const ensure = () => {
@@ -41,13 +50,20 @@ export function Editor() {
       const id = setInterval(() => {
         try {
           const st = require('@/lib/store').useWorkspaceStore.getState();
-          if (st.sheets && st.sheets.length > 0) { clearInterval(id); return; }
+          if (st.sheets && st.sheets.length > 0) {
+            clearInterval(id);
+            return;
+          }
         } catch {}
         ensure();
         if (Date.now() - start > 4000) clearInterval(id);
       }, 200);
       requestAnimationFrame(() => setTimeout(ensure, 0));
-      return () => { try { clearInterval(id); } catch {} };
+      return () => {
+        try {
+          clearInterval(id);
+        } catch {}
+      };
     } catch {}
   }, []);
 
