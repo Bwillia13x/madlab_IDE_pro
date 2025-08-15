@@ -30,7 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
     };
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(_error: Error): State {
     const errorId = `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     return {
       hasError: true,
@@ -85,11 +85,16 @@ interface ErrorFallbackProps {
 function ErrorFallback({ error, onReset }: ErrorFallbackProps) {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'critical': return 'text-red-600 border-red-200 bg-red-50';
-      case 'high': return 'text-orange-600 border-orange-200 bg-orange-50';
-      case 'medium': return 'text-yellow-600 border-yellow-200 bg-yellow-50';
-      case 'low': return 'text-blue-600 border-blue-200 bg-blue-50';
-      default: return 'text-gray-600 border-gray-200 bg-gray-50';
+      case 'critical':
+        return 'text-red-600 border-red-200 bg-red-50';
+      case 'high':
+        return 'text-orange-600 border-orange-200 bg-orange-50';
+      case 'medium':
+        return 'text-yellow-600 border-yellow-200 bg-yellow-50';
+      case 'low':
+        return 'text-blue-600 border-blue-200 bg-blue-50';
+      default:
+        return 'text-gray-600 border-gray-200 bg-gray-50';
     }
   };
 
@@ -107,15 +112,11 @@ function ErrorFallback({ error, onReset }: ErrorFallbackProps) {
     <div className="min-h-[200px] w-full flex items-center justify-center p-4">
       <Card className={`max-w-md w-full p-6 ${getSeverityColor(error.severity)}`}>
         <div className="flex items-start gap-3">
-          <div className="flex-shrink-0">
-            {getSeverityIcon(error.severity)}
-          </div>
-          
+          <div className="flex-shrink-0">{getSeverityIcon(error.severity)}</div>
+
           <div className="flex-1">
-            <h3 className="font-semibold text-lg mb-2">
-              {error.userMessage}
-            </h3>
-            
+            <h3 className="font-semibold text-lg mb-2">{error.userMessage}</h3>
+
             <p className="text-sm text-muted-foreground mb-4">
               {error.category.replace('_', ' ')} • {error.severity} severity
             </p>
@@ -135,8 +136,13 @@ function ErrorFallback({ error, onReset }: ErrorFallbackProps) {
               {error.recoveryActions.map((action, index) => (
                 <Button
                   key={index}
-                  variant={action.type === 'primary' ? 'default' : 
-                           action.type === 'destructive' ? 'destructive' : 'secondary'}
+                  variant={
+                    action.type === 'primary'
+                      ? 'default'
+                      : action.type === 'destructive'
+                        ? 'destructive'
+                        : 'secondary'
+                  }
                   size="sm"
                   className="w-full"
                   onClick={action.action}
@@ -151,13 +157,8 @@ function ErrorFallback({ error, onReset }: ErrorFallbackProps) {
                   {action.label}
                 </Button>
               ))}
-              
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full mt-2"
-                onClick={onReset}
-              >
+
+              <Button variant="outline" size="sm" className="w-full mt-2" onClick={onReset}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Try Again
               </Button>
@@ -177,10 +178,10 @@ export function useErrorHandler() {
 
   const reportError = (error: Error | EnhancedError, context?: Record<string, any>) => {
     const enhancedError = 'category' in error ? error : errorHandler.handle(error, context);
-    
+
     // Could integrate with error reporting service here
     console.error('[User Reported Error]', enhancedError);
-    
+
     return enhancedError;
   };
 

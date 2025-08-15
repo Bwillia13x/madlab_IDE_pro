@@ -1,13 +1,6 @@
 'use client';
 
-import { 
-  ChevronDown, 
-  ChevronRight, 
-  FileText, 
-  Folder, 
-  Database,
-  TrendingUp
-} from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, Folder, Database, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -16,25 +9,43 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 const MOCK_EXPLORER_DATA: { data: TreeItem[]; models: TreeItem[] } = {
   data: [
-  { id: '1', name: 'market_data.csv', type: 'file', icon: FileText },
-  { id: '2', name: 'portfolio.json', type: 'file', icon: FileText },
-  { id: '3', name: 'earnings', type: 'folder', icon: Folder, children: [
-      { id: '3-1', name: 'Q1_2024.xlsx', type: 'file', icon: FileText },
-      { id: '3-2', name: 'Q2_2024.xlsx', type: 'file', icon: FileText },
-    ]},
-  { id: '4', name: 'indices', type: 'folder', icon: Folder, children: [
-      { id: '4-1', name: 'SPX.csv', type: 'file', icon: FileText },
-      { id: '4-2', name: 'NDX.csv', type: 'file', icon: FileText },
-    ]},
+    { id: '1', name: 'market_data.csv', type: 'file', icon: FileText },
+    { id: '2', name: 'portfolio.json', type: 'file', icon: FileText },
+    {
+      id: '3',
+      name: 'earnings',
+      type: 'folder',
+      icon: Folder,
+      children: [
+        { id: '3-1', name: 'Q1_2024.xlsx', type: 'file', icon: FileText },
+        { id: '3-2', name: 'Q2_2024.xlsx', type: 'file', icon: FileText },
+      ],
+    },
+    {
+      id: '4',
+      name: 'indices',
+      type: 'folder',
+      icon: Folder,
+      children: [
+        { id: '4-1', name: 'SPX.csv', type: 'file', icon: FileText },
+        { id: '4-2', name: 'NDX.csv', type: 'file', icon: FileText },
+      ],
+    },
   ],
   models: [
-  { id: '5', name: 'dcf_model.py', type: 'file', icon: FileText },
-  { id: '6', name: 'monte_carlo.ipynb', type: 'file', icon: FileText },
-  { id: '7', name: 'risk_models', type: 'folder', icon: Folder, children: [
-      { id: '7-1', name: 'var_model.py', type: 'file', icon: FileText },
-      { id: '7-2', name: 'stress_test.py', type: 'file', icon: FileText },
-    ]},
-  ]
+    { id: '5', name: 'dcf_model.py', type: 'file', icon: FileText },
+    { id: '6', name: 'monte_carlo.ipynb', type: 'file', icon: FileText },
+    {
+      id: '7',
+      name: 'risk_models',
+      type: 'folder',
+      icon: Folder,
+      children: [
+        { id: '7-1', name: 'var_model.py', type: 'file', icon: FileText },
+        { id: '7-2', name: 'stress_test.py', type: 'file', icon: FileText },
+      ],
+    },
+  ],
 };
 
 type TreeItem = {
@@ -75,7 +86,7 @@ function ExplorerItem({ item, level }: ExplorerItemProps) {
         variant="ghost"
         size="sm"
         className={cn(
-          "w-full h-6 justify-start px-1 py-0 font-normal text-xs text-foreground hover:bg-accent focus:bg-accent focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-secondary",
+          'w-full h-6 justify-start px-1 py-0 font-normal text-xs text-foreground hover:bg-accent focus:bg-accent focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-secondary',
           `pl-${level * 4 + 1}`
         )}
         onClick={() => hasChildren && setExpanded(!expanded)}
@@ -87,20 +98,18 @@ function ExplorerItem({ item, level }: ExplorerItemProps) {
       >
         {hasChildren && (
           <div className="w-4 flex justify-center">
-            {expanded ? (
-              <ChevronDown className="h-3 w-3" />
-            ) : (
-              <ChevronRight className="h-3 w-3" />
-            )}
+            {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
           </div>
         )}
         <item.icon className="h-3 w-3 mr-1" />
-        <span className="truncate" data-testid="explorer-item-name">{item.name}</span>
+        <span className="truncate" data-testid="explorer-item-name">
+          {item.name}
+        </span>
       </Button>
 
-    {expanded && hasChildren && item.children && (
+      {expanded && hasChildren && item.children && (
         <div>
-      {item.children.map((child: TreeItem) => (
+          {item.children.map((child: TreeItem) => (
             <ExplorerItem key={child.id} item={child} level={level + 1} />
           ))}
         </div>
@@ -117,11 +126,14 @@ export function Explorer() {
   const startX = useRef(0);
   const startWidth = useRef(0);
 
-  const onMouseMove = useCallback((e: MouseEvent) => {
-    const delta = e.clientX - startX.current;
-    const next = Math.max(200, Math.min(600, startWidth.current + delta));
-    setExplorerWidth(next);
-  }, [setExplorerWidth]);
+  const onMouseMove = useCallback(
+    (e: MouseEvent) => {
+      const delta = e.clientX - startX.current;
+      const next = Math.max(200, Math.min(600, startWidth.current + delta));
+      setExplorerWidth(next);
+    },
+    [setExplorerWidth]
+  );
 
   const onMouseUp = useCallback(() => {
     setIsResizing(false);
@@ -129,15 +141,18 @@ export function Explorer() {
     window.removeEventListener('mouseup', onMouseUp);
   }, [onMouseMove]);
 
-  const onMouseDownHandle = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsResizing(true);
-    startX.current = e.clientX;
-    startWidth.current = containerRef.current?.getBoundingClientRect().width || explorerWidth;
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-  }, [explorerWidth, onMouseMove, onMouseUp]);
+  const onMouseDownHandle = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsResizing(true);
+      startX.current = e.clientX;
+      startWidth.current = containerRef.current?.getBoundingClientRect().width || explorerWidth;
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    },
+    [explorerWidth, onMouseMove, onMouseUp]
+  );
   const [dataExpanded, setDataExpanded] = useState(true);
   const [modelsExpanded, setModelsExpanded] = useState(true);
 
@@ -157,7 +172,10 @@ export function Explorer() {
   return (
     <div
       ref={containerRef}
-      className={cn("relative bg-secondary border-r border-border flex flex-col select-none group", isResizing && "cursor-col-resize")}
+      className={cn(
+        'relative bg-secondary border-r border-border flex flex-col select-none group',
+        isResizing && 'cursor-col-resize'
+      )}
       style={{ width: Math.max(200, Math.min(600, explorerWidth)) }}
       data-testid="explorer-panel"
       hidden={explorerCollapsed}
@@ -214,9 +232,19 @@ export function Explorer() {
 
             {dataExpanded && (
               <div className="mt-1">
-                {MOCK_EXPLORER_DATA.data.map((item) => (
-                  <ExplorerItem key={item.id} item={item} level={1} />
-                ))}
+                {MOCK_EXPLORER_DATA.data.length > 0 ? (
+                  MOCK_EXPLORER_DATA.data.map((item) => (
+                    <ExplorerItem key={item.id} item={item} level={1} />
+                  ))
+                ) : (
+                  <div className="px-3 py-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Database className="h-3 w-3" />
+                      <span>No data sources available</span>
+                    </div>
+                    <p className="mt-1 text-xs opacity-75">Add data providers in Settings</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -240,9 +268,21 @@ export function Explorer() {
 
             {modelsExpanded && (
               <div className="mt-1">
-                {MOCK_EXPLORER_DATA.models.map((item) => (
-                  <ExplorerItem key={item.id} item={item} level={1} />
-                ))}
+                {MOCK_EXPLORER_DATA.models.length > 0 ? (
+                  MOCK_EXPLORER_DATA.models.map((item) => (
+                    <ExplorerItem key={item.id} item={item} level={1} />
+                  ))
+                ) : (
+                  <div className="px-3 py-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-3 w-3" />
+                      <span>No models available</span>
+                    </div>
+                    <p className="mt-1 text-xs opacity-75">
+                      Create or import models to get started
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>

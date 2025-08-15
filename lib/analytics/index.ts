@@ -20,7 +20,7 @@ export interface AnalyticsEvent {
 }
 
 // User behavior categories
-export type EventCategory = 
+export type EventCategory =
   | 'widget_interaction'
   | 'data_request'
   | 'export_action'
@@ -81,6 +81,18 @@ class AnalyticsManager {
   }
 
   private initialize(): void {
+    if (this.isInitialized) return;
+
+    // Defer non-critical analytics until idle for better performance
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      window.requestIdleCallback(() => this.initializeAnalytics(), { timeout: 5000 });
+    } else {
+      // Fallback for browsers without requestIdleCallback
+      setTimeout(() => this.initializeAnalytics(), 1000);
+    }
+  }
+
+  private initializeAnalytics(): void {
     if (this.isInitialized) return;
 
     // Start flush timer
@@ -145,73 +157,105 @@ class AnalyticsManager {
    * Track widget interactions
    */
   trackWidget(action: string, widgetType: string, properties: Record<string, any> = {}): void {
-    this.track(`widget_${action}`, {
-      widget_type: widgetType,
-      ...properties,
-    }, 'widget_interaction');
+    this.track(
+      `widget_${action}`,
+      {
+        widget_type: widgetType,
+        ...properties,
+      },
+      'widget_interaction'
+    );
   }
 
   /**
    * Track data requests and performance
    */
-  trackDataRequest(provider: string, query: any, result: {
-    success: boolean;
-    loadTime: number;
-    fromCache: boolean;
-    error?: string;
-  }): void {
-    this.track('data_request', {
-      provider,
-      query_type: typeof query,
-      success: result.success,
-      load_time: result.loadTime,
-      from_cache: result.fromCache,
-      error: result.error,
-    }, 'data_request');
+  trackDataRequest(
+    provider: string,
+    query: any,
+    result: {
+      success: boolean;
+      loadTime: number;
+      fromCache: boolean;
+      error?: string;
+    }
+  ): void {
+    this.track(
+      'data_request',
+      {
+        provider,
+        query_type: typeof query,
+        success: result.success,
+        load_time: result.loadTime,
+        from_cache: result.fromCache,
+        error: result.error,
+      },
+      'data_request'
+    );
   }
 
   /**
    * Track export actions
    */
   trackExport(format: string, widgetType: string, dataSize: number): void {
-    this.track('data_export', {
-      format,
-      widget_type: widgetType,
-      data_size: dataSize,
-    }, 'export_action');
+    this.track(
+      'data_export',
+      {
+        format,
+        widget_type: widgetType,
+        data_size: dataSize,
+      },
+      'export_action'
+    );
   }
 
   /**
    * Track navigation patterns
    */
   trackNavigation(from: string, to: string, method: 'click' | 'keyboard' | 'url'): void {
-    this.track('navigation', {
-      from_page: from,
-      to_page: to,
-      method,
-    }, 'navigation');
+    this.track(
+      'navigation',
+      {
+        from_page: from,
+        to_page: to,
+        method,
+      },
+      'navigation'
+    );
   }
 
   /**
    * Track feature usage
    */
-  trackFeature(feature: string, action: 'discovered' | 'used' | 'completed', properties: Record<string, any> = {}): void {
-    this.track('feature_usage', {
-      feature,
-      action,
-      ...properties,
-    }, 'feature_usage');
+  trackFeature(
+    feature: string,
+    action: 'discovered' | 'used' | 'completed',
+    properties: Record<string, any> = {}
+  ): void {
+    this.track(
+      'feature_usage',
+      {
+        feature,
+        action,
+        ...properties,
+      },
+      'feature_usage'
+    );
   }
 
   /**
    * Track user flow milestones
    */
   trackMilestone(milestone: string, properties: Record<string, any> = {}): void {
-    this.track('milestone_reached', {
-      milestone,
-      session_duration: Date.now() - parseInt(this.sessionId.split('_')[1]),
-      ...properties,
-    }, 'user_flow');
+    this.track(
+      'milestone_reached',
+      {
+        milestone,
+        session_duration: Date.now() - parseInt(this.sessionId.split('_')[1]),
+        ...properties,
+      },
+      'user_flow'
+    );
   }
 
   /**
@@ -219,10 +263,14 @@ class AnalyticsManager {
    */
   identify(userId: string, traits: Record<string, any> = {}): void {
     this.userId = userId;
-    this.track('user_identified', {
-      user_id: userId,
-      ...traits,
-    }, 'user_flow');
+    this.track(
+      'user_identified',
+      {
+        user_id: userId,
+        ...traits,
+      },
+      'user_flow'
+    );
   }
 
   /**
@@ -234,12 +282,16 @@ class AnalyticsManager {
     unit?: string;
     context?: Record<string, any>;
   }): void {
-    this.track('performance_metric', {
-      metric_name: metrics.name,
-      metric_value: metrics.value,
-      metric_unit: metrics.unit || 'ms',
-      ...metrics.context,
-    }, 'performance');
+    this.track(
+      'performance_metric',
+      {
+        metric_name: metrics.name,
+        metric_value: metrics.value,
+        metric_unit: metrics.unit || 'ms',
+        ...metrics.context,
+      },
+      'performance'
+    );
   }
 
   /**
@@ -299,9 +351,10 @@ class AnalyticsManager {
     return {
       platform: typeof window !== 'undefined' ? 'web' : 'server',
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
-      viewport: typeof window !== 'undefined' 
-        ? { width: window.innerWidth, height: window.innerHeight }
-        : { width: 0, height: 0 },
+      viewport:
+        typeof window !== 'undefined'
+          ? { width: window.innerWidth, height: window.innerHeight }
+          : { width: 0, height: 0 },
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       version: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
     };
@@ -361,7 +414,7 @@ class AnalyticsManager {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(this.config.apiKey && { 'Authorization': `Bearer ${this.config.apiKey}` }),
+          ...(this.config.apiKey && { Authorization: `Bearer ${this.config.apiKey}` }),
         },
         body: JSON.stringify({ events }),
       });
@@ -375,15 +428,19 @@ class AnalyticsManager {
       }
     } catch (error) {
       console.error('[Analytics] Failed to send events:', error);
-      
+
       // Store failed events locally as backup
       this.storeEventsLocally(events);
-      
+
       // Track the analytics error
-      this.track('analytics_error', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        events_count: events.length,
-      }, 'error');
+      this.track(
+        'analytics_error',
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          events_count: events.length,
+        },
+        'error'
+      );
     }
   }
 
@@ -392,12 +449,12 @@ class AnalyticsManager {
       const stored = localStorage.getItem('madlab_analytics_events');
       const existingEvents: AnalyticsEvent[] = stored ? JSON.parse(stored) : [];
       const allEvents = [...existingEvents, ...events];
-      
+
       // Keep only last 1000 events and 30 days of data
       const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-      const filtered = allEvents.filter(e => e.timestamp >= cutoff);
+      const filtered = allEvents.filter((e) => e.timestamp >= cutoff);
       const recentEvents = filtered.slice(-1000);
-      
+
       localStorage.setItem('madlab_analytics_events', JSON.stringify(recentEvents));
     } catch (error) {
       console.warn('[Analytics] Failed to store events locally:', error);
@@ -414,36 +471,45 @@ class AnalyticsManager {
   }
 
   private handleBeforeUnload(): void {
-    this.track('session_end', {
-      session_duration: Date.now() - parseInt(this.sessionId.split('_')[1]),
-    }, 'user_flow');
-    
+    this.track(
+      'session_end',
+      {
+        session_duration: Date.now() - parseInt(this.sessionId.split('_')[1]),
+      },
+      'user_flow'
+    );
+
     // Use sendBeacon for reliable event sending on page unload
     if (navigator.sendBeacon && this.config.endpoint) {
-      navigator.sendBeacon(
-        this.config.endpoint,
-        JSON.stringify({ events: this.eventBuffer })
-      );
+      navigator.sendBeacon(this.config.endpoint, JSON.stringify({ events: this.eventBuffer }));
     } else {
       this.flush();
     }
   }
 
   private handleError(event: ErrorEvent): void {
-    this.track('javascript_error', {
-      message: event.message,
-      filename: event.filename,
-      line_number: event.lineno,
-      column_number: event.colno,
-      stack: event.error?.stack,
-    }, 'error');
+    this.track(
+      'javascript_error',
+      {
+        message: event.message,
+        filename: event.filename,
+        line_number: event.lineno,
+        column_number: event.colno,
+        stack: event.error?.stack,
+      },
+      'error'
+    );
   }
 
   private handleUnhandledRejection(event: PromiseRejectionEvent): void {
-    this.track('unhandled_promise_rejection', {
-      reason: event.reason instanceof Error ? event.reason.message : String(event.reason),
-      stack: event.reason instanceof Error ? event.reason.stack : undefined,
-    }, 'error');
+    this.track(
+      'unhandled_promise_rejection',
+      {
+        reason: event.reason instanceof Error ? event.reason.message : String(event.reason),
+        stack: event.reason instanceof Error ? event.reason.stack : undefined,
+      },
+      'error'
+    );
   }
 
   private trackPerformanceMetrics(): void {
@@ -452,8 +518,10 @@ class AnalyticsManager {
     // Track page load performance
     window.addEventListener('load', () => {
       setTimeout(() => {
-        const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-        
+        const navigation = performance.getEntriesByType(
+          'navigation'
+        )[0] as PerformanceNavigationTiming;
+
         if (navigation) {
           this.trackPerformance({
             name: 'page_load_time',
@@ -473,7 +541,7 @@ class AnalyticsManager {
 
         // Track paint metrics
         const paintMetrics = performance.getEntriesByType('paint');
-        paintMetrics.forEach(metric => {
+        paintMetrics.forEach((metric) => {
           this.trackPerformance({
             name: metric.name.replace('-', '_'),
             value: metric.startTime,
@@ -490,11 +558,21 @@ class AnalyticsManager {
       try {
         // dynamic import to avoid bundling on server
         // @ts-ignore - module may not be installed
-        import('web-vitals').then((wv: any) => {
-          try { wv.onLCP((m: any) => this.trackPerformance({ name: 'LCP', value: m.value })) } catch {}
-          try { wv.onCLS((m: any) => this.trackPerformance({ name: 'CLS', value: m.value, unit: '' })) } catch {}
-          try { wv.onINP((m: any) => this.trackPerformance({ name: 'INP', value: m.value })) } catch {}
-        }).catch(() => {})
+        import('web-vitals')
+          .then((wv: any) => {
+            try {
+              wv.onLCP((m: any) => this.trackPerformance({ name: 'LCP', value: m.value }));
+            } catch {}
+            try {
+              wv.onCLS((m: any) =>
+                this.trackPerformance({ name: 'CLS', value: m.value, unit: '' })
+              );
+            } catch {}
+            try {
+              wv.onINP((m: any) => this.trackPerformance({ name: 'INP', value: m.value }));
+            } catch {}
+          })
+          .catch(() => {});
       } catch {}
     }
   }
@@ -502,7 +580,7 @@ class AnalyticsManager {
   private trackWebVitals(): void {
     // This would integrate with web-vitals library in a real implementation
     // For now, we'll track basic performance metrics
-    
+
     if ('PerformanceObserver' in window) {
       // Track Largest Contentful Paint
       const lcpObserver = new PerformanceObserver((list) => {
@@ -523,7 +601,7 @@ class AnalyticsManager {
       // Track First Input Delay
       const fidObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries();
-        entries.forEach(entry => {
+        entries.forEach((entry) => {
           const perfEntry = entry as any; // FID entries have processingStart
           if (perfEntry.processingStart) {
             this.trackPerformance({
@@ -549,7 +627,7 @@ class AnalyticsManager {
     if (this.flushTimer) {
       clearInterval(this.flushTimer);
     }
-    
+
     this.flush();
     this.isInitialized = false;
   }
@@ -557,7 +635,8 @@ class AnalyticsManager {
 
 // Create singleton instance
 export const analytics = new AnalyticsManager({
-  enabled: process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ANALYTICS_ENABLED === 'true',
+  enabled:
+    process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ANALYTICS_ENABLED === 'true',
   endpoint: process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT,
   apiKey: process.env.NEXT_PUBLIC_ANALYTICS_API_KEY,
   debugMode: process.env.NODE_ENV === 'development',

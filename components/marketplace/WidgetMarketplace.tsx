@@ -198,18 +198,18 @@ export function WidgetMarketplace({ onClose }: WidgetMarketplaceProps) {
 
       // Show success toast
       toast({
-        title: "Installation Complete!",
+        title: 'Installation Complete!',
         description: `${widget.name} has been successfully installed to your workspace.`,
-        variant: "default",
+        variant: 'default',
       });
 
       console.log(`Widget ${widget.name} installed successfully`);
     } catch (error) {
       // Show error toast
       toast({
-        title: "Installation Failed",
+        title: 'Installation Failed',
         description: `Failed to install ${widget.name}. Please try again.`,
-        variant: "destructive",
+        variant: 'destructive',
       });
       console.error(`Failed to install widget ${widget.name}:`, error);
     } finally {
@@ -332,7 +332,10 @@ export function WidgetMarketplace({ onClose }: WidgetMarketplaceProps) {
             }
           >
             {filteredWidgets.map((widget) => (
-              <Card key={widget.id} className="h-full">
+              <Card
+                key={widget.id}
+                className="h-full focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background transition-shadow duration-200"
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -381,7 +384,7 @@ export function WidgetMarketplace({ onClose }: WidgetMarketplaceProps) {
                     <div className="flex items-center gap-2">
                       <Button
                         size="sm"
-                        className="flex-1"
+                        className="flex-1 focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background"
                         onClick={() => handleInstall(widget)}
                         disabled={installing === widget.id}
                       >
@@ -396,11 +399,11 @@ export function WidgetMarketplace({ onClose }: WidgetMarketplaceProps) {
                       </Button>
 
                       {widget.documentation && (
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => handleOpenDocs(widget.documentation!)}
-                          className="flex items-center gap-1"
+                          className="flex items-center gap-1 focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background"
                         >
                           <ExternalLink className="h-3 w-3" />
                           Docs
