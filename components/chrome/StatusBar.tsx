@@ -1,21 +1,36 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useState } from 'react';
-import { Database, Globe, Activity, AlertCircle, CheckCircle, RefreshCw, Info, HelpCircle, Target, BarChart3, MoreHorizontal, Clock } from 'lucide-react';
+import {
+  Database,
+  Globe,
+  Activity,
+  AlertCircle,
+  CheckCircle,
+  RefreshCw,
+  Info,
+  HelpCircle,
+  Target,
+  BarChart3,
+  MoreHorizontal,
+  Clock,
+} from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { DataProviderHealth } from '@/components/panels/DataProviderHealth';
 import { useWorkspaceStore, type Sheet } from '@/lib/store';
 import { dataProviderRegistry, registerDataProvider } from '@/lib/data/providers';
 import { extensionProvider } from '@/lib/data/providers/ExtensionBridgeProvider';
 import { KeyboardHelp } from '@/components/ui/KeyboardHelp';
-import { SettingsPanel } from '@/components/panels/SettingsPanel'
+import { SettingsPanel } from '@/components/panels/SettingsPanel';
 
 export function StatusBar() {
   const { sheets, activeSheetId, dataProvider } = useWorkspaceStore();
-  const [currentTime, setCurrentTime] = useState<string>(() => 
+  const [currentTime, setCurrentTime] = useState<string>(() =>
     new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
   );
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
+  const [connectionStatus, setConnectionStatus] = useState<
+    'connected' | 'disconnected' | 'checking'
+  >('checking');
   const [forceProviderLabel, setForceProviderLabel] = useState<string | null>(null);
   const [uiLabel, setUiLabel] = useState<string | null>(null);
   const [healthOpen, setHealthOpen] = useState(false);
@@ -23,13 +38,19 @@ export function StatusBar() {
   // Align forced label with bridge attribute in automation to stabilize E2E expectations
   useLayoutEffect(() => {
     if (typeof document !== 'undefined') {
-      const hasBridgeAttr = document.documentElement.getAttribute('data-extension-bridge') === 'true';
+      const hasBridgeAttr =
+        document.documentElement.getAttribute('data-extension-bridge') === 'true';
       const hasWindowBridge = typeof window !== 'undefined' && !!(window as any).madlabBridge;
       const isTestMode = (() => {
         try {
           const sp = new URLSearchParams(window.location.search);
-          return sp.get('e2e') === '1' || (typeof navigator !== 'undefined' && (navigator as any).webdriver);
-        } catch { return (typeof navigator !== 'undefined' && (navigator as any).webdriver); }
+          return (
+            sp.get('e2e') === '1' ||
+            (typeof navigator !== 'undefined' && (navigator as any).webdriver)
+          );
+        } catch {
+          return typeof navigator !== 'undefined' && (navigator as any).webdriver;
+        }
       })();
       if (hasBridgeAttr || hasWindowBridge) {
         setForceProviderLabel('Extension');
@@ -55,12 +76,19 @@ export function StatusBar() {
         if (hasAttr || hasBridge) {
           setForceProviderLabel('Extension');
           try {
-            if (isTestMode) { useWorkspaceStore.setState({ dataProvider: 'extension' }); }
+            if (isTestMode) {
+              useWorkspaceStore.setState({ dataProvider: 'extension' });
+            }
           } catch {}
           try {
-            if (typeof localStorage !== 'undefined' && localStorage.getItem('debugE2E') === 'true') {
+            if (
+              typeof localStorage !== 'undefined' &&
+              localStorage.getItem('debugE2E') === 'true'
+            ) {
               // eslint-disable-next-line no-console
-              console.log('[E2E] StatusBar: bridge detected during poll, forcing label to Extension');
+              console.log(
+                '[E2E] StatusBar: bridge detected during poll, forcing label to Extension'
+              );
             }
           } catch {}
           clearInterval(interval);
@@ -71,10 +99,17 @@ export function StatusBar() {
       return () => clearInterval(interval);
     }
   }, []);
-  
+
   useEffect(() => {
-    const id = setInterval(() => 
-      setCurrentTime(new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })), 
+    const id = setInterval(
+      () =>
+        setCurrentTime(
+          new Date().toLocaleTimeString('en-US', {
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        ),
       60_000
     );
     return () => clearInterval(id);
@@ -105,7 +140,9 @@ export function StatusBar() {
     if (typeof document === 'undefined') return;
     const apply = () => {
       try {
-        const btn = document.querySelector('[data-testid="status-bar"] [data-testid="provider-toggle"]') as HTMLButtonElement | null;
+        const btn = document.querySelector(
+          '[data-testid="status-bar"] [data-testid="provider-toggle"]'
+        ) as HTMLButtonElement | null;
         if (!btn) return;
         const hasAttr = document.documentElement.getAttribute('data-extension-bridge') === 'true';
         if (hasAttr) {
@@ -114,7 +151,10 @@ export function StatusBar() {
           if (span) span.textContent = 'Extension';
           setUiLabel('Extension');
           try {
-            if (typeof localStorage !== 'undefined' && localStorage.getItem('debugE2E') === 'true') {
+            if (
+              typeof localStorage !== 'undefined' &&
+              localStorage.getItem('debugE2E') === 'true'
+            ) {
               // eslint-disable-next-line no-console
               console.log('[E2E] StatusBar: MutationObserver applied Extension label');
             }
@@ -124,9 +164,17 @@ export function StatusBar() {
     };
     apply();
     const observer = new MutationObserver(apply);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-extension-bridge'] });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-extension-bridge'],
+    });
     const raf = requestAnimationFrame(apply);
-    return () => { try { observer.disconnect(); cancelAnimationFrame(raf); } catch {} };
+    return () => {
+      try {
+        observer.disconnect();
+        cancelAnimationFrame(raf);
+      } catch {}
+    };
   }, []);
 
   const activeSheet = sheets.find((s: Sheet) => s.id === activeSheetId);
@@ -135,31 +183,52 @@ export function StatusBar() {
 
   const normalizedProvider = (dataProvider || '').replace(':loading', '').toLowerCase();
   const webdriver = typeof navigator !== 'undefined' && (navigator as any).webdriver;
-  const bridgeDetected = (typeof document !== 'undefined' && document.documentElement.getAttribute('data-extension-bridge') === 'true')
-    || (typeof window !== 'undefined' && !!(window as any).madlabBridge);
+  const bridgeDetected =
+    (typeof document !== 'undefined' &&
+      document.documentElement.getAttribute('data-extension-bridge') === 'true') ||
+    (typeof window !== 'undefined' && !!(window as any).madlabBridge);
   // Prefer bridge detection (when present) for icon/label regardless of store timing
-  const isExtension = bridgeDetected
-    || forceProviderLabel === 'Extension'
-    || normalizedProvider.includes('extension')
-    || normalizedProvider.includes('bridge');
-  const isExtensionForIcon = (uiLabel === 'Extension') || isExtension;
-  const providerIcon = isExtensionForIcon ? <Globe className="h-3 w-3" /> : <Database className="h-3 w-3" />;
-  // Use stable labels expected by E2E tests
+  const isExtension =
+    bridgeDetected ||
+    forceProviderLabel === 'Extension' ||
+    normalizedProvider.includes('extension') ||
+    normalizedProvider.includes('bridge');
+  const isExtensionForIcon = uiLabel === 'Extension' || isExtension;
+  const providerIcon = isExtensionForIcon ? (
+    <Globe className="h-3 w-3" />
+  ) : (
+    <Database className="h-3 w-3" />
+  );
+  // Use stable labels expected by E2E tests on the toggle button
   const providerLabel = isExtension ? 'Extension' : 'Mock';
-  const finalProviderLabel = uiLabel ?? (forceProviderLabel ?? providerLabel);
-  
-  const statusIcon = connectionStatus === 'connected' ? 
-    <CheckCircle className="h-3 w-3 text-green-500" /> :
-    connectionStatus === 'disconnected' ?
-    <AlertCircle className="h-3 w-3 text-red-500" /> :
-    <Activity className="h-3 w-3 text-yellow-500" />;
+  const finalProviderLabel = uiLabel ?? forceProviderLabel ?? providerLabel;
+  // Human-friendly provider indicator (separate from E2E-stable toggle label)
+  const providerIndicatorLabel = (() => {
+    if (isExtension) return 'Extension';
+    if (normalizedProvider === 'mock' || normalizedProvider === 'mock-data') return 'Mock';
+    if (normalizedProvider === 'alpha-vantage') return 'Alpha Vantage';
+    if (!normalizedProvider) return 'Unknown';
+    const words = normalizedProvider.replace(/[-_]/g, ' ').split(' ');
+    return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  })();
+
+  const statusIcon =
+    connectionStatus === 'connected' ? (
+      <CheckCircle className="h-3 w-3 text-green-500" />
+    ) : connectionStatus === 'disconnected' ? (
+      <AlertCircle className="h-3 w-3 text-red-500" />
+    ) : (
+      <Activity className="h-3 w-3 text-yellow-500" />
+    );
 
   // First-paint sync: if a bridge is detected, force the button label/attribute immediately
   useLayoutEffect(() => {
     try {
-      const btn = document.querySelector('[data-testid="status-bar"] [data-testid="provider-toggle"]') as HTMLButtonElement | null;
+      const btn = document.querySelector(
+        '[data-testid="status-bar"] [data-testid="provider-toggle"]'
+      ) as HTMLButtonElement | null;
       if (!btn) return;
-      const label = bridgeDetected ? 'Extension' : (finalProviderLabel || 'Mock');
+      const label = bridgeDetected ? 'Extension' : finalProviderLabel || 'Mock';
       btn.setAttribute('data-provider-label', label);
       const span = btn.querySelector('span');
       if (span) span.textContent = label;
@@ -176,8 +245,11 @@ export function StatusBar() {
   const handleProviderToggle = async (e?: React.MouseEvent<HTMLButtonElement>) => {
     try {
       // If bridge present, immediately reflect Extension for label and attributes
-      if ((typeof window !== 'undefined' && !!(window as any).madlabBridge)
-        || (typeof document !== 'undefined' && document.documentElement.getAttribute('data-extension-bridge') === 'true')) {
+      if (
+        (typeof window !== 'undefined' && !!(window as any).madlabBridge) ||
+        (typeof document !== 'undefined' &&
+          document.documentElement.getAttribute('data-extension-bridge') === 'true')
+      ) {
         setUiLabel('Extension');
         useWorkspaceStore.setState({ dataProvider: 'extension' });
         try {
@@ -210,25 +282,32 @@ export function StatusBar() {
           btn?.setAttribute('data-provider-label', 'Extension');
         } catch {}
         setTimeout(() => {
-          useWorkspaceStore.getState().setDataProvider('extension').catch(() => {
-            useWorkspaceStore.setState({ dataProvider: 'mock' });
-            setUiLabel('Mock');
-            try {
-              const btn = (e?.currentTarget as HTMLButtonElement | undefined) || undefined;
-              const span = btn?.querySelector('span');
-              if (span) span.textContent = 'Mock';
-              btn?.setAttribute('data-provider-label', 'Mock');
-            } catch {}
-          });
+          useWorkspaceStore
+            .getState()
+            .setDataProvider('extension')
+            .catch(() => {
+              useWorkspaceStore.setState({ dataProvider: 'mock' });
+              setUiLabel('Mock');
+              try {
+                const btn = (e?.currentTarget as HTMLButtonElement | undefined) || undefined;
+                const span = btn?.querySelector('span');
+                if (span) span.textContent = 'Mock';
+                btn?.setAttribute('data-provider-label', 'Mock');
+              } catch {}
+            });
         }, 0);
         setConnectionStatus('connected');
         return;
       }
       // If a bridge object exists (injected by tests or extension), register and switch optimistically
-      const bridgePresent = (typeof window !== 'undefined' && !!(window as any).madlabBridge)
-        || (typeof document !== 'undefined' && document.documentElement.getAttribute('data-extension-bridge') === 'true');
+      const bridgePresent =
+        (typeof window !== 'undefined' && !!(window as any).madlabBridge) ||
+        (typeof document !== 'undefined' &&
+          document.documentElement.getAttribute('data-extension-bridge') === 'true');
       if (bridgePresent) {
-        try { registerDataProvider('extension', extensionProvider); } catch {}
+        try {
+          registerDataProvider('extension', extensionProvider);
+        } catch {}
         useWorkspaceStore.setState({ dataProvider: 'extension' });
         setUiLabel('Extension');
         try {
@@ -238,16 +317,19 @@ export function StatusBar() {
           btn?.setAttribute('data-provider-label', 'Extension');
         } catch {}
         setTimeout(() => {
-          useWorkspaceStore.getState().setDataProvider('extension').catch(() => {
-            useWorkspaceStore.setState({ dataProvider: 'mock' });
-            setUiLabel('Mock');
-            try {
-              const btn = (e?.currentTarget as HTMLButtonElement | undefined) || undefined;
-              const span = btn?.querySelector('span');
-              if (span) span.textContent = 'Mock';
-              btn?.setAttribute('data-provider-label', 'Mock');
-            } catch {}
-          });
+          useWorkspaceStore
+            .getState()
+            .setDataProvider('extension')
+            .catch(() => {
+              useWorkspaceStore.setState({ dataProvider: 'mock' });
+              setUiLabel('Mock');
+              try {
+                const btn = (e?.currentTarget as HTMLButtonElement | undefined) || undefined;
+                const span = btn?.querySelector('span');
+                if (span) span.textContent = 'Mock';
+                btn?.setAttribute('data-provider-label', 'Mock');
+              } catch {}
+            });
         }, 0);
         setConnectionStatus('connected');
         return;
@@ -273,9 +355,9 @@ export function StatusBar() {
         target = available[nextIndex];
       }
 
-            await useWorkspaceStore.getState().setDataProvider(target);
-            // Sync label with store result
-            setUiLabel(null);
+      await useWorkspaceStore.getState().setDataProvider(target);
+      // Sync label with store result
+      setUiLabel(null);
       // Force immediate UI update in case availability checks are delayed
       useWorkspaceStore.setState({ dataProvider: target });
       setConnectionStatus('connected');
@@ -286,18 +368,27 @@ export function StatusBar() {
   };
 
   return (
-    <div className="flex items-center justify-between w-full px-4 py-1 text-xs h-6 bg-background border-t border-border text-foreground" data-testid="status-bar">
+    <div
+      className="flex items-center justify-between w-full px-4 py-1 text-xs h-6 bg-background border-t border-border text-foreground"
+      data-testid="status-bar"
+    >
       {/* Left: title only, simplified */}
       <div className="flex items-center gap-4">
-        <span className="font-medium">
-          {activeSheet?.title || "No Active Sheet"}
-        </span>
+        <span className="font-medium">{activeSheet?.title || 'No Active Sheet'}</span>
       </div>
 
       {/* Right: provider + health + concise summary; secondary actions reveal on hover/focus */}
       <div className="group flex items-center gap-2">
         <div className="flex items-center gap-1">
           {statusIcon}
+          <span
+            className="hidden md:inline text-muted-foreground/80"
+            data-testid="data-provider-indicator"
+            aria-label="Current data provider"
+            title={`Provider: ${providerIndicatorLabel}`}
+          >
+            {providerIndicatorLabel}
+          </span>
           <button
             type="button"
             className="flex items-center gap-1 px-2 py-1 rounded border border-border hover:bg-accent transition-colors"
@@ -378,19 +469,33 @@ function LearningProgressChip() {
           data-testid="learning-progress-chip"
         >
           <Target className="h-3 w-3" />
-          <span>{completed}/{total}</span>
+          <span>
+            {completed}/{total}
+          </span>
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-72 text-sm" side="top">
         <div className="font-medium mb-1">Learning progression</div>
         <ul className="list-disc pl-5 text-xs text-muted-foreground space-y-1">
-          <li className={learningProgress?.createdFirstSheet ? 'line-through text-foreground' : ''}>Create first sheet</li>
-          <li className={learningProgress?.configuredWidget ? 'line-through text-foreground' : ''}>Configure a widget</li>
-          <li className={learningProgress?.exportedWorkspace ? 'line-through text-foreground' : ''}>Export workspace</li>
-          <li className={learningProgress?.savedTemplate ? 'line-through text-foreground' : ''}>Save a template</li>
-          <li className={learningProgress?.installedWidget ? 'line-through text-foreground' : ''}>Install a widget</li>
+          <li className={learningProgress?.createdFirstSheet ? 'line-through text-foreground' : ''}>
+            Create first sheet
+          </li>
+          <li className={learningProgress?.configuredWidget ? 'line-through text-foreground' : ''}>
+            Configure a widget
+          </li>
+          <li className={learningProgress?.exportedWorkspace ? 'line-through text-foreground' : ''}>
+            Export workspace
+          </li>
+          <li className={learningProgress?.savedTemplate ? 'line-through text-foreground' : ''}>
+            Save a template
+          </li>
+          <li className={learningProgress?.installedWidget ? 'line-through text-foreground' : ''}>
+            Install a widget
+          </li>
         </ul>
-        <div className="mt-2 text-xs"><span className="font-medium">Recommended next:</span> {next}</div>
+        <div className="mt-2 text-xs">
+          <span className="font-medium">Recommended next:</span> {next}
+        </div>
       </PopoverContent>
     </Popover>
   );
@@ -398,7 +503,11 @@ function LearningProgressChip() {
 
 function KpiChip() {
   const [text, setText] = useState('KPIs');
-  const [kpi, setKpi] = useState<{ featureDiscoveryRate: number; averageSessionMinutes: number; returnRate: number }|null>(null);
+  const [kpi, setKpi] = useState<{
+    featureDiscoveryRate: number;
+    averageSessionMinutes: number;
+    returnRate: number;
+  } | null>(null);
   useEffect(() => {
     try {
       const { getCustomerAnalytics } = require('@/lib/analytics/customer');
@@ -406,24 +515,47 @@ function KpiChip() {
       const k = a?.getKpis?.();
       if (k) {
         setKpi(k);
-        setText(`${(k.featureDiscoveryRate||0).toFixed(1)}/sess • ${Math.round(k.averageSessionMinutes||0)}m • ${Math.round((k.returnRate||0)*100)}%`);
+        setText(
+          `${(k.featureDiscoveryRate || 0).toFixed(1)}/sess • ${Math.round(k.averageSessionMinutes || 0)}m • ${Math.round((k.returnRate || 0) * 100)}%`
+        );
       }
     } catch {}
   }, []);
   return (
-        <Popover>
-          <PopoverTrigger asChild>
-            <button type="button" className="inline-flex items-center gap-1 px-2 py-1 rounded border border-border hover:bg-accent text-xs" aria-label="KPI summary" aria-haspopup="dialog" aria-controls="statusbar-help-kpis">
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 px-2 py-1 rounded border border-border hover:bg-accent text-xs"
+          aria-label="KPI summary"
+          aria-haspopup="dialog"
+          aria-controls="statusbar-help-kpis"
+        >
           <BarChart3 className="h-3 w-3" />
           <span>{text}</span>
         </button>
       </PopoverTrigger>
-          <PopoverContent id="statusbar-help-kpis" className="w-72 text-sm" side="top">
+      <PopoverContent id="statusbar-help-kpis" className="w-72 text-sm" side="top">
         <div className="font-medium mb-1">KPIs (local)</div>
         <div className="text-xs text-muted-foreground">
-          <div>Feature discovery/sess: <span className="text-foreground">{kpi ? kpi.featureDiscoveryRate.toFixed(2) : '—'}</span></div>
-          <div>Avg session minutes: <span className="text-foreground">{kpi ? Math.round(kpi.averageSessionMinutes) : '—'}</span></div>
-          <div>Return rate: <span className="text-foreground">{kpi ? Math.round(kpi.returnRate * 100) + '%' : '—'}</span></div>
+          <div>
+            Feature discovery/sess:{' '}
+            <span className="text-foreground">
+              {kpi ? kpi.featureDiscoveryRate.toFixed(2) : '—'}
+            </span>
+          </div>
+          <div>
+            Avg session minutes:{' '}
+            <span className="text-foreground">
+              {kpi ? Math.round(kpi.averageSessionMinutes) : '—'}
+            </span>
+          </div>
+          <div>
+            Return rate:{' '}
+            <span className="text-foreground">
+              {kpi ? Math.round(kpi.returnRate * 100) + '%' : '—'}
+            </span>
+          </div>
         </div>
       </PopoverContent>
     </Popover>
@@ -443,7 +575,11 @@ function StatusSummary({ currentTime }: { currentTime: string }) {
     return 'Explore advanced presets';
   })();
 
-  const [kpi, setKpi] = useState<{ featureDiscoveryRate: number; averageSessionMinutes: number; returnRate: number }|null>(null);
+  const [kpi, setKpi] = useState<{
+    featureDiscoveryRate: number;
+    averageSessionMinutes: number;
+    returnRate: number;
+  } | null>(null);
   useEffect(() => {
     try {
       const { getCustomerAnalytics } = require('@/lib/analytics/customer');
@@ -468,23 +604,52 @@ function StatusSummary({ currentTime }: { currentTime: string }) {
         <div className="font-medium mb-1 text-xs">Learning progression</div>
         <div className="inline-flex items-center gap-1 px-2 py-1 rounded border border-border text-xs mb-2">
           <Target className="h-3 w-3" />
-          <span>{completed}/{total}</span>
+          <span>
+            {completed}/{total}
+          </span>
         </div>
         <ul className="list-disc pl-5 text-xs text-muted-foreground space-y-1">
-          <li className={learningProgress?.createdFirstSheet ? 'line-through text-foreground' : ''}>Create first sheet</li>
-          <li className={learningProgress?.configuredWidget ? 'line-through text-foreground' : ''}>Configure a widget</li>
-          <li className={learningProgress?.exportedWorkspace ? 'line-through text-foreground' : ''}>Export workspace</li>
-          <li className={learningProgress?.savedTemplate ? 'line-through text-foreground' : ''}>Save a template</li>
-          <li className={learningProgress?.installedWidget ? 'line-through text-foreground' : ''}>Install a widget</li>
+          <li className={learningProgress?.createdFirstSheet ? 'line-through text-foreground' : ''}>
+            Create first sheet
+          </li>
+          <li className={learningProgress?.configuredWidget ? 'line-through text-foreground' : ''}>
+            Configure a widget
+          </li>
+          <li className={learningProgress?.exportedWorkspace ? 'line-through text-foreground' : ''}>
+            Export workspace
+          </li>
+          <li className={learningProgress?.savedTemplate ? 'line-through text-foreground' : ''}>
+            Save a template
+          </li>
+          <li className={learningProgress?.installedWidget ? 'line-through text-foreground' : ''}>
+            Install a widget
+          </li>
         </ul>
-        <div className="mt-2 text-xs"><span className="font-medium">Recommended next:</span> {next}</div>
+        <div className="mt-2 text-xs">
+          <span className="font-medium">Recommended next:</span> {next}
+        </div>
       </div>
       <div>
         <div className="font-medium mb-1 text-xs">KPIs (local)</div>
         <div className="text-xs text-muted-foreground">
-          <div>Feature discovery/sess: <span className="text-foreground">{kpi ? kpi.featureDiscoveryRate.toFixed(2) : '—'}</span></div>
-          <div>Avg session minutes: <span className="text-foreground">{kpi ? Math.round(kpi.averageSessionMinutes) : '—'}</span></div>
-          <div>Return rate: <span className="text-foreground">{kpi ? Math.round(kpi.returnRate * 100) + '%' : '—'}</span></div>
+          <div>
+            Feature discovery/sess:{' '}
+            <span className="text-foreground">
+              {kpi ? kpi.featureDiscoveryRate.toFixed(2) : '—'}
+            </span>
+          </div>
+          <div>
+            Avg session minutes:{' '}
+            <span className="text-foreground">
+              {kpi ? Math.round(kpi.averageSessionMinutes) : '—'}
+            </span>
+          </div>
+          <div>
+            Return rate:{' '}
+            <span className="text-foreground">
+              {kpi ? Math.round(kpi.returnRate * 100) + '%' : '—'}
+            </span>
+          </div>
         </div>
       </div>
     </div>

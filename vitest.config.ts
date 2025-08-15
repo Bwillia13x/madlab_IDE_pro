@@ -8,8 +8,15 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
-    // Exclude default folders (node_modules, dist, etc.) and our e2e tests
-    exclude: [...configDefaults.exclude, 'tests/e2e/**', 'vscode/**'],
+    exclude: [
+      ...configDefaults.exclude,
+      'tests/e2e/**',
+      'vscode/**',
+      // Exclude Playwright suites; run via `pnpm e2e`
+      'tests/visual/**',
+      'tests/integration/**',
+      'tests/accessibility/accessibility.suite.test.*',
+    ],
     coverage: {
       reporter: ['text', 'json', 'html', 'json-summary'],
       provider: 'v8',

@@ -51,13 +51,13 @@ interface LazyWidgetRendererProps {
   updateWidget: (sheetId: string, update: Partial<Widget> & { id: string }) => void;
 }
 
-const LazyWidgetRenderer = memo(function LazyWidgetRenderer({ 
-  widget, 
-  schemaEntry, 
-  SchemaComponent, 
-  sheetId, 
-  selected, 
-  updateWidget 
+const LazyWidgetRenderer = memo(function LazyWidgetRenderer({
+  widget,
+  schemaEntry,
+  SchemaComponent,
+  sheetId,
+  selected,
+  updateWidget,
 }: LazyWidgetRendererProps) {
   if (SchemaComponent) {
     // Use existing schema component with suspense wrapper for performance
@@ -65,25 +65,38 @@ const LazyWidgetRenderer = memo(function LazyWidgetRenderer({
       <Suspense fallback={<WidgetLoadingFallback />}>
         <SchemaComponent
           id={widget.id}
-          config={(widget.props as any) || (schemaEntry ? schemaEntry.definition.meta.defaultConfig : {})}
+          config={
+            (widget.props as any) || (schemaEntry ? schemaEntry.definition.meta.defaultConfig : {})
+          }
           isSelected={selected}
           onConfigChange={(config) => {
             updateWidget(sheetId, { id: widget.id, props: config as Record<string, unknown> });
             try {
               const s = useWorkspaceStore.getState();
               if (!s.learningProgress.configuredWidget) {
-                s.safeUpdate?.({ learningProgress: { ...s.learningProgress, configuredWidget: true } });
+                s.safeUpdate?.({
+                  learningProgress: { ...s.learningProgress, configuredWidget: true },
+                });
                 s.celebrate?.('Widget configured');
                 try {
-                  if (typeof localStorage !== 'undefined' && localStorage.getItem('madlab_first_configure') !== 'true') {
-                    analytics.track('conversion', { event: 'first_configure', variant: getOnboardingVariant() }, 'user_flow');
+                  if (
+                    typeof localStorage !== 'undefined' &&
+                    localStorage.getItem('madlab_first_configure') !== 'true'
+                  ) {
+                    analytics.track(
+                      'conversion',
+                      { event: 'first_configure', variant: getOnboardingVariant() },
+                      'user_flow'
+                    );
                     localStorage.setItem('madlab_first_configure', 'true');
                   }
                 } catch {}
               }
             } catch {}
           }}
-          onError={(err) => {/* Widget error handling */}}
+          onError={(err) => {
+            /* Widget error handling */
+          }}
         />
       </Suspense>
     );
@@ -99,7 +112,9 @@ const LazyWidgetRenderer = memo(function LazyWidgetRenderer({
       onConfigChange={(config) =>
         updateWidget(sheetId, { id: widget.id, props: config as Record<string, unknown> })
       }
-      onError={(err) => {/* Widget error handling */}}
+      onError={(err) => {
+        /* Widget error handling */
+      }}
       fallback={<WidgetLoadingFallback />}
     />
   );
@@ -108,7 +123,7 @@ const LazyWidgetRenderer = memo(function LazyWidgetRenderer({
 export const WidgetTile = memo(function WidgetTile({ widget, sheetId }: WidgetTileProps) {
   const { removeWidget, updateWidget, setSelectedWidget, selectedWidgetId, setInspectorOpen } =
     useWorkspaceStore();
-  
+
   // Analytics tracking
   const { trackInteraction, trackConfigChange } = useWidgetTracking(widget.type, widget.id);
 
@@ -128,36 +143,52 @@ export const WidgetTile = memo(function WidgetTile({ widget, sheetId }: WidgetTi
   }, [widget.props]);
 
   // Memoize event handlers to prevent unnecessary re-renders
-  const handleRemove = useMemo(() => () => {
-    trackInteraction('removed', { sheet_id: sheetId });
-    removeWidget(sheetId, widget.id);
-  }, [trackInteraction, sheetId, removeWidget, widget.id]);
+  const handleRemove = useMemo(
+    () => () => {
+      trackInteraction('removed', { sheet_id: sheetId });
+      removeWidget(sheetId, widget.id);
+    },
+    [trackInteraction, sheetId, removeWidget, widget.id]
+  );
 
   // Title change handler (kept for potential future use)
-  const handleTitleChange = useMemo(() => (newTitle: string) => {
-    trackConfigChange({ title: newTitle });
-    updateWidget(sheetId, { id: widget.id, title: newTitle });
-  }, [trackConfigChange, updateWidget, sheetId, widget.id]);
+  const handleTitleChange = useMemo(
+    () => (newTitle: string) => {
+      trackConfigChange({ title: newTitle });
+      updateWidget(sheetId, { id: widget.id, title: newTitle });
+    },
+    [trackConfigChange, updateWidget, sheetId, widget.id]
+  );
 
-  const handleSymbolChange = useMemo(() => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value || '';
-    const sym = raw.toUpperCase().slice(0, 12);
-    updateWidget(sheetId, {
-      id: widget.id,
-      props: { ...(widget.props || {}), symbol: sym },
-    });
-  }, [updateWidget, sheetId, widget.id, widget.props]);
+  const handleSymbolChange = useMemo(
+    () => (e: React.ChangeEvent<HTMLInputElement>) => {
+      const raw = e.target.value || '';
+      const sym = raw.toUpperCase().slice(0, 12);
+      updateWidget(sheetId, {
+        id: widget.id,
+        props: { ...(widget.props || {}), symbol: sym },
+      });
+    },
+    [updateWidget, sheetId, widget.id, widget.props]
+  );
 
-  const handleConfigureClick = useMemo(() => () => {
-    trackInteraction('configure_opened', { via: 'button' });
-    setSelectedWidget(widget.id);
-    setInspectorOpen(true);
-  }, [trackInteraction, setSelectedWidget, setInspectorOpen, widget.id]);
+  const handleConfigureClick = useMemo(
+    () => () => {
+      trackInteraction('configure_opened', { via: 'button' });
+      setSelectedWidget(widget.id);
+      setInspectorOpen(true);
+    },
+    [trackInteraction, setSelectedWidget, setInspectorOpen, widget.id]
+  );
 
   const selected = selectedWidgetId === widget.id;
   const content = (
     <Card
-      className={`w-full h-full bg-background border-border transition-colors group ${selected ? 'ring-1 ring-primary' : 'hover:border-primary/50'}`}
+      className={`w-full h-full bg-background border-border transition-all duration-200 group ${
+        selected
+          ? 'ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg border-primary/50'
+          : 'hover:border-primary/50 hover:shadow-md'
+      }`}
       data-testid={`widget-tile-${widget.id}`}
       data-selected={selected ? 'true' : 'false'}
       onClick={(e) => {
@@ -168,15 +199,32 @@ export const WidgetTile = memo(function WidgetTile({ widget, sheetId }: WidgetTi
         setSelectedWidget(widget.id);
       }}
     >
+      {/* Selection indicator overlay */}
+      {selected && (
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-0 w-0 h-0 border-l-[8px] border-l-primary border-t-[8px] border-t-primary" />
+          <div className="absolute top-0 right-0 w-0 h-0 border-r-[8px] border-r-primary border-t-[8px] border-t-primary" />
+          <div className="absolute bottom-0 left-0 w-0 h-0 border-l-[8px] border-l-primary border-b-[8px] border-b-primary" />
+          <div className="absolute bottom-0 right-0 w-0 h-0 border-r-[8px] border-r-primary border-b-[8px] border-b-primary" />
+        </div>
+      )}
+
       {/* Header */}
-      <div className="flex items-center justify-between p-2 border-b border-border" data-testid="widget-header">
+      <div
+        className="flex items-center justify-between p-2 border-b border-border relative"
+        data-testid="widget-header"
+      >
         <div className="flex items-center gap-2">
           <div className="drag-handle cursor-move opacity-100">
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
           <span className="text-sm font-medium text-foreground truncate">{widget.title}</span>
           {/* Symbol input */}
-          <div className="ml-2 flex items-center gap-1" title="Enter a ticker symbol (e.g., AAPL). Press Configure to see more options." aria-label="Symbol input help">
+          <div
+            className="ml-2 flex items-center gap-1"
+            title="Enter a ticker symbol (e.g., AAPL). Press Configure to see more options."
+            aria-label="Symbol input help"
+          >
             <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Sym</span>
             <Input
               value={currentSymbol}
@@ -197,10 +245,18 @@ export const WidgetTile = memo(function WidgetTile({ widget, sheetId }: WidgetTi
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => {/* Add action 1 */}}>
+              <DropdownMenuItem
+                onClick={() => {
+                  /* Add action 1 */
+                }}
+              >
                 Add action 1
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {/* Add action 2 */}}>
+              <DropdownMenuItem
+                onClick={() => {
+                  /* Add action 2 */
+                }}
+              >
                 Add action 2
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -274,7 +330,7 @@ export const WidgetTile = memo(function WidgetTile({ widget, sheetId }: WidgetTi
           priority={selected ? 'high' : 'normal'}
           fallback={<WidgetLoadingFallback />}
         >
-          <LazyWidgetRenderer 
+          <LazyWidgetRenderer
             widget={widget}
             schemaEntry={schemaEntry}
             SchemaComponent={SchemaComponent}
@@ -288,7 +344,10 @@ export const WidgetTile = memo(function WidgetTile({ widget, sheetId }: WidgetTi
   );
 
   // Simple error boundary to protect grid from crashing widgets
-  class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  class ErrorBoundary extends React.Component<
+    { children: React.ReactNode },
+    { hasError: boolean }
+  > {
     constructor(props: any) {
       super(props);
       this.state = { hasError: false };

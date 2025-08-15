@@ -69,13 +69,13 @@ export class DataSourceManager {
 
     if (useCache) {
       const cacheKey = createDataSourceCacheKey(id, query);
-      const cachedData = dataCache.get(cacheKey);
+      const cachedData = dataCache.get<DataFrame>(cacheKey);
       if (cachedData) {
         return cachedData;
       }
 
       const data = await dataSource.getData(query);
-      dataCache.set(cacheKey, data, { source: id });
+      dataCache.set(cacheKey, data);
       return data;
     }
 
@@ -91,7 +91,7 @@ export class DataSourceManager {
   }
 
   listDataSources(): Array<{ id: string; name: string; type: string; connected: boolean }> {
-    return Array.from(this.dataSources.values()).map(ds => ({
+    return Array.from(this.dataSources.values()).map((ds) => ({
       id: ds.id,
       name: ds.name,
       type: ds.type,

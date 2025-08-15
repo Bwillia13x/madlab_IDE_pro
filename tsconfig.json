@@ -2,11 +2,7 @@
   "compilerOptions": {
     "target": "ES2018",
     "downlevelIteration": true,
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -24,28 +20,20 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     }
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts"
-  ],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "typeAcquisition": {
     "enable": true
   },
-  "typeRoots": [
-    "./types",
-    "./node_modules/@types"
-  ],
+  "typeRoots": ["./types", "./node_modules/@types"],
   "exclude": [
     "node_modules",
     "apps/extension/dist/**",
     "out/**",
-    "playwright-report/**"
+    "playwright-report/**",
+    "vscode/**",
+    "extensions/**"
   ]
 }

@@ -5,383 +5,200 @@
 
 import { DataFrame } from './source';
 
-export interface CacheEntry {
-  key: string;
-  data: DataFrame;
+interface CacheEntry<T> {
+  data: T;
   timestamp: number;
   ttl: number;
-  source: string;
 }
 
-export interface CacheConfig {
-  maxMemoryEntries?: number;
-  maxMemoryBytes?: number; // hard limit for in-memory cache
-  defaultTTL?: number;
-  enableLocalStorage?: boolean;
-  localStoragePrefix?: string;
-  cleanupInterval?: number;
+interface CacheOptions {
+  ttl?: number; // Time to live in milliseconds
+  maxSize?: number; // Maximum number of entries
 }
 
 export class DataCache {
-  private memoryCache = new Map<string, CacheEntry>();
-  private config: Required<CacheConfig>;
-  private cleanupTimer?: NodeJS.Timeout;
-  private approximateMemoryBytes = 0;
+  private cache = new Map<string, CacheEntry<any>>();
+  private readonly defaultTTL: number;
+  private readonly maxSize: number;
 
-  constructor(config: CacheConfig = {}) {
-    // Allow environment overrides with sane defaults
-    const envMax = typeof process !== 'undefined' ? Number((process as any).env?.NEXT_PUBLIC_DATA_CACHE_MAX_ENTRIES || (process as any).env?.DATA_CACHE_MAX_ENTRIES) : undefined
-    const envTtl = typeof process !== 'undefined' ? Number((process as any).env?.NEXT_PUBLIC_DATA_CACHE_TTL_MS || (process as any).env?.DATA_CACHE_TTL_MS) : undefined
-    const envCleanup = typeof process !== 'undefined' ? Number((process as any).env?.NEXT_PUBLIC_DATA_CACHE_CLEANUP_MS || (process as any).env?.DATA_CACHE_CLEANUP_MS) : undefined
-    const envMaxBytes = typeof process !== 'undefined' ? Number((process as any).env?.NEXT_PUBLIC_DATA_CACHE_MAX_BYTES || (process as any).env?.DATA_CACHE_MAX_BYTES) : undefined
-
-    this.config = {
-      maxMemoryEntries: Number.isFinite(envMax) && envMax! > 0 ? envMax! : 100,
-      maxMemoryBytes: Number.isFinite(envMaxBytes) && envMaxBytes! > 1024 ? envMaxBytes! : 50 * 1024 * 1024, // 50MB default
-      defaultTTL: Number.isFinite(envTtl) && envTtl! > 0 ? envTtl! : 300000, // 5 minutes
-      enableLocalStorage: true,
-      localStoragePrefix: 'madlab_cache_',
-      cleanupInterval: Number.isFinite(envCleanup) && envCleanup! > 0 ? envCleanup! : 60000, // 1 minute
-      ...config,
-    };
-
-    this.startCleanupTimer();
+  constructor(options: CacheOptions = {}) {
+    this.defaultTTL = options.ttl || 5 * 60 * 1000; // 5 minutes default
+    this.maxSize = options.maxSize || 1000; // 1000 entries default
   }
 
-  set(key: string, data: DataFrame, options: {
-    ttl?: number;
-    source?: string;
-    memoryOnly?: boolean;
-  } = {}): void {
-    const ttl = options.ttl || this.config.defaultTTL;
-    const entry: CacheEntry = {
-      key,
+  set<T>(key: string, data: T, ttl?: number): void {
+    const entry: CacheEntry<T> = {
       data,
       timestamp: Date.now(),
-      ttl,
-      source: options.source || 'unknown',
+      ttl: ttl || this.defaultTTL,
     };
 
-    const prev = this.memoryCache.get(key);
-    if (prev) {
-      try { this.approximateMemoryBytes -= JSON.stringify(prev).length * 2 } catch { this.approximateMemoryBytes -= 1000 }
-    }
-    this.memoryCache.set(key, entry);
-    try { this.approximateMemoryBytes += JSON.stringify(entry).length * 2 } catch { this.approximateMemoryBytes += 1000 }
-
-    if (this.memoryCache.size > this.config.maxMemoryEntries) {
-      this.evictOldestMemoryEntry();
+    // Remove oldest entries if cache is full
+    if (this.cache.size >= this.maxSize) {
+      const oldestKey = this.cache.keys().next().value;
+      this.cache.delete(oldestKey);
     }
 
-    // Enforce memory budget (best-effort; uses approximate size)
-    while (this.approximateMemoryBytes > this.config.maxMemoryBytes && this.memoryCache.size > 0) {
-      this.evictOldestMemoryEntry();
-    }
-
-    if (this.config.enableLocalStorage && !options.memoryOnly && this.isLocalStorageAvailable()) {
-      try {
-        const serializedEntry = JSON.stringify({
-          ...entry,
-          data: this.serializeDataFrame(entry.data),
-        });
-        localStorage.setItem(this.config.localStoragePrefix + key, serializedEntry);
-      } catch (error) {
-        console.warn('Failed to store in localStorage:', error);
-      }
-    }
+    this.cache.set(key, entry);
   }
 
-  get(key: string): DataFrame | null {
-    const memoryEntry = this.memoryCache.get(key);
-    
-    if (memoryEntry) {
-      if (this.isEntryValid(memoryEntry)) {
-        return memoryEntry.data;
-      } else {
-        this.memoryCache.delete(key);
-      }
+  get<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+
+    // Check if entry has expired
+    if (Date.now() - entry.timestamp > entry.ttl) {
+      this.cache.delete(key);
+      return null;
     }
 
-    if (this.config.enableLocalStorage && this.isLocalStorageAvailable()) {
-      try {
-        const stored = localStorage.getItem(this.config.localStoragePrefix + key);
-        if (stored) {
-          const entry = JSON.parse(stored) as CacheEntry;
-          entry.data = this.deserializeDataFrame(entry.data as any);
-          
-          if (this.isEntryValid(entry)) {
-            this.memoryCache.set(key, entry);
-            return entry.data;
-          } else {
-            localStorage.removeItem(this.config.localStoragePrefix + key);
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to retrieve from localStorage:', error);
-        try {
-          localStorage.removeItem(this.config.localStoragePrefix + key);
-        } catch (cleanupError) {
-          // Ignore cleanup errors
-        }
-      }
-    }
-
-    return null;
+    return entry.data;
   }
 
   has(key: string): boolean {
-    return this.get(key) !== null;
+    const entry = this.cache.get(key);
+    if (!entry) return false;
+
+    // Check if entry has expired
+    if (Date.now() - entry.timestamp > entry.ttl) {
+      this.cache.delete(key);
+      return false;
+    }
+
+    return true;
   }
 
   delete(key: string): boolean {
-    const prev = this.memoryCache.get(key);
-    if (prev) {
-      try { this.approximateMemoryBytes -= JSON.stringify(prev).length * 2 } catch { this.approximateMemoryBytes -= 1000 }
-    }
-    const hadMemoryEntry = this.memoryCache.delete(key);
-    
-    if (this.config.enableLocalStorage && this.isLocalStorageAvailable()) {
-      try {
-        localStorage.removeItem(this.config.localStoragePrefix + key);
-      } catch (error) {
-        console.warn('Failed to remove from localStorage:', error);
-      }
-    }
-
-    return hadMemoryEntry;
+    return this.cache.delete(key);
   }
 
-  clear(source?: string): void {
-    if (source) {
-      const keysToDelete: string[] = [];
-      
-      this.memoryCache.forEach((entry, key) => {
-        if (entry.source === source) {
-          keysToDelete.push(key);
-        }
-      });
-      
-      keysToDelete.forEach(key => this.delete(key));
-    } else {
-      this.memoryCache.clear();
-      this.approximateMemoryBytes = 0;
-      
-      if (this.config.enableLocalStorage && this.isLocalStorageAvailable()) {
-        try {
-          const keysToRemove: string[] = [];
-          
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith(this.config.localStoragePrefix)) {
-              keysToRemove.push(key);
-            }
-          }
-          
-          keysToRemove.forEach(key => localStorage.removeItem(key));
-        } catch (error) {
-          console.warn('Failed to clear localStorage cache:', error);
-        }
-      }
+  clear(prefix?: string): void {
+    if (!prefix) {
+      this.cache.clear();
+      return;
     }
-  }
-
-  getStats(): {
-    memoryEntries: number;
-    localStorageEntries: number;
-    memorySize: number;
-    hitRate?: number;
-  } {
-    let localStorageEntries = 0;
-    
-    if (this.config.enableLocalStorage && this.isLocalStorageAvailable()) {
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith(this.config.localStoragePrefix)) {
-            localStorageEntries++;
-          }
-        }
-      } catch (error) {
-        // Ignore errors when calculating stats
-      }
-    }
-
-    return {
-      memoryEntries: this.memoryCache.size,
-      localStorageEntries,
-      memorySize: this.approximateMemoryBytes || this.estimateMemorySize(),
-    };
-  }
-
-  cleanup(): void {
-    const now = Date.now();
-    const keysToDelete: string[] = [];
-
-    this.memoryCache.forEach((entry, key) => {
-      if (now - entry.timestamp > entry.ttl) {
-        keysToDelete.push(key);
-      }
-    });
-
-    keysToDelete.forEach(key => this.delete(key));
-
-    if (this.config.enableLocalStorage && this.isLocalStorageAvailable()) {
-      try {
-        const localKeysToRemove: string[] = [];
-        
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith(this.config.localStoragePrefix)) {
-            try {
-              const stored = localStorage.getItem(key);
-              if (stored) {
-                const entry = JSON.parse(stored) as CacheEntry;
-                if (now - entry.timestamp > entry.ttl) {
-                  localKeysToRemove.push(key);
-                }
-              }
-            } catch (error) {
-              localKeysToRemove.push(key);
-            }
-          }
-        }
-        
-        localKeysToRemove.forEach(key => localStorage.removeItem(key));
-      } catch (error) {
-        console.warn('Failed to cleanup localStorage cache:', error);
-      }
-    }
-  }
-
-  destroy(): void {
-    if (this.cleanupTimer) {
-      clearInterval(this.cleanupTimer);
-      this.cleanupTimer = undefined;
-    }
-    this.clear();
-  }
-
-  private isEntryValid(entry: CacheEntry): boolean {
-    return Date.now() - entry.timestamp < entry.ttl;
-  }
-
-  private evictOldestMemoryEntry(): void {
-    let oldestKey: string | undefined;
-    let oldestTimestamp = Date.now();
-
-    this.memoryCache.forEach((entry, key) => {
-      if (entry.timestamp < oldestTimestamp) {
-        oldestTimestamp = entry.timestamp;
-        oldestKey = key;
-      }
-    });
-
-    if (oldestKey) {
-      this.delete(oldestKey);
-    }
-  }
-
-  private startCleanupTimer(): void {
-    if (this.cleanupTimer) {
-      clearInterval(this.cleanupTimer);
-    }
-
-    this.cleanupTimer = setInterval(() => {
-      this.cleanup();
-    }, this.config.cleanupInterval);
-  }
-
-  private isLocalStorageAvailable(): boolean {
     try {
-      const test = '__storage_test__';
-      localStorage.setItem(test, test);
-      localStorage.removeItem(test);
-      return true;
-    } catch (error) {
-      return false;
+      for (const key of Array.from(this.cache.keys())) {
+        if (key.includes(prefix)) this.cache.delete(key);
+      }
+    } catch {
+      this.cache.clear();
     }
   }
 
-  private serializeDataFrame(dataFrame: DataFrame): any {
-    return {
-      columns: dataFrame.columns,
-      rows: dataFrame.rows,
-      metadata: {
-        ...dataFrame.metadata,
-        lastUpdated: dataFrame.metadata?.lastUpdated?.toISOString(),
-      },
-    };
+  size(): number {
+    return this.cache.size;
   }
 
-  private deserializeDataFrame(serialized: any): DataFrame {
-    return {
-      columns: serialized.columns || [],
-      rows: serialized.rows || [],
-      metadata: {
-        ...serialized.metadata,
-        lastUpdated: serialized.metadata?.lastUpdated 
-          ? new Date(serialized.metadata.lastUpdated)
-          : undefined,
-      },
-    };
-  }
+  // Get cache statistics
+  getStats() {
+    const now = Date.now();
+    let expired = 0;
+    let valid = 0;
 
-  private estimateMemorySize(): number {
-    let size = 0;
-    
-    this.memoryCache.forEach(entry => {
-      try {
-        size += JSON.stringify(entry).length * 2;
-      } catch (error) {
-        size += 1000;
+    for (const entry of this.cache.values()) {
+      if (now - entry.timestamp > entry.ttl) {
+        expired++;
+      } else {
+        valid++;
       }
+    }
+
+    return {
+      total: this.cache.size,
+      valid,
+      expired,
+      maxSize: this.maxSize,
+    };
+  }
+
+  // Clean up expired entries
+  cleanup(): number {
+    const now = Date.now();
+    let cleaned = 0;
+
+    for (const [key, entry] of this.cache.entries()) {
+      if (now - entry.timestamp > entry.ttl) {
+        this.cache.delete(key);
+        cleaned++;
+      }
+    }
+
+    return cleaned;
+  }
+
+  // Set multiple entries at once
+  setMultiple<T>(entries: Array<{ key: string; data: T; ttl?: number }>): void {
+    entries.forEach(({ key, data, ttl }) => {
+      this.set(key, data, ttl);
     });
+  }
 
-    return size;
+  // Get multiple entries at once
+  getMultiple<T>(keys: string[]): Record<string, T | null> {
+    const result: Record<string, T | null> = {};
+    keys.forEach((key) => {
+      result[key] = this.get<T>(key);
+    });
+    return result;
   }
 }
 
-export const dataCache = new DataCache();
+// Create cache instances for different data types
+export const priceCache = new DataCache({ ttl: 1 * 60 * 1000 }); // 1 minute for prices
+export const kpiCache = new DataCache({ ttl: 5 * 60 * 1000 }); // 5 minutes for KPIs
+export const financialsCache = new DataCache({ ttl: 24 * 60 * 60 * 1000 }); // 24 hours for financials
+export const correlationCache = new DataCache({ ttl: 15 * 60 * 1000 }); // 15 minutes for correlations
 
-export function getCachedData(key: string): DataFrame | null {
-  return dataCache.get(key);
+// Cache key generators
+export const cacheKeys = {
+  prices: (symbol: string, range: string) => `prices:${symbol}:${range}`,
+  kpi: (symbol: string) => `kpi:${symbol}`,
+  financials: (symbol: string) => `financials:${symbol}`,
+  correlation: (symbols: string[], period?: string) =>
+    `correlation:${symbols.sort().join(',')}:${period || 'default'}`,
+  batchQuotes: (symbols: string[]) => `batch:${symbols.sort().join(',')}`,
+};
+
+// Auto-cleanup expired entries every minute
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    priceCache.cleanup();
+    kpiCache.cleanup();
+    financialsCache.cleanup();
+    correlationCache.cleanup();
+  }, 60 * 1000);
 }
 
-export function setCachedData(
-  key: string, 
-  data: DataFrame, 
-  options?: {
-    ttl?: number;
-    source?: string;
-    memoryOnly?: boolean;
-  }
-): void {
-  dataCache.set(key, data, options);
+// Common, simple cache used by loader/manager
+export const dataCache = new DataCache({ ttl: 5 * 60 * 1000, maxSize: 1000 });
+
+// Convenience wrappers for common operations (legacy compatibility)
+export function getCachedData<T>(key: string): T | null {
+  return dataCache.get<T>(key);
 }
 
-export function invalidateCache(key?: string, source?: string): void {
-  if (key) {
-    dataCache.delete(key);
-  } else {
-    dataCache.clear(source);
+export function setCachedData<T>(key: string, data: T, ttl?: number): void {
+  dataCache.set<T>(key, data, ttl);
+}
+
+export function invalidateCache(key?: string): void {
+  if (!key) {
+    dataCache.clear();
+    return;
   }
+  dataCache.delete(key);
 }
 
 export function getCacheStats() {
   return dataCache.getStats();
 }
 
-export function createDataSourceCacheKey(sourceId: string, query?: any): string {
-  const baseKey = `datasource:${sourceId}`;
-  
-  if (!query) {
-    return baseKey;
-  }
-
+export function createDataSourceCacheKey(providerId: string, query: unknown): string {
   try {
-    const queryString = JSON.stringify(query);
-    return `${baseKey}:${btoa(queryString).replace(/[+/=]/g, '')}`;
-  } catch (error) {
-    return `${baseKey}:${Date.now()}`;
+    const q = typeof query === 'string' ? query : JSON.stringify(query || {});
+    return `prov:${providerId}:${q}`;
+  } catch {
+    return `prov:${providerId}:unknown`;
   }
 }

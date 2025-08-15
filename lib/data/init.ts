@@ -5,26 +5,38 @@
 import { registerDataProvider, setDataProvider, dataProviderRegistry } from './providers';
 import { mockProvider } from './mock';
 import { extensionProvider } from './providers/ExtensionBridgeProvider';
+import { alphaVantageProvider } from './providers/AlphaVantageProvider';
 
 // Register all available providers
 export function initializeProviders() {
   // Always register mock provider as fallback
   registerDataProvider('mock', mockProvider);
-  
+
   // Prefer pre-registering extension provider only when a bridge exists to avoid races
   try {
-    const hasBridge = typeof window !== 'undefined' && !!(window as any).madlabBridge && typeof (window as any).madlabBridge.request === 'function';
+    const hasBridge =
+      typeof window !== 'undefined' &&
+      !!(window as any).madlabBridge &&
+      typeof (window as any).madlabBridge.request === 'function';
     if (hasBridge) {
       registerDataProvider('extension', extensionProvider);
     }
   } catch {}
-  
+
+  // Register browser Alpha Vantage provider if key is present
+  try {
+    const hasWindow = typeof window !== 'undefined';
+    if (hasWindow) {
+      registerDataProvider('alpha-vantage', alphaVantageProvider);
+    }
+  } catch {}
+
   // Set default provider to mock for safety
   const success = setDataProvider('mock');
   if (!success) {
     console.warn('Failed to set default mock provider');
   }
-  
+
   return { mockProvider, extensionProvider: dataProviderRegistry.getProvider('extension') };
 }
 

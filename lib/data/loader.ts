@@ -75,19 +75,19 @@ export async function loadData<T = DataFrame>(
   stats.requests++;
 
   const cacheKey = createDataSourceCacheKey(providerId, query);
-  
+
   try {
     // Check cache first (unless force refresh)
     if (!options.forceRefresh) {
       const cachedData = dataCache.get(cacheKey);
       if (cachedData) {
         stats.cacheHits++;
-        
+
         // Schedule background refresh if enabled and cache is aging
         if (options.backgroundRefresh) {
           scheduleBackgroundRefresh(cacheKey, providerId, query, options);
         }
-        
+
         // Track cache hit
         analytics.trackDataRequest(providerId, query, {
           success: true,
@@ -116,14 +116,14 @@ export async function loadData<T = DataFrame>(
     if (pendingRequests.has(cacheKey)) {
       stats.dedupedRequests++;
       const result = await pendingRequests.get(cacheKey);
-      
+
       // Track deduped request
       analytics.trackDataRequest(providerId, query, {
         success: true,
         loadTime: Date.now() - startTime,
         fromCache: false,
       });
-      
+
       return {
         data: result,
         fromCache: false,
@@ -135,24 +135,19 @@ export async function loadData<T = DataFrame>(
 
     // Create new request with timeout
     // If requested provider is not present in registry, return mock data for known ids in demo
-    const hasProvider = (dataProviderRegistry as any).get?.(providerId) || (dataProviderRegistry as any)[providerId];
+    const hasProvider =
+      (dataProviderRegistry as any).get?.(providerId) || (dataProviderRegistry as any)[providerId];
     const requestPromise = hasProvider
-      ? createTimeoutPromise(
-          fetchDataFromProvider(providerId, query),
-          options.timeout || 10000
-        )
+      ? createTimeoutPromise(fetchDataFromProvider(providerId, query), options.timeout || 10000)
       : Promise.resolve(getDemoFallback(providerId, query));
 
     pendingRequests.set(cacheKey, requestPromise);
 
     try {
       const data = await requestPromise;
-      
+
       // Cache the result
-      dataCache.set(cacheKey, data, {
-        ttl: options.ttl || 300000, // 5 minutes default
-        source: providerId,
-      });
+      dataCache.set(cacheKey, data, options.ttl || 300000);
 
       const loadTime = Date.now() - startTime;
       updateLoadTimeStats(loadTime);
@@ -182,18 +177,15 @@ export async function loadData<T = DataFrame>(
   } catch (error) {
     stats.errors++;
     pendingRequests.delete(cacheKey);
-    
+
     // Handle error with enhanced error system
-    const enhancedError = handleError(
-      error instanceof Error ? error : new Error('Unknown error'),
-      {
-        provider_id: providerId,
-        query,
-        load_time: Date.now() - startTime,
-        cache_key: cacheKey,
-      }
-    );
-    
+    const enhancedError = handleError(error instanceof Error ? error : new Error('Unknown error'), {
+      provider_id: providerId,
+      query,
+      load_time: Date.now() - startTime,
+      cache_key: cacheKey,
+    });
+
     // Track data loading error
     analytics.trackDataRequest(providerId, query, {
       success: false,
@@ -201,13 +193,13 @@ export async function loadData<T = DataFrame>(
       fromCache: false,
       error: enhancedError.technicalMessage,
     });
-    
+
     // Show user-friendly error toast
     // During demo, suppress global toast noise for KPI mock fallback
     if (!(error as any)?.code?.includes?.('DEMO_FALLBACK')) {
       showErrorToast(enhancedError, { duration: 6000 });
     }
-    
+
     throw enhancedError;
   }
 }
@@ -223,28 +215,27 @@ export async function loadBatch<T = DataFrame>(
   }>
 ): Promise<LoadResult<T>[]> {
   // Sort by priority (higher first)
-  const sortedRequests = requests.sort((a, b) => 
-    (b.options?.priority || 0) - (a.options?.priority || 0)
+  const sortedRequests = requests.sort(
+    (a, b) => (b.options?.priority || 0) - (a.options?.priority || 0)
   );
 
   // Execute in parallel with concurrency limit
   const CONCURRENCY_LIMIT = 5;
   const results: LoadResult<T>[] = [];
-  
+
   for (let i = 0; i < sortedRequests.length; i += CONCURRENCY_LIMIT) {
     const batch = sortedRequests.slice(i, i + CONCURRENCY_LIMIT);
-    const batchPromises = batch.map(req => 
-      loadData<T>(req.providerId, req.query, req.options)
-        .catch(error => ({
-          data: null as T,
-          fromCache: false,
-          loadTime: 0,
-          timestamp: Date.now(),
-          source: req.providerId,
-          error: error.message,
-        }))
+    const batchPromises = batch.map((req) =>
+      loadData<T>(req.providerId, req.query, req.options).catch((error) => ({
+        data: null as T,
+        fromCache: false,
+        loadTime: 0,
+        timestamp: Date.now(),
+        source: req.providerId,
+        error: error.message,
+      }))
     );
-    
+
     const batchResults = await Promise.all(batchPromises);
     results.push(...batchResults);
   }
@@ -255,17 +246,13 @@ export async function loadBatch<T = DataFrame>(
 /**
  * Preload data in the background for better UX
  */
-export function preloadData(
-  providerId: string,
-  query: any = {},
-  options: LoadOptions = {}
-): void {
+export function preloadData(providerId: string, query: any = {}, options: LoadOptions = {}): void {
   // Execute with low priority to avoid blocking user interactions
-  loadData(providerId, query, { 
-    ...options, 
+  loadData(providerId, query, {
+    ...options,
     priority: 0,
-    backgroundRefresh: false 
-  }).catch(error => {
+    backgroundRefresh: false,
+  }).catch((error) => {
     console.debug('Preload failed (non-critical):', providerId, error);
   });
 }
@@ -280,10 +267,10 @@ export async function refreshData<T = DataFrame>(
 ): Promise<LoadResult<T>> {
   const cacheKey = createDataSourceCacheKey(providerId, query);
   dataCache.delete(cacheKey);
-  
-  return loadData<T>(providerId, query, { 
-    ...options, 
-    forceRefresh: true 
+
+  return loadData<T>(providerId, query, {
+    ...options,
+    forceRefresh: true,
   });
 }
 
@@ -294,7 +281,7 @@ export function getLoaderStats(): LoaderStats & { cacheStats: any } {
   return {
     ...stats,
     cacheStats: dataCache.getStats(),
-  };
+  } as unknown as LoaderStats & { cacheStats: any };
 }
 
 /**
@@ -316,7 +303,8 @@ export function resetStats(): void {
 // Helper functions
 
 async function fetchDataFromProvider(providerId: string, query: any): Promise<any> {
-  const provider = (dataProviderRegistry as any).get?.(providerId) || (dataProviderRegistry as any)[providerId];
+  const provider =
+    (dataProviderRegistry as any).get?.(providerId) || (dataProviderRegistry as any)[providerId];
   if (!provider) {
     throw new Error(`Provider not found: ${providerId}`);
   }
@@ -329,21 +317,18 @@ async function fetchDataFromProvider(providerId: string, query: any): Promise<an
   throw new Error(`Provider ${providerId} does not support data fetching`);
 }
 
-function createTimeoutPromise<T>(
-  promise: Promise<T>, 
-  timeout: number
-): Promise<T> {
+function createTimeoutPromise<T>(promise: Promise<T>, timeout: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
       reject(new Error(`Request timeout after ${timeout}ms`));
     }, timeout);
 
     promise
-      .then(result => {
+      .then((result) => {
         clearTimeout(timeoutId);
         resolve(result);
       })
-      .catch(error => {
+      .catch((error) => {
         clearTimeout(timeoutId);
         reject(error);
       });
@@ -400,12 +385,12 @@ async function processRefreshQueue(): Promise<void> {
 
   // Process up to 3 refresh requests per cycle
   const itemsToProcess = Array.from(refreshQueue).slice(0, 3);
-  
+
   for (const cacheKey of itemsToProcess) {
     try {
       // Parse cache key to get provider and query
       const [, providerId, queryHash] = cacheKey.split(':');
-      
+
       // Only refresh if cache entry is getting old
       const cachedData = dataCache.get(cacheKey);
       if (cachedData) {
@@ -437,12 +422,12 @@ function prefetchRelatedData(providerId: string, query: any): void {
 
 function updateLoadTimeStats(loadTime: number): void {
   loadTimes.push(loadTime);
-  
+
   // Keep only last 100 measurements
   if (loadTimes.length > 100) {
     loadTimes.shift();
   }
-  
+
   // Update average
   stats.averageLoadTime = loadTimes.reduce((sum, time) => sum + time, 0) / loadTimes.length;
 }
