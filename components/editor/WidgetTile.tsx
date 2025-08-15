@@ -24,7 +24,8 @@ interface WidgetTileProps {
   sheetId: string;
 }
 
-const WIDGET_COMPONENTS: Record<string, never> = {};
+// Legacy widget components - these will be replaced by schema-based registry
+const WIDGET_COMPONENTS: Record<string, React.ComponentType<any>> = {};
 
 export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
   // Ensure core widgets are registered once
@@ -34,7 +35,7 @@ export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
 
   // Prefer schema-based registry if available for this type
   const schemaEntry = getSchemaWidget(widget.type);
-  const SchemaComponent = schemaEntry?.definition.runtime.component as
+  const SchemaComponent = schemaEntry?.runtime.component as
     | ((props: SchemaWidgetProps) => JSX.Element)
     | undefined;
 
@@ -168,13 +169,18 @@ export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
       <div className="flex-1 p-2 overflow-hidden">
         {SchemaComponent ? (
           <SchemaComponent
-            id={widget.id}
-            config={(widget.props as any) || schemaEntry!.definition.meta.defaultConfig}
-            isSelected={selected}
-            onConfigChange={(config) =>
-              updateWidget(sheetId, { id: widget.id, props: config as Record<string, unknown> })
+            widget={widget}
+            sheetId={sheetId}
+            onTitleChange={handleTitleChange}
+            onPropsChange={(props) =>
+              updateWidget(sheetId, { id: widget.id, props })
             }
-            onError={(err) => console.warn('Widget error', widget.type, err)}
+          />
+        ) : WidgetComponent ? (
+          <WidgetComponent
+            widget={widget}
+            sheetId={sheetId}
+            onTitleChange={handleTitleChange}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">

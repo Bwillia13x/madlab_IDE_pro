@@ -280,12 +280,12 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
       // Data Provider
       setDataProvider: async (provider: string) => {
-        const { setDataProvider: setProviderRegistry } = await import('./data/providers');
-        const success = await setProviderRegistry(provider);
-        if (success) {
+        try {
+          const { setDataProvider: setProviderRegistry } = await import('./data/providers');
+          await setProviderRegistry(provider);
           set({ dataProvider: provider });
-        } else {
-          console.warn(`Failed to set data provider to '${provider}'`);
+        } catch (error) {
+          console.warn(`Failed to set data provider to '${provider}':`, error);
         }
       },
       getDataProvider: () => get().dataProvider,
