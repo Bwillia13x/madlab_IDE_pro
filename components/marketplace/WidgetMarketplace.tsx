@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Download, Star, Filter, Grid, List } from 'lucide-react';
+import { Search, Download, Star, Filter, Grid, List, ExternalLink } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWorkspaceStore } from '@/lib/store';
+import { useToast } from '@/hooks/use-toast';
 
 interface WidgetPackage {
   id: string;
@@ -50,6 +51,7 @@ export function WidgetMarketplace({ onClose }: WidgetMarketplaceProps) {
   const [installing, setInstalling] = useState<string | null>(null);
 
   const { addWidget, activeSheetId } = useWorkspaceStore();
+  const { toast } = useToast();
 
   // Mock widget data - in production this would come from a registry API
   useEffect(() => {
@@ -194,12 +196,29 @@ export function WidgetMarketplace({ onClose }: WidgetMarketplaceProps) {
         });
       }
 
+      // Show success toast
+      toast({
+        title: "Installation Complete!",
+        description: `${widget.name} has been successfully installed to your workspace.`,
+        variant: "default",
+      });
+
       console.log(`Widget ${widget.name} installed successfully`);
     } catch (error) {
+      // Show error toast
+      toast({
+        title: "Installation Failed",
+        description: `Failed to install ${widget.name}. Please try again.`,
+        variant: "destructive",
+      });
       console.error(`Failed to install widget ${widget.name}:`, error);
     } finally {
       setInstalling(null);
     }
+  };
+
+  const handleOpenDocs = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const categories = [
@@ -377,7 +396,13 @@ export function WidgetMarketplace({ onClose }: WidgetMarketplaceProps) {
                       </Button>
 
                       {widget.documentation && (
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleOpenDocs(widget.documentation!)}
+                          className="flex items-center gap-1"
+                        >
+                          <ExternalLink className="h-3 w-3" />
                           Docs
                         </Button>
                       )}

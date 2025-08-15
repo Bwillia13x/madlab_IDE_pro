@@ -181,6 +181,20 @@ export function AgentChat() {
 
       {/* Input + LLM */}
       <div className="p-3 border-t border-border">
+        {/* Typing Indicator */}
+        {inflight && (
+          <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <div className="flex gap-1">
+                <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              </div>
+              <span>Agent is typing...</span>
+            </div>
+          </div>
+        )}
+        
         <div className="flex gap-2">
           <Input
             value={inputValue}
@@ -192,8 +206,8 @@ export function AgentChat() {
           <Button
             size="sm"
             onClick={handleSendMessage}
-            disabled={inflight}
-            className="bg-primary hover:bg-primary/90"
+            disabled={inflight || !inputValue.trim()}
+            className="bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Send message"
           >
             <Send className="h-4 w-4" />

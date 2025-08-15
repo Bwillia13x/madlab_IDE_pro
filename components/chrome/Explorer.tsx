@@ -54,18 +54,36 @@ function ExplorerItem({ item, level }: ExplorerItemProps) {
   const [expanded, setExpanded] = useState(false);
   const hasChildren = item.children && item.children.length > 0;
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (hasChildren) {
+        setExpanded(!expanded);
+      }
+    } else if (e.key === 'ArrowRight' && hasChildren && !expanded) {
+      e.preventDefault();
+      setExpanded(true);
+    } else if (e.key === 'ArrowLeft' && hasChildren && expanded) {
+      e.preventDefault();
+      setExpanded(false);
+    }
+  };
+
   return (
     <div>
       <Button
         variant="ghost"
         size="sm"
         className={cn(
-          "w-full h-6 justify-start px-1 py-0 font-normal text-xs text-foreground hover:bg-accent",
+          "w-full h-6 justify-start px-1 py-0 font-normal text-xs text-foreground hover:bg-accent focus:bg-accent focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-secondary",
           `pl-${level * 4 + 1}`
         )}
         onClick={() => hasChildren && setExpanded(!expanded)}
+        onKeyDown={handleKeyDown}
         data-testid={`explorer-item-${item.type}`}
         aria-label={`${item.type}:${item.name}`}
+        aria-expanded={hasChildren ? expanded : undefined}
+        tabIndex={0}
       >
         {hasChildren && (
           <div className="w-4 flex justify-center">
@@ -155,7 +173,7 @@ export function Explorer() {
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 px-2 text-xs"
+            className="h-6 px-2 text-xs focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-secondary"
             onClick={() => setDataExpanded((v) => !v)}
             aria-pressed={dataExpanded}
             aria-label="Toggle Data section"
@@ -165,7 +183,7 @@ export function Explorer() {
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 px-2 text-xs"
+            className="h-6 px-2 text-xs focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-secondary"
             onClick={() => setModelsExpanded((v) => !v)}
             aria-pressed={modelsExpanded}
             aria-label="Toggle Models section"
@@ -182,7 +200,7 @@ export function Explorer() {
             <Button
               variant="ghost"
               size="sm"
-              className="w-full h-6 justify-start px-1 py-0 font-medium text-xs text-foreground hover:bg-accent"
+              className="w-full h-6 justify-start px-1 py-0 font-medium text-xs text-foreground hover:bg-accent focus:bg-accent focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-secondary"
               onClick={() => setDataExpanded(!dataExpanded)}
             >
               {dataExpanded ? (
@@ -208,7 +226,7 @@ export function Explorer() {
             <Button
               variant="ghost"
               size="sm"
-              className="w-full h-6 justify-start px-1 py-0 font-medium text-xs text-foreground hover:bg-accent"
+              className="w-full h-6 justify-start px-1 py-0 font-medium text-xs text-foreground hover:bg-accent focus:bg-accent focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-secondary"
               onClick={() => setModelsExpanded(!modelsExpanded)}
             >
               {modelsExpanded ? (

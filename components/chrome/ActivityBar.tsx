@@ -39,7 +39,7 @@ export function ActivityBar() {
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    "w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-accent transition-opacity duration-200",
+                    "w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-accent transition-opacity duration-200 focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-secondary",
                     item.active && "border-l-primary bg-accent",
                     // Progressive disclosure: fade in non-primary actions on hover/focus
                     !item.active && "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100"
@@ -73,7 +73,7 @@ export function ActivityBar() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-accent transition-opacity duration-200 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100"
+                className="w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-accent transition-opacity duration-200 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-secondary"
                 data-testid="activity-chat"
                 aria-label="Agent Chat"
               >
@@ -90,7 +90,7 @@ export function ActivityBar() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-accent transition-opacity duration-200 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100"
+                className="w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-accent transition-opacity duration-200 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-secondary"
                 data-testid="activity-settings"
                 aria-label="Settings"
                 onClick={() => setSettingsOpen(true)}>
