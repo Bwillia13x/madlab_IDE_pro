@@ -68,6 +68,7 @@ export function DataProviderHealth({ open, onOpenChange }: DataProviderHealthPro
         .then(setServerMetrics)
         .catch(() => {});
     }
+    // Intentionally exclude runHealthCheck reference; it's stable in this component scope
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
