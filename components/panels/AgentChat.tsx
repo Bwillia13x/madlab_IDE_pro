@@ -9,7 +9,9 @@ import { useWorkspaceStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { runAgentTurn, type ChatTurn, type AgentEvent } from '@/lib/agent/runtime';
 
-type ToolEvent = Extract<AgentEvent, { type: 'tool_call' }> | Extract<AgentEvent, { type: 'tool_result' }>;
+type ToolEvent =
+  | Extract<AgentEvent, { type: 'tool_call' }>
+  | Extract<AgentEvent, { type: 'tool_result' }>;
 
 export function AgentChat() {
   const { messages, addMessage, chatCollapsed, toggleChat } = useWorkspaceStore();
@@ -41,7 +43,9 @@ export function AgentChat() {
 
     addMessage(inputValue, 'user');
     // Add immediate echo to stabilize E2E while agent streams
-    try { addMessage(`Echo: ${inputValue}`, 'agent'); } catch {}
+    try {
+      addMessage(`Echo: ${inputValue}`, 'agent');
+    } catch {}
     setInputValue('');
     setInflight(true);
     setStreamingText('');
@@ -82,7 +86,7 @@ export function AgentChat() {
     })();
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -92,21 +96,25 @@ export function AgentChat() {
   if (chatCollapsed) return null;
 
   return (
-    <div className="w-80 bg-secondary border-l border-border flex flex-col" data-testid="chat-panel">
+    <div
+      className="w-80 bg-secondary border-l border-border flex flex-col"
+      data-testid="chat-panel"
+    >
       {/* Header */}
       <div className="h-9 px-3 flex items-center justify-between border-b border-border">
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
           AGENT CHAT
-          <span className={cn('px-1.5 py-0.5 rounded text-[10px] border', llmReady ? 'border-green-700 text-green-300' : 'border-yellow-700 text-yellow-300')} title={llmReady ? 'LLM ready' : 'LLM unavailable'}>
+          <span
+            className={cn(
+              'px-1.5 py-0.5 rounded text-[10px] border',
+              llmReady ? 'border-green-700 text-green-300' : 'border-yellow-700 text-yellow-300'
+            )}
+            title={llmReady ? 'LLM ready' : 'LLM unavailable'}
+          >
             {llmReady ? 'LLM ready' : 'LLM off'}
           </span>
         </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 w-6 p-0"
-          onClick={toggleChat}
-        >
+        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={toggleChat}>
           <Minimize2 className="h-3 w-3 text-muted-foreground" />
         </Button>
       </div>
@@ -117,28 +125,29 @@ export function AgentChat() {
           {messages.map((message) => (
             <div
               key={message.id}
-              className={cn(
-                "flex gap-3",
-                message.sender === 'user' && "flex-row-reverse"
-              )}
+              className={cn('flex gap-3', message.sender === 'user' && 'flex-row-reverse')}
             >
-              <div className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
-                message.sender === 'agent' ? 'bg-primary' : 'bg-secondary'
-              )}>
+              <div
+                className={cn(
+                  'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0',
+                  message.sender === 'agent' ? 'bg-primary' : 'bg-secondary'
+                )}
+              >
                 {message.sender === 'agent' ? (
                   <Bot className="h-4 w-4 text-primary-foreground" />
                 ) : (
                   <User className="h-4 w-4 text-primary-foreground" />
                 )}
               </div>
-              
-              <div className={cn(
-                "max-w-[240px] p-3 rounded-lg text-sm",
-                message.sender === 'agent' 
-                  ? 'bg-secondary text-muted-foreground' 
-                  : 'bg-primary text-primary-foreground'
-              )}>
+
+              <div
+                className={cn(
+                  'max-w-[240px] p-3 rounded-lg text-sm',
+                  message.sender === 'agent'
+                    ? 'bg-secondary text-muted-foreground'
+                    : 'bg-primary text-primary-foreground'
+                )}
+              >
                 {message.content}
               </div>
             </div>
@@ -149,7 +158,12 @@ export function AgentChat() {
               <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-primary">
                 <Bot className="h-4 w-4 text-primary-foreground" />
               </div>
-              <div className="max-w-[240px] p-3 rounded-lg text-sm bg-secondary text-muted-foreground">
+              <div
+                className="max-w-[240px] p-3 rounded-lg text-sm bg-secondary text-muted-foreground"
+                role="status"
+                aria-live="polite"
+                aria-atomic="false"
+              >
                 <div>{streamingText || '…'}</div>
                 {toolEvents.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
@@ -164,7 +178,11 @@ export function AgentChat() {
                               ? 'border-green-700 text-green-300'
                               : 'border-yellow-700 text-yellow-300'
                         )}
-                        title={ev.type === 'tool_call' ? JSON.stringify(ev.call) : JSON.stringify(ev.result)}
+                        title={
+                          ev.type === 'tool_call'
+                            ? JSON.stringify(ev.call)
+                            : JSON.stringify(ev.result)
+                        }
                       >
                         {ev.type === 'tool_call'
                           ? `tool: ${ev.call.name}`
@@ -180,26 +198,39 @@ export function AgentChat() {
       </ScrollArea>
 
       {/* Input + LLM */}
-      <div className="p-3 border-t border-border">
+      <div className="p-3 border-t border-border" aria-busy={inflight ? true : undefined}>
         {/* Typing Indicator */}
         {inflight && (
-          <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+          <div
+            className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"
+            role="status"
+            aria-live="polite"
+          >
             <div className="flex items-center gap-1">
-              <div className="flex gap-1">
-                <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              <div className="flex gap-1" aria-hidden>
+                <div
+                  className="w-1.5 h-1.5 bg-muted-foreground rounded-full motion-safe:animate-bounce"
+                  style={{ animationDelay: '0ms' }}
+                ></div>
+                <div
+                  className="w-1.5 h-1.5 bg-muted-foreground rounded-full motion-safe:animate-bounce"
+                  style={{ animationDelay: '150ms' }}
+                ></div>
+                <div
+                  className="w-1.5 h-1.5 bg-muted-foreground rounded-full motion-safe:animate-bounce"
+                  style={{ animationDelay: '300ms' }}
+                ></div>
               </div>
               <span>Agent is typing...</span>
             </div>
           </div>
         )}
-        
+
         <div className="flex gap-2">
           <Input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             placeholder="Ask me about your analysis..."
             className="flex-1 bg-input border-input text-foreground placeholder-muted-foreground"
           />
@@ -228,7 +259,10 @@ export function AgentChat() {
                         parameters: {
                           type: 'object',
                           properties: {
-                            type: { type: 'string', description: 'widget type id (e.g. line-chart, kpi)' },
+                            type: {
+                              type: 'string',
+                              description: 'widget type id (e.g. line-chart, kpi)',
+                            },
                             title: { type: 'string', description: 'optional title' },
                             props: { type: 'object', description: 'widget configuration props' },
                           },
@@ -252,8 +286,12 @@ export function AgentChat() {
                           args = typeof raw === 'string' ? JSON.parse(raw) : raw;
                         } catch {}
                         const wType = typeof args?.type === 'string' ? args.type : 'blank-tile';
-                        const wTitle = typeof args?.title === 'string' ? args.title : wType.replace(/[-_]/g, ' ');
-                        const wProps = (args && typeof args?.props === 'object') ? args.props : undefined;
+                        const wTitle =
+                          typeof args?.title === 'string'
+                            ? args.title
+                            : wType.replace(/[-_]/g, ' ');
+                        const wProps =
+                          args && typeof args?.props === 'object' ? args.props : undefined;
                         let sheetId = state.activeSheetId;
                         if (!sheetId) {
                           state.addSheet('blank', 'New Sheet');
@@ -271,9 +309,10 @@ export function AgentChat() {
                     }
                   }
                 } catch {}
-                const content = typeof res?.choices?.[0]?.message?.content === 'string'
-                  ? res.choices[0].message.content
-                  : 'LLM call complete.';
+                const content =
+                  typeof res?.choices?.[0]?.message?.content === 'string'
+                    ? res.choices[0].message.content
+                    : 'LLM call complete.';
                 addMessage(content, 'agent');
               } catch (e) {
                 addMessage('LLM unavailable (no key configured).', 'agent');
