@@ -12,11 +12,11 @@ interface CorrelationMatrixProps {
 
 const ASSETS = ['SPY', 'QQQ', 'IWM', 'EFA', 'BND'];
 const MOCK_CORRELATION_DATA = [
-  [1.00, 0.85, 0.76, 0.68, -0.12],
-  [0.85, 1.00, 0.72, 0.64, -0.18],
-  [0.76, 0.72, 1.00, 0.59, -0.08],
-  [0.68, 0.64, 0.59, 1.00, -0.15],
-  [-0.12, -0.18, -0.08, -0.15, 1.00],
+  [1.0, 0.85, 0.76, 0.68, -0.12],
+  [0.85, 1.0, 0.72, 0.64, -0.18],
+  [0.76, 0.72, 1.0, 0.59, -0.08],
+  [0.68, 0.64, 0.59, 1.0, -0.15],
+  [-0.12, -0.18, -0.08, -0.15, 1.0],
 ];
 
 function getCorrelationColor(value: number): string {
@@ -30,14 +30,21 @@ function getCorrelationColor(value: number): string {
 
 export function CorrelationMatrix({ widget: _widget }: Readonly<CorrelationMatrixProps>) {
   const content = (
-    <div className="h-full flex flex-col" role="img" aria-label="Asset correlation matrix" data-testid="correlation-matrix">
+    <div
+      className="h-full flex flex-col"
+      role="img"
+      aria-label="Asset correlation matrix"
+      data-testid="correlation-matrix"
+    >
       <div className="grid grid-cols-6 gap-1 text-xs text-muted-foreground mb-2">
         <div></div>
         {ASSETS.map((asset) => (
-          <div key={asset} className="text-center">{asset}</div>
+          <div key={asset} className="text-center">
+            {asset}
+          </div>
         ))}
       </div>
-      
+
       <div className="flex-1">
         {MOCK_CORRELATION_DATA.map((row, rowIndex) => (
           <div key={rowIndex} className="grid grid-cols-6 gap-1 mb-1">
@@ -48,7 +55,7 @@ export function CorrelationMatrix({ widget: _widget }: Readonly<CorrelationMatri
               <div
                 key={colIndex}
                 className={cn(
-                  "aspect-square rounded text-xs font-medium text-foreground flex items-center justify-center",
+                  'aspect-square rounded text-xs font-medium text-foreground flex items-center justify-center',
                   getCorrelationColor(value)
                 )}
               >
@@ -58,7 +65,7 @@ export function CorrelationMatrix({ widget: _widget }: Readonly<CorrelationMatri
           </div>
         ))}
       </div>
-      
+
       <div className="text-xs text-muted-foreground mt-2 text-center">
         30-Day Rolling Correlation
       </div>
@@ -86,7 +93,12 @@ export function CorrelationMatrix({ widget: _widget }: Readonly<CorrelationMatri
 
 // Default export for lazy import via getLazyWidget('CorrelationMatrix')
 export default function CorrelationMatrixDefault(props: WidgetProps) {
-  const cfg = (props.config as any) || {};
-  const stub = { id: props.id, type: 'correlation-matrix', title: cfg.title || 'Correlation Matrix', layout: { i: props.id, x: 0, y: 0, w: 6, h: 6 } } as unknown as Widget;
+  const cfg = (props.config as Record<string, unknown>) || {};
+  const stub = {
+    id: props.id,
+    type: 'correlation-matrix',
+    title: cfg.title || 'Correlation Matrix',
+    layout: { i: props.id, x: 0, y: 0, w: 6, h: 6 },
+  } as unknown as Widget;
   return <CorrelationMatrix widget={stub} />;
 }

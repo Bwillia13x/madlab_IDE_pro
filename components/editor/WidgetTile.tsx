@@ -66,7 +66,8 @@ const LazyWidgetRenderer = memo(function LazyWidgetRenderer({
         <SchemaComponent
           id={widget.id}
           config={
-            (widget.props as any) || (schemaEntry ? schemaEntry.definition.meta.defaultConfig : {})
+            (widget.props as Record<string, unknown>) ||
+            (schemaEntry ? schemaEntry.definition.meta.defaultConfig : {})
           }
           isSelected={selected}
           onConfigChange={(config) => {
@@ -107,7 +108,7 @@ const LazyWidgetRenderer = memo(function LazyWidgetRenderer({
     <LazyWidget
       type={widget.type}
       id={widget.id}
-      config={(widget.props as any) || {}}
+      config={(widget.props as Record<string, unknown>) || {}}
       isSelected={selected}
       onConfigChange={(config) =>
         updateWidget(sheetId, { id: widget.id, props: config as Record<string, unknown> })
@@ -348,7 +349,7 @@ export const WidgetTile = memo(function WidgetTile({ widget, sheetId }: WidgetTi
     { children: React.ReactNode },
     { hasError: boolean }
   > {
-    constructor(props: any) {
+    constructor(props: Readonly<{ children?: React.ReactNode }>) {
       super(props);
       this.state = { hasError: false };
     }

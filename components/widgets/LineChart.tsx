@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState } from 'react';
 import { AccessibleWidget } from '@/components/ui/AccessibleWidget';
@@ -18,7 +18,7 @@ interface LineChartProps {
   symbol?: string;
 }
 
-const RANGES: PriceRange[] = ['1D','5D','1M','3M','6M','1Y','2Y','5Y'];
+const RANGES: PriceRange[] = ['1D', '5D', '1M', '3M', '6M', '1Y', '2Y', '5Y'];
 
 export function LineChart({ widget: _widget, symbol }: Readonly<LineChartProps>) {
   const [range, setRange] = useState<PriceRange>('6M');
@@ -34,8 +34,11 @@ export function LineChart({ widget: _widget, symbol }: Readonly<LineChartProps>)
 
     try {
       // Transform data to include OHLC structure (with close as all values for line chart data)
-      const exportData = data.map(point => ({
-        date: point.date instanceof Date ? point.date.toISOString().split('T')[0] : (point as any).date,
+      const exportData = data.map((point) => ({
+        date:
+          point.date instanceof Date
+            ? point.date.toISOString().split('T')[0]
+            : (point as { date?: string }).date,
         open: point.close, // Line chart typically only has close prices
         high: point.close,
         low: point.close,
@@ -44,7 +47,7 @@ export function LineChart({ widget: _widget, symbol }: Readonly<LineChartProps>)
       }));
 
       exportPriceData(exportData, actualSymbol, {
-        filename: `${actualSymbol}_${range}_prices_${new Date().toISOString().split('T')[0]}.csv`
+        filename: `${actualSymbol}_${range}_prices_${new Date().toISOString().split('T')[0]}.csv`,
       });
       toast.success(`Price data for ${actualSymbol} (${range}) exported successfully`);
     } catch (err) {
@@ -55,7 +58,10 @@ export function LineChart({ widget: _widget, symbol }: Readonly<LineChartProps>)
     <div className="h-full group" data-testid="line-chart">
       <div className="flex items-center gap-2 px-2 py-1">
         <div className="text-xs text-muted-foreground">{actualSymbol}</div>
-        <div className="ml-auto flex items-center gap-1 opacity-60 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200" data-testid="line-range">
+        <div
+          className="ml-auto flex items-center gap-1 opacity-60 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200"
+          data-testid="line-range"
+        >
           {RANGES.map((r) => (
             <Button
               key={r}
@@ -93,11 +99,13 @@ export function LineChart({ widget: _widget, symbol }: Readonly<LineChartProps>)
         </div>
       </div>
       {error && (
-        <div className="text-xs text-red-400 px-2 py-1" role="status">{String(error)}</div>
+        <div className="text-xs text-red-400 px-2 py-1" role="status">
+          {String(error)}
+        </div>
       )}
-      <div 
-        role="img" 
-        aria-labelledby="chart-title" 
+      <div
+        role="img"
+        aria-labelledby="chart-title"
         aria-describedby="chart-desc"
         aria-label={`Line chart showing ${actualSymbol} price over ${range} period`}
       >
@@ -105,49 +113,50 @@ export function LineChart({ widget: _widget, symbol }: Readonly<LineChartProps>)
           {actualSymbol} Stock Price Chart - {range}
         </div>
         <div id="chart-desc" className="sr-only">
-          {loading 
+          {loading
             ? 'Loading price data...'
-            : error 
+            : error
               ? `Error loading data: ${error}`
-              : data 
-                ? `Chart displays ${data.length} price points from ${data[0]?.date} to ${data[data.length-1]?.date}`
-                : 'No data available'
-          }
+              : data
+                ? `Chart displays ${data.length} price points from ${data[0]?.date} to ${data[data.length - 1]?.date}`
+                : 'No data available'}
         </div>
         <ChartContainer minHeight={180}>
           <RechartsLineChart data={data ?? []}>
-          <XAxis 
-            dataKey="date" 
-            axisLine={false}
-            tickLine={false}
-            tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-          />
-          <YAxis 
-            axisLine={false}
-            tickLine={false}
-            tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-          />
-          <Tooltip 
-            contentStyle={{ 
-              backgroundColor: 'hsl(var(--card))', 
-              border: '1px solid hsl(var(--border))',
-              borderRadius: '4px',
-              color: 'hsl(var(--foreground))'
-            }}
-          />
-          <Line 
-            type="monotone" 
-            dataKey="close" 
-            stroke="hsl(var(--primary))" 
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 4, stroke: 'hsl(var(--primary))', strokeWidth: 2 }}
-          />
-        </RechartsLineChart>
+            <XAxis
+              dataKey="date"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'hsl(var(--card))',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '4px',
+                color: 'hsl(var(--foreground))',
+              }}
+            />
+            <Line
+              type="monotone"
+              dataKey="close"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, stroke: 'hsl(var(--primary))', strokeWidth: 2 }}
+            />
+          </RechartsLineChart>
         </ChartContainer>
       </div>
       {loading && !data && (
-        <div className="text-xs text-muted-foreground px-2 py-1" role="status" aria-live="polite">Loading…</div>
+        <div className="text-xs text-muted-foreground px-2 py-1" role="status" aria-live="polite">
+          Loading…
+        </div>
       )}
     </div>
   );

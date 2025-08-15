@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { 
+import {
   LineChart,
   Line,
   BarChart,
@@ -26,7 +26,10 @@ import { z } from 'zod';
 const ChartLiteConfigSchema = createWidgetSchema(
   z.object({
     ...CommonSchemas.chart.shape,
-    data: z.array(z.record(z.union([z.string(), z.number()]))).default([]).describe('Chart data array'),
+    data: z
+      .array(z.record(z.union([z.string(), z.number()])))
+      .default([])
+      .describe('Chart data array'),
     xAxisKey: z.string().default('name').describe('Key for X-axis data'),
     yAxisKeys: z.array(z.string()).default(['value']).describe('Keys for Y-axis data'),
     animate: z.boolean().default(true).describe('Enable chart animations'),
@@ -48,17 +51,26 @@ const SAMPLE_DATA = [
 
 function ChartLiteComponent({ config, data }: WidgetProps) {
   const typedConfig = config as ChartLiteConfig;
-  
+
   // Use provided data or fall back to sample data
-  const chartData = data && Array.isArray(data) && data.length > 0 
-    ? data 
-    : typedConfig.data.length > 0 
-      ? typedConfig.data 
-      : SAMPLE_DATA;
+  const chartData =
+    data && Array.isArray(data) && data.length > 0
+      ? data
+      : typedConfig.data.length > 0
+        ? typedConfig.data
+        : SAMPLE_DATA;
 
   // Custom tooltip formatter
-  interface TooltipEntry { name: string; value: number | string; color?: string }
-  interface TooltipProps { active?: boolean; payload?: TooltipEntry[]; label?: string }
+  interface TooltipEntry {
+    name: string;
+    value: number | string;
+    color?: string;
+  }
+  interface TooltipProps {
+    active?: boolean;
+    payload?: TooltipEntry[];
+    label?: string;
+  }
   const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
     if (active && payload && payload.length) {
       return (
@@ -85,22 +97,42 @@ function ChartLiteComponent({ config, data }: WidgetProps) {
       dataKey: typedConfig.xAxisKey,
       stroke: 'hsl(var(--muted-foreground))',
       fontSize: 12,
-      ...(typedConfig.xAxis?.label && { label: { value: typedConfig.xAxis.label, position: 'insideBottom', offset: -10, style: { textAnchor: 'middle', fill: 'hsl(var(--muted-foreground))' } } }),
+      ...(typedConfig.xAxis?.label && {
+        label: {
+          value: typedConfig.xAxis.label,
+          position: 'insideBottom',
+          offset: -10,
+          style: { textAnchor: 'middle', fill: 'hsl(var(--muted-foreground))' },
+        },
+      }),
     };
 
     const yAxisProps = {
       stroke: 'hsl(var(--muted-foreground))',
       fontSize: 12,
-      ...(typedConfig.yAxis?.min !== undefined && { domain: [typedConfig.yAxis.min, 'auto'] as [number, string] }),
-      ...(typedConfig.yAxis?.max !== undefined && { domain: ['auto', typedConfig.yAxis.max] as [string, number] }),
-      ...(typedConfig.yAxis?.label && { label: { value: typedConfig.yAxis.label, angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: 'hsl(var(--muted-foreground))' } } }),
+      ...(typedConfig.yAxis?.min !== undefined && {
+        domain: [typedConfig.yAxis.min, 'auto'] as [number, string],
+      }),
+      ...(typedConfig.yAxis?.max !== undefined && {
+        domain: ['auto', typedConfig.yAxis.max] as [string, number],
+      }),
+      ...(typedConfig.yAxis?.label && {
+        label: {
+          value: typedConfig.yAxis.label,
+          angle: -90,
+          position: 'insideLeft',
+          style: { textAnchor: 'middle', fill: 'hsl(var(--muted-foreground))' },
+        },
+      }),
     };
 
-    const gridProps = typedConfig.showGrid ? {
-      strokeDasharray: '3 3',
-      stroke: 'hsl(var(--border))',
-      opacity: 0.3,
-    } : false;
+    const gridProps = typedConfig.showGrid
+      ? {
+          strokeDasharray: '3 3',
+          stroke: 'hsl(var(--border))',
+          opacity: 0.3,
+        }
+      : false;
 
     switch (typedConfig.chartType) {
       case 'line':
@@ -118,7 +150,11 @@ function ChartLiteComponent({ config, data }: WidgetProps) {
                 dataKey={key}
                 stroke={typedConfig.colors[index % typedConfig.colors.length]}
                 strokeWidth={typedConfig.strokeWidth}
-                dot={{ fill: typedConfig.colors[index % typedConfig.colors.length], strokeWidth: 0, r: 4 }}
+                dot={{
+                  fill: typedConfig.colors[index % typedConfig.colors.length],
+                  strokeWidth: 0,
+                  r: 4,
+                }}
                 activeDot={{ r: 6 }}
                 animationDuration={typedConfig.animate ? 1000 : 0}
               />
@@ -201,7 +237,12 @@ function ChartLiteComponent({ config, data }: WidgetProps) {
   };
 
   return (
-    <div className="h-full w-full" role="img" aria-label="Chart Lite visualization" data-testid="chart-lite">
+    <div
+      className="h-full w-full"
+      role="img"
+      aria-label="Chart Lite visualization"
+      data-testid="chart-lite"
+    >
       <ChartContainer minHeight={200}>{renderChart()}</ChartContainer>
     </div>
   );
@@ -249,7 +290,7 @@ export const ChartLiteDefinition: WidgetDefinition = {
       schema: z.array(z.record(z.union([z.string(), z.number()]))),
     },
     tags: ['chart', 'visualization', 'data', 'recharts'],
-    icon: BarChart3 as any,
+    icon: BarChart3,
   },
   runtime: {
     component: ChartLiteComponent,

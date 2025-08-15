@@ -5,7 +5,7 @@
 
 export interface DataFrame {
   columns: string[];
-  rows: Record<string, any>[];
+  rows: Array<Record<string, unknown>>;
   metadata?: {
     source?: string;
     lastUpdated?: Date;
@@ -18,12 +18,12 @@ export interface DataSource {
   id: string;
   name: string;
   type: 'static-json' | 'csv' | 'rest' | 'websocket' | 'file';
-  
+
   connect(): Promise<boolean>;
   disconnect(): Promise<void>;
-  
-  getData(query?: any): Promise<DataFrame>;
-  
+
+  getData(query?: Record<string, unknown>): Promise<DataFrame>;
+
   isConnected(): boolean;
   getMetadata(): {
     name: string;
@@ -69,7 +69,7 @@ export abstract class BaseDataSource implements DataSource {
 
   abstract connect(): Promise<boolean>;
   abstract disconnect(): Promise<void>;
-  abstract getData(query?: any): Promise<DataFrame>;
+  abstract getData(query?: Record<string, unknown>): Promise<DataFrame>;
 
   isConnected(): boolean {
     return this.connected;

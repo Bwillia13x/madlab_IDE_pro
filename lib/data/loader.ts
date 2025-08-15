@@ -11,7 +11,7 @@ import { showErrorToast } from '../errors/toast';
 import type { DataFrame } from './source';
 
 // Request deduplication - prevents multiple identical requests
-const pendingRequests = new Map<string, Promise<any>>();
+const pendingRequests = new Map<string, Promise<unknown>>();
 
 // Background refresh queue
 const refreshQueue = new Set<string>();
@@ -55,7 +55,7 @@ export interface LoadOptions {
   priority?: number;
 }
 
-export interface LoadResult<T = any> {
+export interface LoadResult<T = unknown> {
   data: T;
   fromCache: boolean;
   loadTime: number;
@@ -68,7 +68,7 @@ export interface LoadResult<T = any> {
  */
 export async function loadData<T = DataFrame>(
   providerId: string,
-  query: any = {},
+  query: Record<string, unknown> = {},
   options: LoadOptions = {}
 ): Promise<LoadResult<T>> {
   const startTime = Date.now();
@@ -210,7 +210,7 @@ export async function loadData<T = DataFrame>(
 export async function loadBatch<T = DataFrame>(
   requests: Array<{
     providerId: string;
-    query?: any;
+    query?: Record<string, unknown>;
     options?: LoadOptions;
   }>
 ): Promise<LoadResult<T>[]> {
@@ -246,7 +246,11 @@ export async function loadBatch<T = DataFrame>(
 /**
  * Preload data in the background for better UX
  */
-export function preloadData(providerId: string, query: any = {}, options: LoadOptions = {}): void {
+export function preloadData(
+  providerId: string,
+  query: Record<string, unknown> = {},
+  options: LoadOptions = {}
+): void {
   // Execute with low priority to avoid blocking user interactions
   loadData(providerId, query, {
     ...options,
@@ -262,7 +266,7 @@ export function preloadData(providerId: string, query: any = {}, options: LoadOp
  */
 export async function refreshData<T = DataFrame>(
   providerId: string,
-  query: any = {},
+  query: Record<string, unknown> = {},
   options: LoadOptions = {}
 ): Promise<LoadResult<T>> {
   const cacheKey = createDataSourceCacheKey(providerId, query);
@@ -277,11 +281,11 @@ export async function refreshData<T = DataFrame>(
 /**
  * Get loader performance statistics
  */
-export function getLoaderStats(): LoaderStats & { cacheStats: any } {
+export function getLoaderStats(): LoaderStats & { cacheStats: unknown } {
   return {
     ...stats,
     cacheStats: dataCache.getStats(),
-  } as unknown as LoaderStats & { cacheStats: any };
+  } as LoaderStats & { cacheStats: unknown };
 }
 
 /**
@@ -302,7 +306,10 @@ export function resetStats(): void {
 
 // Helper functions
 
-async function fetchDataFromProvider(providerId: string, query: any): Promise<any> {
+async function fetchDataFromProvider(
+  providerId: string,
+  query: Record<string, unknown>
+): Promise<unknown> {
   const provider =
     (dataProviderRegistry as any).get?.(providerId) || (dataProviderRegistry as any)[providerId];
   if (!provider) {
@@ -335,11 +342,11 @@ function createTimeoutPromise<T>(promise: Promise<T>, timeout: number): Promise<
   });
 }
 
-function getDemoFallback(providerId: string, query: any): any {
+function getDemoFallback(providerId: string, query: Record<string, unknown>): unknown {
   // Minimal mock responses for demo mode to satisfy widgets
   if (providerId === 'kpi-provider') {
     return {
-      symbol: (query?.symbol || 'AAPL').toUpperCase(),
+      symbol: String((query as Record<string, unknown>)?.symbol || 'AAPL').toUpperCase(),
       name: 'Demo Corp',
       price: 123.45,
       change: 0.12,
@@ -359,7 +366,7 @@ function getDemoFallback(providerId: string, query: any): any {
 function scheduleBackgroundRefresh(
   cacheKey: string,
   providerId: string,
-  query: any,
+  query: Record<string, unknown>,
   options: LoadOptions
 ): void {
   if (refreshQueue.has(cacheKey)) return;
@@ -406,13 +413,14 @@ async function processRefreshQueue(): Promise<void> {
   }
 }
 
-function prefetchRelatedData(providerId: string, query: any): void {
+function prefetchRelatedData(providerId: string, query: Record<string, unknown>): void {
   // Example: If loading AAPL prices, also prefetch AAPL KPIs
   try {
-    const symbol = query.symbol || query.ticker;
+    const symbol =
+      (query as Record<string, unknown>)['symbol'] || (query as Record<string, unknown>)['ticker'];
     if (symbol && providerId.includes('price')) {
       // Prefetch KPI data for the same symbol
-      preloadData('kpi-provider', { symbol }, { priority: 0 });
+      preloadData('kpi-provider', { symbol } as Record<string, unknown>, { priority: 0 });
     }
   } catch (error) {
     // Ignore prefetch errors

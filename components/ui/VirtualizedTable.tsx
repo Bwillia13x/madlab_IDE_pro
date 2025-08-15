@@ -13,7 +13,7 @@ export interface TableColumn {
 }
 
 interface VirtualizedTableProps {
-  data: Record<string, any>[];
+  data: Array<Record<string, unknown>>;
   columns: TableColumn[];
   height: number;
   width: number;
@@ -21,8 +21,8 @@ interface VirtualizedTableProps {
   headerHeight?: number;
   overscanCount?: number;
   className?: string;
-  onRowClick?: (row: Record<string, any>, index: number) => void;
-  getRowKey?: (row: Record<string, any>, index: number) => string;
+  onRowClick?: (row: Record<string, unknown>, index: number) => void;
+  getRowKey?: (row: Record<string, unknown>, index: number) => string;
   loading?: boolean;
   emptyMessage?: string;
 }
@@ -73,7 +73,7 @@ export function VirtualizedTable({
   );
 
   const Row = useCallback(
-    ({ index, style }: any) => {
+    ({ index, style }: { index: number; style: React.CSSProperties }) => {
       const row = data[index];
       const isEven = index % 2 === 0;
 
@@ -153,7 +153,7 @@ export function VirtualizedTable({
 
 // Financial data table with common financial formatting
 interface FinancialTableProps extends Omit<VirtualizedTableProps, 'columns'> {
-  data: Array<Record<string, any>>;
+  data: Array<Record<string, unknown>>;
   type: 'prices' | 'portfolio' | 'transactions' | 'generic';
 }
 

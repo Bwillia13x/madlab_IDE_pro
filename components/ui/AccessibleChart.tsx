@@ -16,7 +16,7 @@ interface DataPoint {
   date: string;
   value: number;
   label?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface AccessibleChartProps {
@@ -70,6 +70,22 @@ export function AccessibleChart({
   const description = ariaDescription || generateChartDescription(data, title, type);
 
   // Handle keyboard navigation
+  // Announce data point to screen reader
+  const announceDataPoint = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= data.length) return;
+
+      const point = data[index];
+      const formattedValue = valueFormatter
+        ? valueFormatter(point.value)
+        : formatForScreenReader(point.value, 'currency', currency);
+
+      const message = `Data point ${index + 1} of ${data.length}: ${point.date}, ${formattedValue}`;
+      announceToScreenReader(message, 'polite');
+    },
+    [data, currency, valueFormatter]
+  );
+
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (!isKeyboardNavigating) return;
@@ -126,22 +142,6 @@ export function AccessibleChart({
       }
     },
     [data, selectedIndex, showTable, onDataPointSelect, isKeyboardNavigating, announceDataPoint]
-  );
-
-  // Announce data point to screen reader
-  const announceDataPoint = useCallback(
-    (index: number) => {
-      if (index < 0 || index >= data.length) return;
-
-      const point = data[index];
-      const formattedValue = valueFormatter
-        ? valueFormatter(point.value)
-        : formatForScreenReader(point.value, 'currency', currency);
-
-      const message = `Data point ${index + 1} of ${data.length}: ${point.date}, ${formattedValue}`;
-      announceToScreenReader(message, 'polite');
-    },
-    [data, currency, valueFormatter]
   );
 
   // Set up keyboard event listeners
@@ -281,8 +281,8 @@ export function AccessibleChart({
 
 // Wrapper component for common chart libraries
 interface ChartWrapperProps extends Omit<AccessibleChartProps, 'children'> {
-  chartComponent: React.ComponentType<any>;
-  chartProps: any;
+  chartComponent: React.ComponentType<unknown>;
+  chartProps: Record<string, unknown>;
 }
 
 export function AccessibleChartWrapper({

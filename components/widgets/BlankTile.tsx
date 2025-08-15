@@ -8,11 +8,13 @@ import { createWidgetSchema, CommonSchemas } from '@/lib/widgets/schema';
 import { z } from 'zod';
 
 // Configuration schema for BlankTile
-const BlankTileConfigSchema = createWidgetSchema(z.object({
-  showSuggestions: z.boolean().default(true).describe('Show widget suggestions'),
-  suggestionCount: z.number().min(2).max(8).default(4).describe('Number of suggestions to show'),
-  enableBrowseButton: z.boolean().default(true).describe('Show browse all widgets button'),
-}));
+const BlankTileConfigSchema = createWidgetSchema(
+  z.object({
+    showSuggestions: z.boolean().default(true).describe('Show widget suggestions'),
+    suggestionCount: z.number().min(2).max(8).default(4).describe('Number of suggestions to show'),
+    enableBrowseButton: z.boolean().default(true).describe('Show browse all widgets button'),
+  })
+);
 
 type BlankTileConfig = z.infer<typeof BlankTileConfigSchema>;
 
@@ -34,13 +36,18 @@ function BlankTileComponent({ config }: WidgetProps) {
         <h3 className="text-lg font-medium text-muted-foreground mb-1">
           {typedConfig.title || 'Add a Widget'}
         </h3>
-        <p className="text-sm text-muted-foreground">Choose from our collection of financial analysis tools</p>
+        <p className="text-sm text-muted-foreground">
+          Choose from our collection of financial analysis tools
+        </p>
       </div>
-      
+
       {typedConfig.showSuggestions && (
         <div className="grid grid-cols-2 gap-3">
           {suggestions.map((suggestion) => (
-            <Card key={suggestion.type} className="bg-card border-border hover:border-primary cursor-pointer transition-colors">
+            <Card
+              key={suggestion.type}
+              className="bg-card border-border hover:border-primary cursor-pointer transition-colors"
+            >
               <CardContent className="p-3 text-center">
                 <suggestion.icon className="h-6 w-6 text-primary mx-auto mb-1" />
                 <span className="text-xs text-muted-foreground">{suggestion.label}</span>
@@ -49,10 +56,10 @@ function BlankTileComponent({ config }: WidgetProps) {
           ))}
         </div>
       )}
-      
+
       {typedConfig.enableBrowseButton && (
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="bg-card border-border text-muted-foreground hover:border-primary"
         >
           Browse All Widgets
@@ -86,7 +93,7 @@ export const BlankTileDefinition: WidgetDefinition = {
       realTimeData: false,
     },
     tags: ['utility', 'placeholder'],
-    icon: Plus as any,
+    icon: Plus,
   },
   runtime: {
     component: BlankTileComponent,
@@ -94,7 +101,7 @@ export const BlankTileDefinition: WidgetDefinition = {
 };
 
 // Export the component for backward compatibility
-export function BlankTile(props: any) {
+export function BlankTile(props: unknown) {
   return <BlankTileComponent {...props} />;
 }
 

@@ -30,7 +30,7 @@ export function DataProviderHealth({ open, onOpenChange }: DataProviderHealthPro
   const streaming = useStreamingStats();
   const streamMode = (useWorkspaceStore.getState() as any).streamMode || 'auto';
   const pollMs = Number((useWorkspaceStore.getState() as any).pollingIntervalMs || 1000);
-  const [serverMetrics, setServerMetrics] = useState<any | null>(null);
+  const [serverMetrics, setServerMetrics] = useState<Record<string, unknown> | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const meta = useMemo(() => {
@@ -132,7 +132,15 @@ export function DataProviderHealth({ open, onOpenChange }: DataProviderHealthPro
             <span className="font-medium">
               {(() => {
                 try {
-                  const t = serverMetrics?.timers?.find((x: any) => x.name === 'market:GET');
+                  const t = Array.isArray((serverMetrics as any)?.timers)
+                    ? (
+                        (serverMetrics as any).timers as Array<{
+                          name?: string;
+                          avgMs?: number;
+                          p95Ms?: number;
+                        }>
+                      ).find((x) => x.name === 'market:GET')
+                    : undefined;
                   return t ? `${Math.round(t.p50)} ms` : '—';
                 } catch {
                   return '—';

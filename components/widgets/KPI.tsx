@@ -21,12 +21,20 @@ const KPIConfigSchema = createWidgetSchema(
     unit: z.string().default('').describe('Unit of measurement'),
     title: z.string().default('KPI').describe('KPI title'),
     subtitle: z.string().optional().describe('KPI subtitle or description'),
-    icon: z.enum(['activity', 'dollar', 'percent', 'hash']).default('activity').describe('Display icon'),
+    icon: z
+      .enum(['activity', 'dollar', 'percent', 'hash'])
+      .default('activity')
+      .describe('Display icon'),
     color: z.string().default('hsl(var(--primary))').describe('Primary color'),
-    sparklineData: z.array(z.object({
-      value: z.number(),
-      timestamp: z.string().optional(),
-    })).default([]).describe('Historical data for sparkline'),
+    sparklineData: z
+      .array(
+        z.object({
+          value: z.number(),
+          timestamp: z.string().optional(),
+        })
+      )
+      .default([])
+      .describe('Historical data for sparkline'),
     layout: z.enum(['horizontal', 'vertical']).default('vertical').describe('Layout orientation'),
     size: z.enum(['small', 'medium', 'large']).default('medium').describe('Display size'),
   })
@@ -36,13 +44,21 @@ type KPIConfig = z.infer<typeof KPIConfigSchema>;
 
 // Sample sparkline data
 const SAMPLE_SPARKLINE_DATA = [
-  { value: 100 }, { value: 120 }, { value: 90 }, { value: 150 }, { value: 140 },
-  { value: 160 }, { value: 180 }, { value: 170 }, { value: 200 }, { value: 175 },
+  { value: 100 },
+  { value: 120 },
+  { value: 90 },
+  { value: 150 },
+  { value: 140 },
+  { value: 160 },
+  { value: 180 },
+  { value: 170 },
+  { value: 200 },
+  { value: 175 },
 ];
 
 function formatValue(value: number, format: string, precision: number, unit: string): string {
   let formatted = '';
-  
+
   switch (format) {
     case 'currency':
       formatted = new Intl.NumberFormat('en-US', {
@@ -52,11 +68,11 @@ function formatValue(value: number, format: string, precision: number, unit: str
         maximumFractionDigits: precision,
       }).format(value);
       break;
-    
+
     case 'percentage':
       formatted = `${value.toFixed(precision)}%`;
       break;
-    
+
     default:
       formatted = value.toLocaleString(undefined, {
         minimumFractionDigits: precision,
@@ -65,22 +81,25 @@ function formatValue(value: number, format: string, precision: number, unit: str
       if (unit) formatted += ` ${unit}`;
       break;
   }
-  
+
   return formatted;
 }
 
-function calculateChange(current: number, previous?: number): { value: number; percentage: number } | null {
+function calculateChange(
+  current: number,
+  previous?: number
+): { value: number; percentage: number } | null {
   if (previous === undefined || previous === null) return null;
-  
+
   const value = current - previous;
   const percentage = previous !== 0 ? (value / previous) * 100 : 0;
-  
+
   return { value, percentage };
 }
 
 function getChangeColor(change: number, threshold: KPIConfig['threshold']): string {
   if (!threshold) return change >= 0 ? 'hsl(var(--primary))' : 'hsl(var(--destructive))';
-  
+
   if (threshold.critical !== undefined && Math.abs(change) >= threshold.critical) {
     return 'hsl(var(--destructive))';
   }
@@ -90,35 +109,40 @@ function getChangeColor(change: number, threshold: KPIConfig['threshold']): stri
   if (threshold.good !== undefined && change >= threshold.good) {
     return 'hsl(var(--primary))';
   }
-  
+
   return change >= 0 ? 'hsl(var(--primary))' : 'hsl(var(--destructive))';
 }
 
 function getIcon(iconType: string, size: number = 20) {
   const props = { size, className: 'text-current' };
-  
+
   switch (iconType) {
-    case 'dollar': return <DollarSign {...props} />;
-    case 'percent': return <Percent {...props} />;
-    case 'hash': return <Hash {...props} />;
-    default: return <Activity {...props} />;
+    case 'dollar':
+      return <DollarSign {...props} />;
+    case 'percent':
+      return <Percent {...props} />;
+    case 'hash':
+      return <Hash {...props} />;
+    default:
+      return <Activity {...props} />;
   }
 }
 
 function KPIComponent({ config, data }: WidgetProps) {
   const typedConfig = config as KPIConfig;
-  
+
   // Use data if provided, otherwise use config values
   const currentValue = data?.value ?? typedConfig.value;
   const previousValue = data?.previousValue ?? typedConfig.previousValue;
   const target = data?.target ?? typedConfig.target;
-  const sparklineData = data?.sparklineData ?? typedConfig.sparklineData.length > 0 
-    ? typedConfig.sparklineData 
-    : SAMPLE_SPARKLINE_DATA;
+  const sparklineData =
+    (data?.sparklineData ?? typedConfig.sparklineData.length > 0)
+      ? typedConfig.sparklineData
+      : SAMPLE_SPARKLINE_DATA;
 
   const change = calculateChange(currentValue, previousValue);
   const changeColor = change ? getChangeColor(change.percentage, typedConfig.threshold) : undefined;
-  
+
   const targetProgress = target ? (currentValue / target) * 100 : undefined;
 
   const getSizeClasses = () => {
@@ -171,12 +195,17 @@ function KPIComponent({ config, data }: WidgetProps) {
               )}
             </div>
           </div>
-          
+
           <div className="text-right">
             <div className={`${sizeClasses.value} font-bold text-foreground`}>
-              {formatValue(currentValue, typedConfig.format, typedConfig.precision, typedConfig.unit)}
+              {formatValue(
+                currentValue,
+                typedConfig.format,
+                typedConfig.precision,
+                typedConfig.unit
+              )}
             </div>
-            
+
             {change && (
               <div className="flex items-center gap-1 mt-1">
                 {change.value >= 0 ? (
@@ -185,7 +214,8 @@ function KPIComponent({ config, data }: WidgetProps) {
                   <TrendingDown className="h-3 w-3" style={{ color: changeColor }} />
                 )}
                 <span className="text-xs" style={{ color: changeColor }}>
-                  {change.value >= 0 ? '+' : ''}{change.percentage.toFixed(1)}%
+                  {change.value >= 0 ? '+' : ''}
+                  {change.percentage.toFixed(1)}%
                 </span>
               </div>
             )}
@@ -209,7 +239,9 @@ function KPIComponent({ config, data }: WidgetProps) {
     <Card className="h-full bg-card border-border" data-testid="kpi">
       <CardContent className={`${sizeClasses.card} h-full flex flex-col`}>
         {currentValue == null && (
-          <div className="text-xs text-muted-foreground" role="status">Loading…</div>
+          <div className="text-xs text-muted-foreground" role="status">
+            Loading…
+          </div>
         )}
         {/* Header */}
         <div className="flex items-start justify-between mb-2">
@@ -243,10 +275,16 @@ function KPIComponent({ config, data }: WidgetProps) {
             )}
             <span className="text-sm" style={{ color: changeColor }}>
               {change.value >= 0 ? '+' : ''}
-              {formatValue(change.value, typedConfig.format, typedConfig.precision, typedConfig.unit)}
+              {formatValue(
+                change.value,
+                typedConfig.format,
+                typedConfig.precision,
+                typedConfig.unit
+              )}
             </span>
             <span className="text-xs text-muted-foreground">
-              ({change.value >= 0 ? '+' : ''}{change.percentage.toFixed(1)}%)
+              ({change.value >= 0 ? '+' : ''}
+              {change.percentage.toFixed(1)}%)
             </span>
           </div>
         )}
@@ -261,9 +299,10 @@ function KPIComponent({ config, data }: WidgetProps) {
             <div className="w-full bg-gray-700 rounded-full h-1.5">
               <div
                 className="h-1.5 rounded-full transition-all duration-300"
-                style={{ 
+                style={{
                   width: `${Math.min(100, targetProgress)}%`,
-                  backgroundColor: targetProgress >= 100 ? 'hsl(var(--primary))' : typedConfig.color
+                  backgroundColor:
+                    targetProgress >= 100 ? 'hsl(var(--primary))' : typedConfig.color,
                 }}
               />
             </div>
@@ -291,12 +330,19 @@ function KPIComponent({ config, data }: WidgetProps) {
         {/* Status Badge */}
         {typedConfig.threshold && change && (
           <div className="mt-2">
-            <Badge 
-              variant={Math.abs(change.percentage) >= (typedConfig.threshold.critical || Infinity) ? 'destructive' : 'secondary'}
+            <Badge
+              variant={
+                Math.abs(change.percentage) >= (typedConfig.threshold.critical || Infinity)
+                  ? 'destructive'
+                  : 'secondary'
+              }
               className="text-xs"
             >
-              {Math.abs(change.percentage) >= (typedConfig.threshold.critical || Infinity) ? 'Critical' :
-               Math.abs(change.percentage) >= (typedConfig.threshold.warning || Infinity) ? 'Warning' : 'Normal'}
+              {Math.abs(change.percentage) >= (typedConfig.threshold.critical || Infinity)
+                ? 'Critical'
+                : Math.abs(change.percentage) >= (typedConfig.threshold.warning || Infinity)
+                  ? 'Warning'
+                  : 'Normal'}
             </Badge>
           </div>
         )}
@@ -363,14 +409,18 @@ export const KPIDefinition: WidgetDefinition = {
         value: z.number(),
         previousValue: z.number().optional(),
         target: z.number().optional(),
-        sparklineData: z.array(z.object({
-          value: z.number(),
-          timestamp: z.string().optional(),
-        })).optional(),
+        sparklineData: z
+          .array(
+            z.object({
+              value: z.number(),
+              timestamp: z.string().optional(),
+            })
+          )
+          .optional(),
       }),
     },
     tags: ['kpi', 'metric', 'performance', 'indicator'],
-    icon: Activity as any,
+    icon: Activity,
   },
   runtime: {
     component: KPIComponent,
@@ -397,7 +447,7 @@ export const KPIDefinition: WidgetDefinition = {
 };
 
 // Export the component for backward compatibility
-export function KPI(props: any) {
+export function KPI(props: unknown) {
   return <KPIComponent {...props} />;
 }
 

@@ -53,67 +53,13 @@ const nextConfig = {
   experimental: {
     // Disable optimizeCss in dev to avoid Critters-related dev server errors
     optimizeCss: process.env.NODE_ENV === 'production',
-    optimizePackageImports: [
-      'recharts',
-      'lucide-react',
-      '@radix-ui/react-dialog',
-      '@radix-ui/react-dropdown-menu',
-      '@radix-ui/react-popover',
-      '@radix-ui/react-select',
-      '@radix-ui/react-tabs',
-      '@radix-ui/react-tooltip',
-    ],
   },
 
-  // Bundle analysis and splitting
-  webpack: (config, { buildId, dev, isServer, defaultLoaders, nextRuntime, webpack }) => {
-    // Optimize imports from large libraries
+  // Keep Webpack config minimal to avoid interfering with Next.js app router chunking
+  webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
-      // Removed fragile alias for react-grid-layout; use package entry to avoid resolution errors
     };
-
-    // Split chunks for better caching
-    if (!dev && !isServer) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          ...config.optimization.splitChunks,
-          cacheGroups: {
-            ...config.optimization.splitChunks.cacheGroups,
-            // Separate chunk for charting library
-            recharts: {
-              test: /[\\/]node_modules[\\/](recharts)[\\/]/,
-              name: 'recharts',
-              chunks: 'all',
-              priority: 10,
-            },
-            // Separate chunk for UI components
-            radixui: {
-              test: /[\\/]node_modules[\\/](@radix-ui)[\\/]/,
-              name: 'radix-ui',
-              chunks: 'all',
-              priority: 10,
-            },
-            // Separate chunk for grid layout
-            gridlayout: {
-              test: /[\\/]node_modules[\\/](react-grid-layout)[\\/]/,
-              name: 'grid-layout',
-              chunks: 'all',
-              priority: 10,
-            },
-            // Icons in separate chunk
-            icons: {
-              test: /[\\/]node_modules[\\/](lucide-react)[\\/]/,
-              name: 'icons',
-              chunks: 'all',
-              priority: 8,
-            },
-          },
-        },
-      };
-    }
-
     return config;
   },
 };

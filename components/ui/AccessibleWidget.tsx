@@ -36,7 +36,7 @@ interface AccessibleWidgetProps {
   onRefresh?: () => void;
   loading?: boolean;
   error?: string | null;
-  data?: any;
+  data?: unknown;
   customA11yMetadata?: Partial<WidgetA11yMetadata>;
   enableLiveUpdates?: boolean;
   helpText?: string;

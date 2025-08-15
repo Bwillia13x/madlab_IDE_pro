@@ -232,7 +232,10 @@ function EditorKeybinds({
       // Skip when typing in inputs/textarea/contenteditable
       const target = e.target as HTMLElement | null;
       const tag = (target?.tagName || '').toLowerCase();
-      const editing = tag === 'input' || tag === 'textarea' || (target as any)?.isContentEditable;
+      const editing =
+        tag === 'input' ||
+        tag === 'textarea' ||
+        (target as Element & { isContentEditable?: boolean })?.isContentEditable;
       if (editing) {
         // Still allow Esc to clear selection
         if (e.key === 'Escape') {

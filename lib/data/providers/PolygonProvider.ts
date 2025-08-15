@@ -20,15 +20,16 @@ interface PolygonTicker {
 }
 
 interface PolygonAggregateBar {
-  o: number;  // open
-  h: number;  // high
-  l: number;  // low
-  c: number;  // close
-  v: number;  // volume
-  t: number;  // timestamp
-  n: number;  // number of transactions
+  o: number; // open
+  h: number; // high
+  l: number; // low
+  c: number; // close
+  v: number; // volume
+  t: number; // timestamp
+  n: number; // number of transactions
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 interface PolygonTickerDetails {
   ticker: string;
   name: string;
@@ -43,7 +44,7 @@ interface PolygonTickerDetails {
   share_class_figi: string;
   market_cap: number;
   phone_number: string;
-  address: any;
+  address: Record<string, unknown>;
   description: string;
   sic_code: string;
   sic_description: string;
@@ -51,7 +52,7 @@ interface PolygonTickerDetails {
   homepage_url: string;
   total_employees: number;
   list_date: string;
-  branding: any;
+  branding: Record<string, unknown>;
   share_class_shares_outstanding: number;
   weighted_shares_outstanding: number;
 }
@@ -61,7 +62,7 @@ export class PolygonProvider implements DataProvider {
   readonly name = 'Polygon.io';
   readonly description = 'Real-time and historical market data for stocks, forex, and crypto';
   readonly supportedSymbols = ['US-STOCKS', 'ETF', 'CRYPTO', 'FOREX', 'OPTIONS'];
-  
+
   private baseUrl = 'https://api.polygon.io';
   private apiKey: string | null = null;
 
@@ -82,20 +83,20 @@ export class PolygonProvider implements DataProvider {
 
     const url = new URL(`${this.baseUrl}${endpoint}`);
     url.searchParams.set('apikey', this.apiKey);
-    
+
     // Add additional parameters
     Object.entries(params).forEach(([key, value]) => {
       url.searchParams.set(key, value);
     });
 
     const response = await fetch(url.toString());
-    
+
     if (!response.ok) {
       throw new Error(`Polygon.io API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    
+
     if (data.status === 'ERROR') {
       throw new Error(`Polygon.io API error: ${data.error || 'Unknown error'}`);
     }
@@ -168,7 +169,7 @@ export class PolygonProvider implements DataProvider {
   }
 
   async getVolSurface(_symbol: string) {
-    return { symbol: _symbol, underlyingPrice: 0, points: [], timestamp: new Date() } as any;
+    return { symbol: _symbol, underlyingPrice: 0, points: [], timestamp: new Date() };
   }
 
   isAvailable(): boolean {
@@ -180,7 +181,7 @@ export class PolygonProvider implements DataProvider {
       // Calculate date range
       const endDate = new Date();
       const startDate = new Date();
-      
+
       switch (range) {
         case '1D':
           startDate.setDate(endDate.getDate() - 1);
@@ -214,7 +215,7 @@ export class PolygonProvider implements DataProvider {
       // Determine multiplier and timespan based on range
       let multiplier = 1;
       let timespan = 'day';
-      
+
       if (range === '1D' || range === '5D') {
         multiplier = 5;
         timespan = 'minute';
@@ -232,7 +233,7 @@ export class PolygonProvider implements DataProvider {
         return [];
       }
 
-      return response.results.map(bar => ({
+      return response.results.map((bar) => ({
         date: new Date(bar.t),
         open: bar.o,
         high: bar.h,
@@ -246,14 +247,14 @@ export class PolygonProvider implements DataProvider {
     }
   }
 
-  async getTickerDetails(symbol: string): Promise<Record<string, any>> {
+  async getTickerDetails(symbol: string): Promise<Record<string, unknown>> {
     try {
       const response = await this.request<{
         results: PolygonTickerDetails;
       }>(`/v3/reference/tickers/${symbol}`);
 
       const details = response.results;
-      
+
       return {
         name: details.name,
         description: details.description,
@@ -304,7 +305,7 @@ export class PolygonProvider implements DataProvider {
     try {
       // Format crypto symbol (e.g., BTC -> X:BTCUSD)
       const cryptoSymbol = symbol.startsWith('X:') ? symbol : `X:${symbol}USD`;
-      
+
       const response = await this.request<{
         results: Array<{
           T: string;
@@ -346,7 +347,7 @@ export class PolygonProvider implements DataProvider {
   async getForexQuote(fromCurrency: string, toCurrency: string): Promise<KpiData> {
     try {
       const forexSymbol = `C:${fromCurrency}${toCurrency}`;
-      
+
       const response = await this.request<{
         results: Array<{
           T: string;
@@ -390,20 +391,20 @@ export class PolygonProvider implements DataProvider {
     // Crypto: X:BTCUSD, X:ETHUSD, etc.
     // Forex: C:EURUSD, C:GBPUSD, etc.
     // Options: O:SPY241220C00650000, etc.
-    
+
     return (
-      /^[A-Z]{1,5}$/.test(symbol) ||           // Regular stocks
-      /^X:[A-Z]{3,6}$/.test(symbol) ||         // Crypto
-      /^C:[A-Z]{6}$/.test(symbol) ||           // Forex
-      /^O:[A-Z0-9]+$/.test(symbol)             // Options
+      /^[A-Z]{1,5}$/.test(symbol) || // Regular stocks
+      /^X:[A-Z]{3,6}$/.test(symbol) || // Crypto
+      /^C:[A-Z]{6}$/.test(symbol) || // Forex
+      /^O:[A-Z0-9]+$/.test(symbol) // Options
     );
   }
 
   // Get pricing info
-  getPricingInfo(): { 
-    tier: string; 
-    creditsPerCall: number; 
-    monthlyLimit: number; 
+  getPricingInfo(): {
+    tier: string;
+    creditsPerCall: number;
+    monthlyLimit: number;
     costPerExtraCall: number;
   } {
     return {
@@ -417,11 +418,11 @@ export class PolygonProvider implements DataProvider {
   // Health check
   async healthCheck(): Promise<{ status: 'healthy' | 'degraded' | 'down'; latency: number }> {
     const startTime = Date.now();
-    
+
     try {
       await this.getMarketStatus();
       const latency = Date.now() - startTime;
-      
+
       return {
         status: latency < 2000 ? 'healthy' : 'degraded',
         latency,
@@ -435,22 +436,27 @@ export class PolygonProvider implements DataProvider {
   }
 
   // Search for tickers
-  async searchTickers(query: string, type?: string): Promise<Array<{
-    ticker: string;
-    name: string;
-    market: string;
-    locale: string;
-    primary_exchange: string;
-    type: string;
-    active: boolean;
-  }>> {
+  async searchTickers(
+    query: string,
+    type?: string
+  ): Promise<
+    Array<{
+      ticker: string;
+      name: string;
+      market: string;
+      locale: string;
+      primary_exchange: string;
+      type: string;
+      active: boolean;
+    }>
+  > {
     try {
       const params: Record<string, string> = {
         search: query,
         active: 'true',
         limit: '20',
       };
-      
+
       if (type) {
         params.type = type;
       }

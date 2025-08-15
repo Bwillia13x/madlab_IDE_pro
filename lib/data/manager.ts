@@ -18,13 +18,19 @@ export class DataSourceManager {
 
     switch (config.type) {
       case 'static-json':
-        dataSource = new StaticJSONProvider(config as any);
+        dataSource = new StaticJSONProvider(
+          config as unknown as ConstructorParameters<typeof StaticJSONProvider>[0]
+        );
         break;
       case 'csv':
-        dataSource = new CSVProvider(config as any);
+        dataSource = new CSVProvider(
+          config as unknown as ConstructorParameters<typeof CSVProvider>[0]
+        );
         break;
       case 'rest':
-        dataSource = new FetchRESTProvider(config as any);
+        dataSource = new FetchRESTProvider(
+          config as unknown as ConstructorParameters<typeof FetchRESTProvider>[0]
+        );
         break;
       default:
         throw new Error(`Unsupported data source type: ${config.type}`);
@@ -54,7 +60,7 @@ export class DataSourceManager {
     await dataSource.disconnect();
   }
 
-  async getData(id: string, query?: any, useCache = true): Promise<DataFrame> {
+  async getData(id: string, query?: Record<string, unknown>, useCache = true): Promise<DataFrame> {
     const dataSource = this.dataSources.get(id);
     if (!dataSource) {
       throw new Error(`Data source not found: ${id}`);

@@ -2,11 +2,14 @@ import type { Widget } from './types';
 
 export type SheetKind = 'valuation' | 'charting' | 'risk' | 'options' | 'blank';
 
-export const SHEET_PRESETS: Record<SheetKind, { 
-  label: string; 
-  description: string; 
-  widgets: Omit<Widget, 'id'>[] 
-}> = {
+export const SHEET_PRESETS: Record<
+  SheetKind,
+  {
+    label: string;
+    description: string;
+    widgets: Omit<Widget, 'id'>[];
+  }
+> = {
   valuation: {
     label: 'Valuation Workbench',
     description: 'KPI cards, DCF models, peer analysis, and sensitivity testing',
@@ -14,24 +17,24 @@ export const SHEET_PRESETS: Record<SheetKind, {
       {
         type: 'kpi-card',
         title: 'KPI',
-        layout: { i: '', x: 0, y: 0, w: 6, h: 4 }
+        layout: { i: '', x: 0, y: 0, w: 6, h: 4 },
       },
       {
         type: 'dcf-basic',
         title: 'DCF (Basic)',
-        layout: { i: '', x: 6, y: 0, w: 6, h: 4 }
+        layout: { i: '', x: 6, y: 0, w: 6, h: 4 },
       },
       {
         type: 'bar-chart',
         title: 'Peer Multiples',
-        layout: { i: '', x: 0, y: 4, w: 6, h: 4 }
+        layout: { i: '', x: 0, y: 4, w: 6, h: 4 },
       },
       {
         type: 'heatmap',
         title: 'Sensitivity (WACC x g)',
-        layout: { i: '', x: 6, y: 4, w: 6, h: 4 }
-      }
-    ]
+        layout: { i: '', x: 6, y: 4, w: 6, h: 4 },
+      },
+    ],
   },
   charting: {
     label: 'Charting & Graphing',
@@ -40,24 +43,24 @@ export const SHEET_PRESETS: Record<SheetKind, {
       {
         type: 'line-chart',
         title: 'Price Line',
-        layout: { i: '', x: 0, y: 0, w: 6, h: 4 }
+        layout: { i: '', x: 0, y: 0, w: 6, h: 4 },
       },
       {
         type: 'bar-chart',
         title: 'Bar Chart',
-        layout: { i: '', x: 6, y: 0, w: 6, h: 4 }
+        layout: { i: '', x: 6, y: 0, w: 6, h: 4 },
       },
       {
         type: 'heatmap',
         title: 'Heatmap',
-        layout: { i: '', x: 0, y: 4, w: 6, h: 4 }
+        layout: { i: '', x: 0, y: 4, w: 6, h: 4 },
       },
       {
-        type: 'line-chart',
+        type: 'bar-chart',
         title: 'Volume',
-        layout: { i: '', x: 6, y: 4, w: 6, h: 4 }
-      }
-    ]
+        layout: { i: '', x: 6, y: 4, w: 6, h: 4 },
+      },
+    ],
   },
   risk: {
     label: 'Risk Analysis',
@@ -66,24 +69,24 @@ export const SHEET_PRESETS: Record<SheetKind, {
       {
         type: 'var-es',
         title: 'VaR/ES',
-        layout: { i: '', x: 0, y: 0, w: 6, h: 4 }
+        layout: { i: '', x: 0, y: 0, w: 6, h: 4 },
       },
       {
         type: 'stress-scenarios',
         title: 'Stress Scenarios',
-        layout: { i: '', x: 6, y: 0, w: 6, h: 4 }
+        layout: { i: '', x: 6, y: 0, w: 6, h: 4 },
       },
       {
         type: 'factor-exposures',
         title: 'Factor Exposures',
-        layout: { i: '', x: 0, y: 4, w: 6, h: 4 }
+        layout: { i: '', x: 0, y: 4, w: 6, h: 4 },
       },
       {
         type: 'correlation-matrix',
         title: 'Correlation Matrix',
-        layout: { i: '', x: 6, y: 4, w: 6, h: 4 }
-      }
-    ]
+        layout: { i: '', x: 6, y: 4, w: 6, h: 4 },
+      },
+    ],
   },
   options: {
     label: 'Options Wizard',
@@ -92,24 +95,24 @@ export const SHEET_PRESETS: Record<SheetKind, {
       {
         type: 'greeks-surface',
         title: 'Greeks Surface',
-        layout: { i: '', x: 0, y: 0, w: 6, h: 4 }
+        layout: { i: '', x: 0, y: 0, w: 6, h: 4 },
       },
       {
         type: 'vol-cone',
         title: 'Vol Cone',
-        layout: { i: '', x: 6, y: 0, w: 6, h: 4 }
+        layout: { i: '', x: 6, y: 0, w: 6, h: 4 },
       },
       {
         type: 'strategy-builder',
         title: 'Strategy Builder',
-        layout: { i: '', x: 0, y: 4, w: 6, h: 4 }
+        layout: { i: '', x: 0, y: 4, w: 6, h: 4 },
       },
       {
         type: 'pnl-profile',
         title: 'P&L Profile',
-        layout: { i: '', x: 6, y: 4, w: 6, h: 4 }
-      }
-    ]
+        layout: { i: '', x: 6, y: 4, w: 6, h: 4 },
+      },
+    ],
   },
   blank: {
     label: 'Blank',
@@ -118,10 +121,10 @@ export const SHEET_PRESETS: Record<SheetKind, {
       {
         type: 'blank-tile',
         title: 'Click to configure',
-        layout: { i: '', x: 0, y: 0, w: 12, h: 8 }
-      }
-    ]
-  }
+        layout: { i: '', x: 0, y: 0, w: 12, h: 8 },
+      },
+    ],
+  },
 };
 
 // TODO: Add more sophisticated preset configurations

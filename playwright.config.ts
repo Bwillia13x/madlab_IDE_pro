@@ -48,11 +48,11 @@ export default defineConfig({
     },
   ],
 
-  // Use Next dev server for E2E to ensure consistent hydration across browsers
+  // Prefer production server for stability and speed in CI/local
   webServer: {
-    command: 'pnpm dev:test',
+    command: 'node scripts/pw-start-prod.cjs',
     url: 'http://localhost:3010',
-    timeout: 180000,
+    timeout: 240000,
     reuseExistingServer: !process.env.CI,
   },
 });

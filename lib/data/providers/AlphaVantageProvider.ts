@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type {
   DataProvider,
   PricePoint,
@@ -85,7 +86,7 @@ export const alphaVantageProvider: DataProvider = {
 
   async initialize() {},
   async getBatchQuotes(symbols: string[]) {
-    const out: Record<string, KpiData> = {} as any;
+    const out: Record<string, KpiData> = {};
     await Promise.all(
       symbols.map(async (s) => {
         try {

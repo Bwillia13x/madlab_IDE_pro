@@ -5,7 +5,7 @@ import { FixedSizeGrid as Grid } from 'react-window';
 import { debounce } from 'lodash-es';
 
 interface VirtualizedGridProps {
-  items: any[];
+  items: unknown[];
   itemHeight: number;
   itemWidth: number;
   containerWidth: number;
@@ -13,9 +13,9 @@ interface VirtualizedGridProps {
   renderItem: (props: {
     index: number;
     style: React.CSSProperties;
-    data: any;
+    data: unknown;
   }) => React.ReactNode;
-  getItemKey?: (index: number, data: any) => string;
+  getItemKey?: (index: number, data: unknown) => string;
   overscanCount?: number;
   className?: string;
 }
@@ -29,14 +29,14 @@ export function VirtualizedGrid({
   renderItem,
   getItemKey,
   overscanCount = 2,
-  className
+  className,
 }: VirtualizedGridProps) {
   const [dimensions, setDimensions] = useState({
     width: containerWidth,
-    height: containerHeight
+    height: containerHeight,
   });
 
-  const gridRef = useRef<Grid<any[]>>(null);
+  const gridRef = useRef<Grid<unknown[]>>(null);
 
   // Calculate grid layout
   const columnCount = Math.floor(containerWidth / itemWidth) || 1;
@@ -63,18 +63,45 @@ export function VirtualizedGrid({
   const handleResize = useCallback(
     debounce((width: number, height: number) => {
       setDimensions({ width, height });
-      if (gridRef.current && (gridRef.current as any).resetAfterIndices) {
-        (gridRef.current as any).resetAfterIndices({
+      if (
+        gridRef.current &&
+        (
+          gridRef.current as unknown as {
+            resetAfterIndices?: (opts: {
+              columnIndex: number;
+              rowIndex: number;
+              shouldForceUpdate?: boolean;
+            }) => void;
+          }
+        ).resetAfterIndices
+      ) {
+        (
+          gridRef.current as unknown as {
+            resetAfterIndices: (opts: {
+              columnIndex: number;
+              rowIndex: number;
+              shouldForceUpdate?: boolean;
+            }) => void;
+          }
+        ).resetAfterIndices({
           columnIndex: 0,
           rowIndex: 0,
-          shouldForceUpdate: true
+          shouldForceUpdate: true,
         });
       }
     }, 150),
     []
   );
 
-  const Cell = ({ columnIndex, rowIndex, style }: { columnIndex: number; rowIndex: number; style: React.CSSProperties }) => {
+  const Cell = ({
+    columnIndex,
+    rowIndex,
+    style,
+  }: {
+    columnIndex: number;
+    rowIndex: number;
+    style: React.CSSProperties;
+  }) => {
     const item = gridData[rowIndex]?.[columnIndex];
     const itemIndex = rowIndex * columnCount + columnIndex;
 
@@ -84,15 +111,15 @@ export function VirtualizedGrid({
 
     return (
       <div style={style}>
-        {renderItem({ 
-          index: itemIndex, 
-          style: { 
-            ...style, 
+        {renderItem({
+          index: itemIndex,
+          style: {
+            ...style,
             padding: '4px',
             width: itemWidth - 8,
-            height: itemHeight - 8
-          }, 
-          data: item 
+            height: itemHeight - 8,
+          },
+          data: item,
         })}
       </div>
     );
@@ -111,10 +138,14 @@ export function VirtualizedGrid({
       itemData={gridData}
       overscanRowCount={overscanCount}
       overscanColumnCount={overscanCount}
-      itemKey={getItemKey ? ({ columnIndex, rowIndex }: { columnIndex: number; rowIndex: number }) => {
-        const itemIndex = rowIndex * columnCount + columnIndex;
-        return getItemKey(itemIndex, gridData[rowIndex]?.[columnIndex]);
-      } : undefined}
+      itemKey={
+        getItemKey
+          ? ({ columnIndex, rowIndex }: { columnIndex: number; rowIndex: number }) => {
+              const itemIndex = rowIndex * columnCount + columnIndex;
+              return getItemKey(itemIndex, gridData[rowIndex]?.[columnIndex]);
+            }
+          : undefined
+      }
     >
       {Cell}
     </Grid>
@@ -150,15 +181,15 @@ export function useContainerDimensions(containerRef: React.RefObject<HTMLElement
 
 // Virtualized list for single-column layouts
 interface VirtualizedListProps {
-  items: any[];
+  items: unknown[];
   itemHeight: number;
   containerHeight: number;
   renderItem: (props: {
     index: number;
     style: React.CSSProperties;
-    data: any;
+    data: unknown;
   }) => React.ReactNode;
-  getItemKey?: (index: number, data: any) => string;
+  getItemKey?: (index: number, data: unknown) => string;
   overscanCount?: number;
   className?: string;
 }
@@ -170,9 +201,9 @@ export function VirtualizedList({
   renderItem,
   getItemKey,
   overscanCount = 3,
-  className
+  className,
 }: VirtualizedListProps) {
-  const Cell = ({ index, style }: any) => {
+  const Cell = ({ index, style }: { index: number; style: React.CSSProperties }) => {
     const item = items[index];
     return renderItem({ index, style, data: item });
   };
@@ -181,14 +212,22 @@ export function VirtualizedList({
     <Grid
       className={className}
       height={containerHeight}
-      width={typeof window !== 'undefined' ? (document.querySelector('.virtualized-list-container') as HTMLElement)?.clientWidth || 0 : 0}
+      width={
+        typeof window !== 'undefined'
+          ? (document.querySelector('.virtualized-list-container') as HTMLElement)?.clientWidth || 0
+          : 0
+      }
       rowCount={items.length}
       columnCount={1}
       rowHeight={itemHeight}
       columnWidth={100}
       itemData={items}
       overscanRowCount={overscanCount}
-      itemKey={getItemKey ? ({ rowIndex }: { rowIndex: number }) => getItemKey(rowIndex, items[rowIndex]) : undefined}
+      itemKey={
+        getItemKey
+          ? ({ rowIndex }: { rowIndex: number }) => getItemKey(rowIndex, items[rowIndex])
+          : undefined
+      }
     >
       {Cell}
     </Grid>

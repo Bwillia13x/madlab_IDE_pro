@@ -3,6 +3,7 @@
  * Provides data from REST API endpoints
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { BaseDataSource, DataFrame, DataSourceConfig } from '../source';
 
 export interface RESTOptions {
@@ -23,7 +24,7 @@ export interface RESTOptions {
 
 export class FetchRESTProvider extends BaseDataSource {
   private options: RESTOptions;
-  private cachedData: unknown[] = [];
+  private cachedData: Array<Record<string, unknown>> = [];
   private lastFetch?: Date;
   private inflight = new Map<string, Promise<DataFrame>>();
 
@@ -41,7 +42,7 @@ export class FetchRESTProvider extends BaseDataSource {
   async connect(): Promise<boolean> {
     try {
       const response = await this.makeRequest(this.options.endpoint || '');
-      
+
       if (!response.ok) {
         throw new Error(`Connection failed: ${response.status} ${response.statusText}`);
       }
@@ -61,7 +62,7 @@ export class FetchRESTProvider extends BaseDataSource {
     this.setConnected(false);
   }
 
-  async getData(query?: any): Promise<DataFrame> {
+  async getData(query?: Record<string, unknown>): Promise<DataFrame> {
     if (!this.connected) {
       throw new Error('Not connected to REST API');
     }
@@ -76,14 +77,14 @@ export class FetchRESTProvider extends BaseDataSource {
 
       const work = (async (): Promise<DataFrame> => {
         const response = await this.makeRequest(this.options.endpoint || '', mergedQuery);
-        
+
         if (!response.ok) {
           throw new Error(`API request failed: ${response.status} ${response.statusText}`);
         }
 
-        const rawData = await response.json();
+        const rawData: unknown = await response.json();
         let processedData = this.extractDataFromResponse(rawData);
-        
+
         if (query && query !== this.options.defaultQuery) {
           processedData = this.applyClientSideQuery(processedData, query);
         }
@@ -122,12 +123,12 @@ export class FetchRESTProvider extends BaseDataSource {
   getMetadata() {
     const baseMetadata = super.getMetadata();
     const columns = this.cachedData.length > 0 ? this.extractColumns(this.cachedData) : [];
-    
+
     return {
       ...baseMetadata,
       lastFetch: this.lastFetch,
       schema: {
-        columns: columns.map(col => ({
+        columns: columns.map((col) => ({
           name: col,
           type: this.inferColumnType(this.cachedData, col),
           nullable: true,
@@ -136,9 +137,12 @@ export class FetchRESTProvider extends BaseDataSource {
     };
   }
 
-  private async makeRequest(endpoint: string, queryParams?: any): Promise<Response> {
+  private async makeRequest(
+    endpoint: string,
+    queryParams?: Record<string, unknown>
+  ): Promise<Response> {
     const url = new URL(endpoint, this.options.baseUrl);
-    
+
     if (queryParams && this.options.method === 'GET') {
       Object.entries(queryParams).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -197,10 +201,10 @@ export class FetchRESTProvider extends BaseDataSource {
         return response;
       } catch (error) {
         lastError = error as Error;
-        
+
         if (attempt < this.options.retries!) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
@@ -208,85 +212,96 @@ export class FetchRESTProvider extends BaseDataSource {
     throw lastError!;
   }
 
-  private extractDataFromResponse(data: any): any[] {
+  private extractDataFromResponse(data: unknown): Array<Record<string, unknown>> {
     if (this.options.dataPath) {
       const pathSegments = this.options.dataPath.split('.');
-      let current = data;
-      
+      let current: unknown = data;
+
       for (const segment of pathSegments) {
         if (current && typeof current === 'object') {
-          current = current[segment];
+          current = (current as Record<string, unknown>)[segment];
         } else {
           throw new Error(`Invalid data path: ${this.options.dataPath}`);
         }
       }
-      
-      return Array.isArray(current) ? current : [current];
+
+      return Array.isArray(current)
+        ? (current as Array<Record<string, unknown>>)
+        : [current as Record<string, unknown>];
     }
 
     if (Array.isArray(data)) {
-      return data;
+      return data as Array<Record<string, unknown>>;
     }
 
-    if (data && typeof data === 'object' && data.data) {
-      return Array.isArray(data.data) ? data.data : [data.data];
+    if (data && typeof data === 'object' && (data as Record<string, unknown>).data) {
+      const inner = (data as Record<string, unknown>).data as unknown;
+      return Array.isArray(inner)
+        ? (inner as Array<Record<string, unknown>>)
+        : [inner as Record<string, unknown>];
     }
 
-    if (data && typeof data === 'object' && data.results) {
-      return Array.isArray(data.results) ? data.results : [data.results];
+    if (data && typeof data === 'object' && (data as Record<string, unknown>).results) {
+      const inner = (data as Record<string, unknown>).results as unknown;
+      return Array.isArray(inner)
+        ? (inner as Array<Record<string, unknown>>)
+        : [inner as Record<string, unknown>];
     }
 
-    return [data];
+    return [data as Record<string, unknown>];
   }
 
-  private extractColumns(data: any[]): string[] {
+  private extractColumns(data: Array<Record<string, unknown>>): string[] {
     if (data.length === 0) return [];
-    
+
     const columnSet = new Set<string>();
-    
+
     for (const row of data) {
       if (row && typeof row === 'object') {
-        Object.keys(row).forEach(key => columnSet.add(key));
+        Object.keys(row).forEach((key) => columnSet.add(key));
       }
     }
-    
+
     return Array.from(columnSet).sort();
   }
 
-  private inferColumnTypes(data: any[], columns: string[]): Record<string, string> {
+  private inferColumnTypes(
+    data: Array<Record<string, unknown>>,
+    columns: string[]
+  ): Record<string, string> {
     const types: Record<string, string> = {};
-    
+
     for (const column of columns) {
       types[column] = this.inferColumnType(data, column);
     }
-    
+
     return types;
   }
 
-  private inferColumnType(data: any[], column: string): string {
+  private inferColumnType(data: Array<Record<string, unknown>>, column: string): string {
     const sampleSize = Math.min(data.length, 10);
     const typeCounts: Record<string, number> = {};
-    
+
     for (let i = 0; i < sampleSize; i++) {
       const value = data[i]?.[column];
       const type = this.getValueType(value);
       typeCounts[type] = (typeCounts[type] || 0) + 1;
     }
-    
+
     let maxType = 'string';
     let maxCount = 0;
-    
+
     for (const [type, count] of Object.entries(typeCounts)) {
       if (count > maxCount) {
         maxCount = count;
         maxType = type;
       }
     }
-    
+
     return maxType;
   }
 
-  private getValueType(value: any): string {
+  private getValueType(value: unknown): string {
     if (value === null || value === undefined) return 'null';
     if (typeof value === 'boolean') return 'boolean';
     if (typeof value === 'number') return Number.isInteger(value) ? 'integer' : 'number';
@@ -296,15 +311,20 @@ export class FetchRESTProvider extends BaseDataSource {
     return 'string';
   }
 
-  private applyClientSideQuery(data: any[], query: any): any[] {
+  private applyClientSideQuery(
+    data: Array<Record<string, unknown>>,
+    query: Record<string, unknown>
+  ): Array<Record<string, unknown>> {
     let result = [...data];
 
     if (query.filter) {
-      result = result.filter(row => this.matchesFilter(row, query.filter));
+      result = result.filter((row) =>
+        this.matchesFilter(row, query.filter as Record<string, unknown>)
+      );
     }
 
     if (query.sort) {
-      result = this.sortData(result, query.sort);
+      result = this.sortData(result, query.sort as Record<string, unknown>);
     }
 
     if (query.limit) {
@@ -318,12 +338,12 @@ export class FetchRESTProvider extends BaseDataSource {
     return result;
   }
 
-  private matchesFilter(row: any, filter: any): boolean {
+  private matchesFilter(row: Record<string, unknown>, filter: Record<string, unknown>): boolean {
     for (const [field, condition] of Object.entries(filter)) {
       const value = row[field];
-      
+
       if (typeof condition === 'object' && condition !== null) {
-        for (const [operator, operand] of Object.entries(condition)) {
+        for (const [operator, operand] of Object.entries(condition as Record<string, unknown>)) {
           switch (operator) {
             case '$eq':
               if (value !== operand) return false;
@@ -350,7 +370,8 @@ export class FetchRESTProvider extends BaseDataSource {
               if (Array.isArray(operand) && operand.includes(value)) return false;
               break;
             case '$contains':
-              if (!String(value).toLowerCase().includes(String(operand).toLowerCase())) return false;
+              if (!String(value).toLowerCase().includes(String(operand).toLowerCase()))
+                return false;
               break;
           }
         }
@@ -358,17 +379,20 @@ export class FetchRESTProvider extends BaseDataSource {
         if (value !== condition) return false;
       }
     }
-    
+
     return true;
   }
 
-  private sortData(data: any[], sort: any): any[] {
+  private sortData(
+    data: Array<Record<string, unknown>>,
+    sort: Record<string, unknown>
+  ): Array<Record<string, unknown>> {
     return data.sort((a, b) => {
       for (const [field, direction] of Object.entries(sort)) {
-        const aVal = a[field];
-        const bVal = b[field];
+        const aVal = a[field as keyof typeof a] as unknown;
+        const bVal = b[field as keyof typeof b] as unknown;
         const dir = direction === 'desc' || direction === -1 ? -1 : 1;
-        
+
         if (aVal < bVal) return -1 * dir;
         if (aVal > bVal) return 1 * dir;
       }

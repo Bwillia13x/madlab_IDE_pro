@@ -3,16 +3,17 @@
  * Provides data from static JSON objects or files
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { BaseDataSource, DataFrame, DataSourceConfig } from '../source';
 
 export interface StaticJSONOptions {
-  data?: any[];
+  data?: Array<Record<string, unknown>>;
   url?: string;
   jsonPath?: string;
 }
 
 export class StaticJSONProvider extends BaseDataSource {
-  private data: any[] = [];
+  private data: Array<Record<string, unknown>> = [];
   private options: StaticJSONOptions;
 
   constructor(config: DataSourceConfig & { options: StaticJSONOptions }) {
@@ -33,15 +34,15 @@ export class StaticJSONProvider extends BaseDataSource {
         if (!response.ok) {
           throw new Error(`Failed to fetch JSON data: ${response.status}`);
         }
-        
+
         const jsonData = await response.json();
-        
+
         if (this.options.jsonPath) {
           this.data = this.extractDataFromPath(jsonData, this.options.jsonPath);
         } else {
           this.data = Array.isArray(jsonData) ? jsonData : [jsonData];
         }
-        
+
         this.setConnected(true);
         return true;
       }
@@ -59,7 +60,7 @@ export class StaticJSONProvider extends BaseDataSource {
     this.setConnected(false);
   }
 
-  async getData(query?: any): Promise<DataFrame> {
+  async getData(query?: Record<string, unknown>): Promise<DataFrame> {
     if (!this.connected || this.data.length === 0) {
       return {
         columns: [],
@@ -96,11 +97,11 @@ export class StaticJSONProvider extends BaseDataSource {
   getMetadata() {
     const baseMetadata = super.getMetadata();
     const columns = this.data.length > 0 ? this.extractColumns(this.data) : [];
-    
+
     return {
       ...baseMetadata,
       schema: {
-        columns: columns.map(col => ({
+        columns: columns.map((col) => ({
           name: col,
           type: this.inferColumnType(this.data, col),
           nullable: true,
@@ -109,69 +110,74 @@ export class StaticJSONProvider extends BaseDataSource {
     };
   }
 
-  private extractDataFromPath(data: any, path: string): any[] {
+  private extractDataFromPath(data: unknown, path: string): Array<Record<string, unknown>> {
     const pathSegments = path.split('.');
-    let current = data;
-    
+    let current: unknown = data;
+
     for (const segment of pathSegments) {
       if (current && typeof current === 'object') {
-        current = current[segment];
+        current = (current as Record<string, unknown>)[segment];
       } else {
         throw new Error(`Invalid JSON path: ${path}`);
       }
     }
-    
-    return Array.isArray(current) ? current : [current];
+
+    return Array.isArray(current)
+      ? (current as Array<Record<string, unknown>>)
+      : [current as Record<string, unknown>];
   }
 
-  private extractColumns(data: any[]): string[] {
+  private extractColumns(data: Array<Record<string, unknown>>): string[] {
     if (data.length === 0) return [];
-    
+
     const columnSet = new Set<string>();
-    
+
     for (const row of data) {
       if (row && typeof row === 'object') {
-        Object.keys(row).forEach(key => columnSet.add(key));
+        Object.keys(row).forEach((key) => columnSet.add(key));
       }
     }
-    
+
     return Array.from(columnSet).sort();
   }
 
-  private inferColumnTypes(data: any[], columns: string[]): Record<string, string> {
+  private inferColumnTypes(
+    data: Array<Record<string, unknown>>,
+    columns: string[]
+  ): Record<string, string> {
     const types: Record<string, string> = {};
-    
+
     for (const column of columns) {
       types[column] = this.inferColumnType(data, column);
     }
-    
+
     return types;
   }
 
-  private inferColumnType(data: any[], column: string): string {
+  private inferColumnType(data: Array<Record<string, unknown>>, column: string): string {
     const sampleSize = Math.min(data.length, 10);
     const typeCounts: Record<string, number> = {};
-    
+
     for (let i = 0; i < sampleSize; i++) {
-      const value = data[i]?.[column];
+      const value = data[i]?.[column as keyof (typeof data)[number]] as unknown;
       const type = this.getValueType(value);
       typeCounts[type] = (typeCounts[type] || 0) + 1;
     }
-    
+
     let maxType = 'string';
     let maxCount = 0;
-    
+
     for (const [type, count] of Object.entries(typeCounts)) {
       if (count > maxCount) {
         maxCount = count;
         maxType = type;
       }
     }
-    
+
     return maxType;
   }
 
-  private getValueType(value: any): string {
+  private getValueType(value: unknown): string {
     if (value === null || value === undefined) return 'null';
     if (typeof value === 'boolean') return 'boolean';
     if (typeof value === 'number') return Number.isInteger(value) ? 'integer' : 'number';
@@ -181,15 +187,20 @@ export class StaticJSONProvider extends BaseDataSource {
     return 'string';
   }
 
-  private applyQuery(data: any[], query: any): any[] {
+  private applyQuery(
+    data: Array<Record<string, unknown>>,
+    query: Record<string, unknown>
+  ): Array<Record<string, unknown>> {
     let result = [...data];
 
     if (query.filter) {
-      result = result.filter(row => this.matchesFilter(row, query.filter));
+      result = result.filter((row) =>
+        this.matchesFilter(row, query.filter as Record<string, unknown>)
+      );
     }
 
     if (query.sort) {
-      result = this.sortData(result, query.sort);
+      result = this.sortData(result, query.sort as Record<string, unknown>);
     }
 
     if (query.limit) {
@@ -203,12 +214,12 @@ export class StaticJSONProvider extends BaseDataSource {
     return result;
   }
 
-  private matchesFilter(row: any, filter: any): boolean {
+  private matchesFilter(row: Record<string, unknown>, filter: Record<string, unknown>): boolean {
     for (const [field, condition] of Object.entries(filter)) {
       const value = row[field];
-      
+
       if (typeof condition === 'object' && condition !== null) {
-        for (const [operator, operand] of Object.entries(condition)) {
+        for (const [operator, operand] of Object.entries(condition as Record<string, unknown>)) {
           switch (operator) {
             case '$eq':
               if (value !== operand) return false;
@@ -235,7 +246,8 @@ export class StaticJSONProvider extends BaseDataSource {
               if (Array.isArray(operand) && operand.includes(value)) return false;
               break;
             case '$contains':
-              if (!String(value).toLowerCase().includes(String(operand).toLowerCase())) return false;
+              if (!String(value).toLowerCase().includes(String(operand).toLowerCase()))
+                return false;
               break;
           }
         }
@@ -243,17 +255,20 @@ export class StaticJSONProvider extends BaseDataSource {
         if (value !== condition) return false;
       }
     }
-    
+
     return true;
   }
 
-  private sortData(data: any[], sort: any): any[] {
+  private sortData(
+    data: Array<Record<string, unknown>>,
+    sort: Record<string, unknown>
+  ): Array<Record<string, unknown>> {
     return data.sort((a, b) => {
       for (const [field, direction] of Object.entries(sort)) {
-        const aVal = a[field];
-        const bVal = b[field];
+        const aVal = a[field as keyof typeof a] as unknown;
+        const bVal = b[field as keyof typeof b] as unknown;
         const dir = direction === 'desc' || direction === -1 ? -1 : 1;
-        
+
         if (aVal < bVal) return -1 * dir;
         if (aVal > bVal) return 1 * dir;
       }

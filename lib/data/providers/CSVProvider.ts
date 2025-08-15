@@ -14,8 +14,9 @@ export interface CSVOptions {
   encoding?: string;
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export class CSVProvider extends BaseDataSource {
-  private parsedData: any[] = [];
+  private parsedData: Array<Record<string, unknown>> = [];
   private options: CSVOptions;
 
   constructor(config: DataSourceConfig & { options: CSVOptions }) {
@@ -60,7 +61,7 @@ export class CSVProvider extends BaseDataSource {
     this.setConnected(false);
   }
 
-  async getData(query?: any): Promise<DataFrame> {
+  async getData(query?: Record<string, unknown>): Promise<DataFrame> {
     if (!this.connected || this.parsedData.length === 0) {
       return {
         columns: [],
@@ -97,11 +98,11 @@ export class CSVProvider extends BaseDataSource {
   getMetadata() {
     const baseMetadata = super.getMetadata();
     const columns = this.parsedData.length > 0 ? this.extractColumns(this.parsedData) : [];
-    
+
     return {
       ...baseMetadata,
       schema: {
-        columns: columns.map(col => ({
+        columns: columns.map((col) => ({
           name: col,
           type: this.inferColumnType(this.parsedData, col),
           nullable: true,
@@ -110,15 +111,18 @@ export class CSVProvider extends BaseDataSource {
     };
   }
 
-  private parseCSV(csvContent: string): any[] {
-    const lines = csvContent.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-    
+  private parseCSV(csvContent: string): Array<Record<string, unknown>> {
+    const lines = csvContent
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+
     if (lines.length <= this.options.skipLines!) {
       return [];
     }
 
     const dataLines = lines.slice(this.options.skipLines!);
-    
+
     if (dataLines.length === 0) {
       return [];
     }
@@ -135,20 +139,20 @@ export class CSVProvider extends BaseDataSource {
       dataStartIndex = 0;
     }
 
-    const data: any[] = [];
+    const data: Array<Record<string, unknown>> = [];
 
     for (let i = dataStartIndex; i < dataLines.length; i++) {
       const row = this.parseLine(dataLines[i]);
-      
+
       if (row.length === 0) continue;
 
-      const rowObject: any = {};
-      
+      const rowObject: Record<string, unknown> = {};
+
       for (let j = 0; j < headers.length; j++) {
         const value = j < row.length ? row[j] : '';
         rowObject[headers[j]] = this.parseValue(value);
       }
-      
+
       data.push(rowObject);
     }
 
@@ -187,7 +191,7 @@ export class CSVProvider extends BaseDataSource {
     return result;
   }
 
-  private parseValue(value: string): any {
+  private parseValue(value: string): unknown {
     if (value === '' || value.toLowerCase() === 'null') {
       return null;
     }
@@ -213,54 +217,57 @@ export class CSVProvider extends BaseDataSource {
     return value;
   }
 
-  private extractColumns(data: any[]): string[] {
+  private extractColumns(data: Array<Record<string, unknown>>): string[] {
     if (data.length === 0) return [];
-    
+
     const columnSet = new Set<string>();
-    
+
     for (const row of data) {
       if (row && typeof row === 'object') {
-        Object.keys(row).forEach(key => columnSet.add(key));
+        Object.keys(row).forEach((key) => columnSet.add(key));
       }
     }
-    
+
     return Array.from(columnSet).sort();
   }
 
-  private inferColumnTypes(data: any[], columns: string[]): Record<string, string> {
+  private inferColumnTypes(
+    data: Array<Record<string, unknown>>,
+    columns: string[]
+  ): Record<string, string> {
     const types: Record<string, string> = {};
-    
+
     for (const column of columns) {
       types[column] = this.inferColumnType(data, column);
     }
-    
+
     return types;
   }
 
-  private inferColumnType(data: any[], column: string): string {
+  private inferColumnType(data: Array<Record<string, unknown>>, column: string): string {
     const sampleSize = Math.min(data.length, 10);
     const typeCounts: Record<string, number> = {};
-    
+
     for (let i = 0; i < sampleSize; i++) {
       const value = data[i]?.[column];
       const type = this.getValueType(value);
       typeCounts[type] = (typeCounts[type] || 0) + 1;
     }
-    
+
     let maxType = 'string';
     let maxCount = 0;
-    
+
     for (const [type, count] of Object.entries(typeCounts)) {
       if (count > maxCount) {
         maxCount = count;
         maxType = type;
       }
     }
-    
+
     return maxType;
   }
 
-  private getValueType(value: any): string {
+  private getValueType(value: unknown): string {
     if (value === null || value === undefined) return 'null';
     if (typeof value === 'boolean') return 'boolean';
     if (typeof value === 'number') return Number.isInteger(value) ? 'integer' : 'number';
@@ -270,15 +277,20 @@ export class CSVProvider extends BaseDataSource {
     return 'string';
   }
 
-  private applyQuery(data: any[], query: any): any[] {
+  private applyQuery(
+    data: Array<Record<string, unknown>>,
+    query: Record<string, unknown>
+  ): Array<Record<string, unknown>> {
     let result = [...data];
 
     if (query.filter) {
-      result = result.filter(row => this.matchesFilter(row, query.filter));
+      result = result.filter((row) =>
+        this.matchesFilter(row, query.filter as Record<string, unknown>)
+      );
     }
 
     if (query.sort) {
-      result = this.sortData(result, query.sort);
+      result = this.sortData(result, query.sort as Record<string, unknown>);
     }
 
     if (query.limit) {
@@ -292,12 +304,12 @@ export class CSVProvider extends BaseDataSource {
     return result;
   }
 
-  private matchesFilter(row: any, filter: any): boolean {
+  private matchesFilter(row: Record<string, unknown>, filter: Record<string, unknown>): boolean {
     for (const [field, condition] of Object.entries(filter)) {
-      const value = row[field];
-      
+      const value = (row as Record<string, unknown>)[field];
+
       if (typeof condition === 'object' && condition !== null) {
-        for (const [operator, operand] of Object.entries(condition)) {
+        for (const [operator, operand] of Object.entries(condition as Record<string, unknown>)) {
           switch (operator) {
             case '$eq':
               if (value !== operand) return false;
@@ -324,7 +336,8 @@ export class CSVProvider extends BaseDataSource {
               if (Array.isArray(operand) && operand.includes(value)) return false;
               break;
             case '$contains':
-              if (!String(value).toLowerCase().includes(String(operand).toLowerCase())) return false;
+              if (!String(value).toLowerCase().includes(String(operand).toLowerCase()))
+                return false;
               break;
           }
         }
@@ -332,17 +345,20 @@ export class CSVProvider extends BaseDataSource {
         if (value !== condition) return false;
       }
     }
-    
+
     return true;
   }
 
-  private sortData(data: any[], sort: any): any[] {
+  private sortData(
+    data: Array<Record<string, unknown>>,
+    sort: Record<string, unknown>
+  ): Array<Record<string, unknown>> {
     return data.sort((a, b) => {
       for (const [field, direction] of Object.entries(sort)) {
-        const aVal = a[field];
-        const bVal = b[field];
+        const aVal = a[field as keyof typeof a] as unknown;
+        const bVal = b[field as keyof typeof b] as unknown;
         const dir = direction === 'desc' || direction === -1 ? -1 : 1;
-        
+
         if (aVal < bVal) return -1 * dir;
         if (aVal > bVal) return 1 * dir;
       }

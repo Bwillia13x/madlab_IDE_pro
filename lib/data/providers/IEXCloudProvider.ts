@@ -59,7 +59,7 @@ export class IEXCloudProvider implements DataProvider {
   readonly name = 'IEX Cloud';
   readonly description = 'Real-time and historical market data from IEX Cloud';
   readonly supportedSymbols = ['US-STOCKS', 'ETF', 'CRYPTO'];
-  
+
   private baseUrl = 'https://cloud.iexapis.com/v1';
   private token: string | null = null;
   private isTestMode = false;
@@ -67,7 +67,7 @@ export class IEXCloudProvider implements DataProvider {
   constructor(token?: string, testMode = false) {
     this.token = token || process.env.IEX_CLOUD_TOKEN || null;
     this.isTestMode = testMode;
-    
+
     // Use sandbox URL for testing
     if (testMode) {
       this.baseUrl = 'https://sandbox.iexapis.com/v1';
@@ -87,14 +87,14 @@ export class IEXCloudProvider implements DataProvider {
 
     const url = new URL(`${this.baseUrl}${endpoint}`);
     url.searchParams.set('token', this.token);
-    
+
     // Add additional parameters
     Object.entries(params).forEach(([key, value]) => {
       url.searchParams.set(key, value);
     });
 
     const response = await fetch(url.toString());
-    
+
     if (!response.ok) {
       throw new Error(`IEX Cloud API error: ${response.status} ${response.statusText}`);
     }
@@ -105,7 +105,7 @@ export class IEXCloudProvider implements DataProvider {
   async getQuote(symbol: string): Promise<KpiData> {
     try {
       const quote = await this.request<IEXQuote>(`/stock/${symbol}/quote`);
-      
+
       return {
         symbol: quote.symbol,
         name: quote.symbol,
@@ -136,7 +136,7 @@ export class IEXCloudProvider implements DataProvider {
 
   async getVolSurface(_symbol: string) {
     // Not supported by IEX; provide a safe fallback shape
-    return { symbol: _symbol, underlyingPrice: 0, points: [], timestamp: new Date() } as any;
+    return { symbol: _symbol, underlyingPrice: 0, points: [], timestamp: new Date() };
   }
 
   isAvailable(): boolean {
@@ -155,13 +155,13 @@ export class IEXCloudProvider implements DataProvider {
         '1Y': '1y',
         '2Y': '2y',
         '5Y': '5y',
-        'MAX': '5y',
+        MAX: '5y',
       };
 
       const iexRange = rangeMap[range] || '1y';
       const data = await this.request<IEXHistoricalPrice[]>(`/stock/${symbol}/chart/${iexRange}`);
-      
-      return data.map(point => ({
+
+      return data.map((point) => ({
         date: new Date(point.date),
         open: point.open,
         high: point.high,
@@ -175,10 +175,10 @@ export class IEXCloudProvider implements DataProvider {
     }
   }
 
-  async getCompanyStats(symbol: string): Promise<Record<string, any>> {
+  async getCompanyStats(symbol: string): Promise<Record<string, unknown>> {
     try {
       const stats = await this.request<IEXStats>(`/stock/${symbol}/stats`);
-      
+
       return {
         companyName: stats.companyName,
         marketCap: stats.marketcap,
@@ -214,7 +214,7 @@ export class IEXCloudProvider implements DataProvider {
       });
 
       const result: Record<string, KpiData> = {};
-      
+
       Object.entries(data).forEach(([symbol, { quote }]) => {
         result[symbol] = {
           symbol: quote.symbol,
@@ -241,10 +241,10 @@ export class IEXCloudProvider implements DataProvider {
   async getIntradayPrices(symbol: string): Promise<PricePoint[]> {
     try {
       const data = await this.request<IEXHistoricalPrice[]>(`/stock/${symbol}/intraday-prices`);
-      
+
       return data
-        .filter(point => point.close !== null) // Filter out null values
-        .map(point => ({
+        .filter((point) => point.close !== null) // Filter out null values
+        .map((point) => ({
           date: new Date(point.date),
           open: point.open,
           high: point.high,
@@ -259,9 +259,11 @@ export class IEXCloudProvider implements DataProvider {
   }
 
   // Get earnings data
-  async getEarnings(symbol: string, last = 4): Promise<any[]> {
+  async getEarnings(symbol: string, last = 4): Promise<Array<Record<string, unknown>>> {
     try {
-      const data = await this.request<any[]>(`/stock/${symbol}/earnings/${last}`);
+      const data = await this.request<Array<Record<string, unknown>>>(
+        `/stock/${symbol}/earnings/${last}`
+      );
       return data;
     } catch (error) {
       console.error(`Failed to fetch earnings for ${symbol}:`, error);
@@ -281,9 +283,11 @@ export class IEXCloudProvider implements DataProvider {
   }
 
   // Get news
-  async getNews(symbol: string, last = 10): Promise<any[]> {
+  async getNews(symbol: string, last = 10): Promise<Array<Record<string, unknown>>> {
     try {
-      const data = await this.request<any[]>(`/stock/${symbol}/news/last/${last}`);
+      const data = await this.request<Array<Record<string, unknown>>>(
+        `/stock/${symbol}/news/last/${last}`
+      );
       return data;
     } catch (error) {
       console.error(`Failed to fetch news for ${symbol}:`, error);
@@ -299,10 +303,10 @@ export class IEXCloudProvider implements DataProvider {
   }
 
   // Get pricing info
-  getPricingInfo(): { 
-    tier: string; 
-    creditsPerCall: number; 
-    monthlyLimit: number; 
+  getPricingInfo(): {
+    tier: string;
+    creditsPerCall: number;
+    monthlyLimit: number;
     costPerExtraCall: number;
   } {
     return {
@@ -316,11 +320,11 @@ export class IEXCloudProvider implements DataProvider {
   // Health check
   async healthCheck(): Promise<{ status: 'healthy' | 'degraded' | 'down'; latency: number }> {
     const startTime = Date.now();
-    
+
     try {
       await this.request('/account/usage');
       const latency = Date.now() - startTime;
-      
+
       return {
         status: latency < 1000 ? 'healthy' : 'degraded',
         latency,
@@ -336,10 +340,10 @@ export class IEXCloudProvider implements DataProvider {
   // Get account usage
   async getUsage(): Promise<{ creditsUsed: number; creditsRemaining: number }> {
     try {
-      const usage = await this.request<any>('/account/usage');
+      const usage = await this.request<Record<string, unknown>>('/account/usage');
       return {
-        creditsUsed: usage.monthlyUsage || 0,
-        creditsRemaining: usage.monthlyPayAsYouGo || 0,
+        creditsUsed: (usage as Record<string, number>).monthlyUsage || 0,
+        creditsRemaining: (usage as Record<string, number>).monthlyPayAsYouGo || 0,
       };
     } catch (error) {
       console.error('Failed to fetch usage:', error);

@@ -1,14 +1,38 @@
 'use client';
 
 import React, { useState, useMemo, useRef } from 'react';
-import { Table as TableIcon, ArrowUpDown, ArrowUp, ArrowDown, Download, Search } from 'lucide-react';
+import {
+  Table as TableIcon,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Download,
+  Search,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AccessibleWidget } from '@/components/ui/AccessibleWidget';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { VirtualizedTable, FinancialTable, type TableColumn } from '@/components/ui/VirtualizedTable';
+import {
+  VirtualizedTable,
+  FinancialTable,
+  type TableColumn,
+} from '@/components/ui/VirtualizedTable';
 import { useContainerDimensions } from '@/components/ui/VirtualizedGrid';
 import type { WidgetProps, WidgetDefinition } from '@/lib/widgets/schema';
 import { createWidgetSchema, CommonSchemas } from '@/lib/widgets/schema';
@@ -32,12 +56,60 @@ type TableConfig = z.infer<typeof TableConfigSchema>;
 
 // Sample data for demonstration
 const SAMPLE_DATA = [
-  { id: 1, symbol: 'AAPL', name: 'Apple Inc.', price: 175.43, change: 2.34, changePercent: 1.35, volume: 52847291 },
-  { id: 2, symbol: 'GOOGL', name: 'Alphabet Inc.', price: 2741.56, change: -12.45, changePercent: -0.45, volume: 1234567 },
-  { id: 3, symbol: 'MSFT', name: 'Microsoft Corp.', price: 331.62, change: 5.78, changePercent: 1.77, volume: 34567890 },
-  { id: 4, symbol: 'TSLA', name: 'Tesla Inc.', price: 208.91, change: -8.12, changePercent: -3.74, volume: 45678901 },
-  { id: 5, symbol: 'AMZN', name: 'Amazon.com Inc.', price: 3201.45, change: 15.67, changePercent: 0.49, volume: 23456789 },
-  { id: 6, symbol: 'META', name: 'Meta Platforms Inc.', price: 318.75, change: 7.23, changePercent: 2.32, volume: 12345678 },
+  {
+    id: 1,
+    symbol: 'AAPL',
+    name: 'Apple Inc.',
+    price: 175.43,
+    change: 2.34,
+    changePercent: 1.35,
+    volume: 52847291,
+  },
+  {
+    id: 2,
+    symbol: 'GOOGL',
+    name: 'Alphabet Inc.',
+    price: 2741.56,
+    change: -12.45,
+    changePercent: -0.45,
+    volume: 1234567,
+  },
+  {
+    id: 3,
+    symbol: 'MSFT',
+    name: 'Microsoft Corp.',
+    price: 331.62,
+    change: 5.78,
+    changePercent: 1.77,
+    volume: 34567890,
+  },
+  {
+    id: 4,
+    symbol: 'TSLA',
+    name: 'Tesla Inc.',
+    price: 208.91,
+    change: -8.12,
+    changePercent: -3.74,
+    volume: 45678901,
+  },
+  {
+    id: 5,
+    symbol: 'AMZN',
+    name: 'Amazon.com Inc.',
+    price: 3201.45,
+    change: 15.67,
+    changePercent: 0.49,
+    volume: 23456789,
+  },
+  {
+    id: 6,
+    symbol: 'META',
+    name: 'Meta Platforms Inc.',
+    price: 318.75,
+    change: 7.23,
+    changePercent: 2.32,
+    volume: 12345678,
+  },
 ];
 
 interface SortConfig {
@@ -58,19 +130,19 @@ function formatCellValue(value: unknown, type: string, format?: string): React.R
       } else {
         return num.toLocaleString();
       }
-    
-    case 'date':
-      {
-        const input = (value instanceof Date || typeof value === 'string' || typeof value === 'number')
+
+    case 'date': {
+      const input =
+        value instanceof Date || typeof value === 'string' || typeof value === 'number'
           ? (value as string | number | Date)
           : String(value);
-        const date = new Date(input as string | number | Date);
-        return date.toLocaleDateString();
-      }
-    
+      const date = new Date(input as string | number | Date);
+      return date.toLocaleDateString();
+    }
+
     case 'boolean':
       return <Badge variant={value ? 'default' : 'secondary'}>{value ? 'Yes' : 'No'}</Badge>;
-    
+
     default:
       return String(value);
   }
@@ -85,39 +157,40 @@ function TableComponent({ config, data }: WidgetProps) {
   const dimensions = useContainerDimensions(containerRef);
 
   // Use provided data or fall back to sample data
-  const tableData = data && Array.isArray(data) && data.length > 0 
-    ? data 
-    : typedConfig.data.length > 0 
-      ? typedConfig.data 
-      : SAMPLE_DATA;
+  const tableData =
+    data && Array.isArray(data) && data.length > 0
+      ? data
+      : typedConfig.data.length > 0
+        ? typedConfig.data
+        : SAMPLE_DATA;
 
   // Auto-generate columns if not configured
   const columns = useMemo(() => {
     if (typedConfig.columns.length > 0) {
       return typedConfig.columns;
     }
-    
+
     // Auto-generate from first data row
     if (tableData.length > 0) {
-      return Object.keys(tableData[0]).map(key => ({
+      return Object.keys(tableData[0]).map((key) => ({
         key,
         header: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1'),
-        type: typeof tableData[0][key] === 'number' ? 'number' as const : 'string' as const,
+        type: typeof tableData[0][key] === 'number' ? ('number' as const) : ('string' as const),
         sortable: true,
         width: undefined as number | undefined,
         format: undefined as string | undefined,
       }));
     }
-    
+
     return [];
   }, [typedConfig.columns, tableData]);
 
   // Filter data based on search term
   const filteredData = useMemo(() => {
     if (!searchTerm) return tableData;
-    
-    return tableData.filter(row =>
-      Object.values(row).some(value =>
+
+    return tableData.filter((row) =>
+      Object.values(row).some((value) =>
         String(value).toLowerCase().includes(searchTerm.toLowerCase())
       )
     );
@@ -126,11 +199,11 @@ function TableComponent({ config, data }: WidgetProps) {
   // Sort data
   const sortedData = useMemo(() => {
     if (!sortConfig) return filteredData;
-    
+
     return [...filteredData].sort((a, b) => {
       const aValue = a[sortConfig.key];
       const bValue = b[sortConfig.key];
-      
+
       if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
       if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
@@ -146,11 +219,9 @@ function TableComponent({ config, data }: WidgetProps) {
   const totalPages = Math.ceil(sortedData.length / typedConfig.pageSize);
 
   const handleSort = (key: string) => {
-    setSortConfig(current => {
+    setSortConfig((current) => {
       if (current?.key === key) {
-        return current.direction === 'asc' 
-          ? { key, direction: 'desc' }
-          : null; // Remove sort
+        return current.direction === 'asc' ? { key, direction: 'desc' } : null; // Remove sort
       }
       return { key, direction: 'asc' };
     });
@@ -158,19 +229,19 @@ function TableComponent({ config, data }: WidgetProps) {
 
   const getSortIcon = (key: string) => {
     if (sortConfig?.key !== key) return <ArrowUpDown className="h-3 w-3" />;
-    return sortConfig.direction === 'asc' 
-      ? <ArrowUp className="h-3 w-3" />
-      : <ArrowDown className="h-3 w-3" />;
+    return sortConfig.direction === 'asc' ? (
+      <ArrowUp className="h-3 w-3" />
+    ) : (
+      <ArrowDown className="h-3 w-3" />
+    );
   };
 
   const exportData = () => {
     const csv = [
-      columns.map(col => col.header).join(','),
-      ...sortedData.map(row => 
-        columns.map(col => String(row[col.key] || '')).join(',')
-      )
+      columns.map((col) => col.header).join(','),
+      ...sortedData.map((row) => columns.map((col) => String(row[col.key] || '')).join(',')),
     ].join('\n');
-    
+
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -181,12 +252,15 @@ function TableComponent({ config, data }: WidgetProps) {
   };
 
   const content = (
-    <div className="h-full flex flex-col" role="table" aria-label="Data table" data-testid="data-table">
+    <div
+      className="h-full flex flex-col"
+      role="table"
+      aria-label="Data table"
+      data-testid="data-table"
+    >
       {/* Header with search and export */}
       <div className="p-3 border-b border-gray-700 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-300">
-          {typedConfig.title || 'Data Table'}
-        </h3>
+        <h3 className="text-sm font-medium text-gray-300">{typedConfig.title || 'Data Table'}</h3>
         <div className="flex items-center gap-2 opacity-60 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200">
           {typedConfig.showSearch && (
             <div className="relative">
@@ -211,13 +285,16 @@ function TableComponent({ config, data }: WidgetProps) {
       </div>
 
       {/* Virtualized Table */}
-      <div 
+      <div
         ref={containerRef}
         className="flex-1 overflow-hidden"
         style={{ maxHeight: `${typedConfig.maxHeight}px` }}
       >
-        {(!Array.isArray(tableData) || tableData.length === 0) ? (
-          <div className="h-full flex items-center justify-center text-xs text-muted-foreground" role="status">
+        {!Array.isArray(tableData) || tableData.length === 0 ? (
+          <div
+            className="h-full flex items-center justify-center text-xs text-muted-foreground"
+            role="status"
+          >
             {Array.isArray(tableData) ? 'No data available' : 'Loading…'}
           </div>
         ) : sortedData.length > 100 ? (
@@ -262,7 +339,7 @@ function TableComponent({ config, data }: WidgetProps) {
                   className={typedConfig.striped && index % 2 === 0 ? 'bg-gray-900/50' : ''}
                 >
                   {columns.map((column) => (
-                    <TableCell 
+                    <TableCell
                       key={column.key}
                       className={`text-xs ${typedConfig.compact ? 'py-1' : 'py-2'} text-gray-300`}
                     >
@@ -280,15 +357,15 @@ function TableComponent({ config, data }: WidgetProps) {
       {typedConfig.showPagination && totalPages > 1 && (
         <div className="p-3 border-t border-gray-700 flex items-center justify-between">
           <div className="text-xs text-gray-500">
-            Showing {((currentPage - 1) * typedConfig.pageSize) + 1} to{' '}
-            {Math.min(currentPage * typedConfig.pageSize, sortedData.length)} of{' '}
-            {sortedData.length} rows
+            Showing {(currentPage - 1) * typedConfig.pageSize + 1} to{' '}
+            {Math.min(currentPage * typedConfig.pageSize, sortedData.length)} of {sortedData.length}{' '}
+            rows
           </div>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
               className="h-7 px-2 text-xs"
             >
@@ -312,7 +389,7 @@ function TableComponent({ config, data }: WidgetProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
               className="h-7 px-2 text-xs"
             >
@@ -374,7 +451,7 @@ export const TableDefinition: WidgetDefinition = {
       schema: z.array(z.record(z.any())),
     },
     tags: ['table', 'data', 'analysis', 'export'],
-    icon: TableIcon as any,
+    icon: TableIcon,
   },
   runtime: {
     component: TableComponent,

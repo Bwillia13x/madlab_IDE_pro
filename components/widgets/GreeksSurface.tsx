@@ -18,7 +18,12 @@ const MOCK_GREEKS_DATA = [
 
 export function GreeksSurface({ widget: _widget }: Readonly<GreeksSurfaceProps>) {
   const content = (
-    <div className="h-full overflow-auto" role="table" aria-label="Options Greeks table" data-testid="greeks-surface">
+    <div
+      className="h-full overflow-auto"
+      role="table"
+      aria-label="Options Greeks table"
+      data-testid="greeks-surface"
+    >
       <div className="min-w-full">
         <div className="grid grid-cols-5 gap-2 text-xs text-muted-foreground mb-2 font-medium">
           <div>Strike</div>
@@ -27,9 +32,13 @@ export function GreeksSurface({ widget: _widget }: Readonly<GreeksSurfaceProps>)
           <div>Theta</div>
           <div>Vega</div>
         </div>
-        
+
         {MOCK_GREEKS_DATA.map((row, index) => (
-          <div key={index} className="grid grid-cols-5 gap-2 text-xs mb-2 p-2 bg-card rounded" role="row">
+          <div
+            key={index}
+            className="grid grid-cols-5 gap-2 text-xs mb-2 p-2 bg-card rounded"
+            role="row"
+          >
             <div className="text-foreground font-medium">{row.strike}</div>
             <div className="text-green-400">{row.delta}</div>
             <div className="text-blue-400">{row.gamma}</div>
@@ -38,7 +47,7 @@ export function GreeksSurface({ widget: _widget }: Readonly<GreeksSurfaceProps>)
           </div>
         ))}
       </div>
-      
+
       <div className="text-xs text-muted-foreground mt-3 text-center">
         Current Spot: $102.45 | DTE: 30
       </div>
@@ -66,7 +75,12 @@ export function GreeksSurface({ widget: _widget }: Readonly<GreeksSurfaceProps>)
 
 // Default export for lazy import via getLazyWidget('GreeksSurface')
 export default function GreeksSurfaceDefault(props: WidgetProps) {
-  const cfg = (props.config as any) || {};
-  const stub = { id: props.id, type: 'greeks-surface', title: cfg.title || 'Greeks Surface', layout: { i: props.id, x: 0, y: 0, w: 6, h: 6 } } as unknown as Widget;
+  const cfg = (props.config as Record<string, unknown>) || {};
+  const stub = {
+    id: props.id,
+    type: 'greeks-surface',
+    title: cfg.title || 'Greeks Surface',
+    layout: { i: props.id, x: 0, y: 0, w: 6, h: 6 },
+  } as unknown as Widget;
   return <GreeksSurface widget={stub} />;
 }

@@ -174,7 +174,7 @@ export const MarkdownDefinition: WidgetDefinition = {
       realTimeData: false,
     },
     tags: ['notes', 'markdown', 'text', 'documentation'],
-    icon: FileText as any,
+    icon: FileText,
   },
   runtime: {
     component: MarkdownComponent,
