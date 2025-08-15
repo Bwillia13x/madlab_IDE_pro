@@ -6,36 +6,49 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   images: { unoptimized: true },
-  ...(isProd ? {} : { async headers() {
-    const csp = [
-      "default-src 'self'",
-      "base-uri 'self'",
-      "object-src 'none'",
-      "frame-ancestors 'none'",
-      "img-src 'self' https: data:",
-      "style-src 'self' 'unsafe-inline'",
-      "font-src 'self' data:",
-      "connect-src 'self' https:",
-      "form-action 'self'",
-      'upgrade-insecure-requests',
-    ].join('; ');
+  ...(isProd
+    ? {}
+    : {
+        async headers() {
+          const csp = [
+            "default-src 'self'",
+            "base-uri 'self'",
+            "object-src 'none'",
+            "frame-ancestors 'none'",
+            "img-src 'self' https: data:",
+            "style-src 'self' 'unsafe-inline'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+            "font-src 'self' data:",
+            "connect-src 'self' https: ws: wss:",
+            "form-action 'self'",
+            "worker-src 'self' blob:",
+            "child-src 'self' blob:",
+            'upgrade-insecure-requests',
+          ].join('; ');
 
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          { key: 'Content-Security-Policy', value: csp },
-          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
-          { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          { key: 'Permissions-Policy', value: 'geolocation=(), camera=(), microphone=(), payment=()' },
-          { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
-        ],
-      },
-    ];
-  } }),
-  
+          return [
+            {
+              source: '/(.*)',
+              headers: [
+                { key: 'Content-Security-Policy', value: csp },
+                {
+                  key: 'Strict-Transport-Security',
+                  value: 'max-age=31536000; includeSubDomains; preload',
+                },
+                { key: 'X-Frame-Options', value: 'DENY' },
+                { key: 'X-Content-Type-Options', value: 'nosniff' },
+                { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+                {
+                  key: 'Permissions-Policy',
+                  value: 'geolocation=(), camera=(), microphone=(), payment=()',
+                },
+                { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
+              ],
+            },
+          ];
+        },
+      }),
+
   // Performance optimizations
   experimental: {
     // Disable optimizeCss in dev to avoid Critters-related dev server errors
@@ -51,7 +64,7 @@ const nextConfig = {
       '@radix-ui/react-tooltip',
     ],
   },
-  
+
   // Bundle analysis and splitting
   webpack: (config, { buildId, dev, isServer, defaultLoaders, nextRuntime, webpack }) => {
     // Optimize imports from large libraries
