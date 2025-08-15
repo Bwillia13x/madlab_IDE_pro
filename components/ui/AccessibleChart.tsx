@@ -5,11 +5,11 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { 
-  generateChartDescription, 
+import {
+  generateChartDescription,
   announceToScreenReader,
   KEYBOARD_KEYS,
-  formatForScreenReader 
+  formatForScreenReader,
 } from '@/lib/accessibility';
 
 interface DataPoint {
@@ -70,76 +70,79 @@ export function AccessibleChart({
   const description = ariaDescription || generateChartDescription(data, title, type);
 
   // Handle keyboard navigation
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    if (!isKeyboardNavigating) return;
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (!isKeyboardNavigating) return;
 
-    event.preventDefault();
-    
-    switch (event.key) {
-      case KEYBOARD_KEYS.ARROW_RIGHT:
-      case KEYBOARD_KEYS.ARROW_DOWN:
-        setSelectedIndex(prev => {
-          const newIndex = Math.min(prev + 1, data.length - 1);
-          announceDataPoint(newIndex);
-          return newIndex;
-        });
-        break;
-        
-      case KEYBOARD_KEYS.ARROW_LEFT:
-      case KEYBOARD_KEYS.ARROW_UP:
-        setSelectedIndex(prev => {
-          const newIndex = Math.max(prev - 1, 0);
-          announceDataPoint(newIndex);
-          return newIndex;
-        });
-        break;
-        
-      case KEYBOARD_KEYS.HOME:
-        setSelectedIndex(0);
-        announceDataPoint(0);
-        break;
-        
-      case KEYBOARD_KEYS.END:
-        const lastIndex = data.length - 1;
-        setSelectedIndex(lastIndex);
-        announceDataPoint(lastIndex);
-        break;
-        
-      case KEYBOARD_KEYS.ENTER:
-      case KEYBOARD_KEYS.SPACE:
-        if (selectedIndex >= 0 && onDataPointSelect) {
-          onDataPointSelect(data[selectedIndex], selectedIndex);
-        }
-        break;
-        
-      case 'KeyT': // 'T' for table
-        setShowTable(!showTable);
-        announceToScreenReader(
-          showTable ? 'Data table hidden' : 'Data table shown', 
-          'polite'
-        );
-        break;
-        
-      case KEYBOARD_KEYS.ESCAPE:
-        setIsKeyboardNavigating(false);
-        setSelectedIndex(-1);
-        chartRef.current?.blur();
-        break;
-    }
-  }, [data, selectedIndex, showTable, onDataPointSelect, isKeyboardNavigating]);
+      event.preventDefault();
+
+      switch (event.key) {
+        case KEYBOARD_KEYS.ARROW_RIGHT:
+        case KEYBOARD_KEYS.ARROW_DOWN:
+          setSelectedIndex((prev) => {
+            const newIndex = Math.min(prev + 1, data.length - 1);
+            announceDataPoint(newIndex);
+            return newIndex;
+          });
+          break;
+
+        case KEYBOARD_KEYS.ARROW_LEFT:
+        case KEYBOARD_KEYS.ARROW_UP:
+          setSelectedIndex((prev) => {
+            const newIndex = Math.max(prev - 1, 0);
+            announceDataPoint(newIndex);
+            return newIndex;
+          });
+          break;
+
+        case KEYBOARD_KEYS.HOME:
+          setSelectedIndex(0);
+          announceDataPoint(0);
+          break;
+
+        case KEYBOARD_KEYS.END:
+          const lastIndex = data.length - 1;
+          setSelectedIndex(lastIndex);
+          announceDataPoint(lastIndex);
+          break;
+
+        case KEYBOARD_KEYS.ENTER:
+        case KEYBOARD_KEYS.SPACE:
+          if (selectedIndex >= 0 && onDataPointSelect) {
+            onDataPointSelect(data[selectedIndex], selectedIndex);
+          }
+          break;
+
+        case 'KeyT': // 'T' for table
+          setShowTable(!showTable);
+          announceToScreenReader(showTable ? 'Data table hidden' : 'Data table shown', 'polite');
+          break;
+
+        case KEYBOARD_KEYS.ESCAPE:
+          setIsKeyboardNavigating(false);
+          setSelectedIndex(-1);
+          chartRef.current?.blur();
+          break;
+      }
+    },
+    [data, selectedIndex, showTable, onDataPointSelect, isKeyboardNavigating, announceDataPoint]
+  );
 
   // Announce data point to screen reader
-  const announceDataPoint = useCallback((index: number) => {
-    if (index < 0 || index >= data.length) return;
-    
-    const point = data[index];
-    const formattedValue = valueFormatter ? 
-      valueFormatter(point.value) : 
-      formatForScreenReader(point.value, 'currency', currency);
-    
-    const message = `Data point ${index + 1} of ${data.length}: ${point.date}, ${formattedValue}`;
-    announceToScreenReader(message, 'polite');
-  }, [data, currency, valueFormatter]);
+  const announceDataPoint = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= data.length) return;
+
+      const point = data[index];
+      const formattedValue = valueFormatter
+        ? valueFormatter(point.value)
+        : formatForScreenReader(point.value, 'currency', currency);
+
+      const message = `Data point ${index + 1} of ${data.length}: ${point.date}, ${formattedValue}`;
+      announceToScreenReader(message, 'polite');
+    },
+    [data, currency, valueFormatter]
+  );
 
   // Set up keyboard event listeners
   useEffect(() => {
@@ -186,7 +189,7 @@ export function AccessibleChart({
         style={{ width, height }}
       >
         {children}
-        
+
         {/* Visual indicator for selected point */}
         {isKeyboardNavigating && selectedIndex >= 0 && (
           <div className="absolute top-2 left-2 bg-primary text-primary-foreground px-2 py-1 text-xs rounded z-10">
@@ -202,8 +205,8 @@ export function AccessibleChart({
 
       {/* Keyboard instructions */}
       <div className="sr-only" aria-live="polite">
-        Use arrow keys to navigate data points. Press Enter to select a point. 
-        Press T to toggle data table view. Press Escape to exit navigation mode.
+        Use arrow keys to navigate data points. Press Enter to select a point. Press T to toggle
+        data table view. Press Escape to exit navigation mode.
       </div>
 
       {/* Data table for screen readers and keyboard users */}
@@ -232,23 +235,17 @@ export function AccessibleChart({
                 </caption>
                 <thead>
                   <tr className="bg-muted">
-                    <th 
-                      className="border border-border px-3 py-2 text-left"
-                      scope="col"
-                    >
+                    <th className="border border-border px-3 py-2 text-left" scope="col">
                       Date
                     </th>
-                    <th 
-                      className="border border-border px-3 py-2 text-right"
-                      scope="col"
-                    >
+                    <th className="border border-border px-3 py-2 text-right" scope="col">
                       Value
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.map((point, index) => (
-                    <tr 
+                    <tr
                       key={index}
                       className={cn(
                         'hover:bg-muted/50',
@@ -256,20 +253,16 @@ export function AccessibleChart({
                       )}
                       role="row"
                     >
-                      <td 
-                        className="border border-border px-3 py-2"
-                        role="gridcell"
-                      >
+                      <td className="border border-border px-3 py-2" role="gridcell">
                         {point.date}
                       </td>
-                      <td 
+                      <td
                         className="border border-border px-3 py-2 text-right font-mono"
                         role="gridcell"
                       >
-                        {valueFormatter ? 
-                          valueFormatter(point.value) : 
-                          formatForScreenReader(point.value, 'currency', currency)
-                        }
+                        {valueFormatter
+                          ? valueFormatter(point.value)
+                          : formatForScreenReader(point.value, 'currency', currency)}
                       </td>
                     </tr>
                   ))}
@@ -281,12 +274,7 @@ export function AccessibleChart({
       )}
 
       {/* Live region for announcements */}
-      <div 
-        aria-live="polite" 
-        aria-atomic="true" 
-        className="sr-only"
-        id={`${title}-live-region`}
-      />
+      <div aria-live="polite" aria-atomic="true" className="sr-only" id={`${title}-live-region`} />
     </div>
   );
 }

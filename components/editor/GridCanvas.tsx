@@ -5,7 +5,7 @@ import { Responsive, WidthProvider, type Layout } from 'react-grid-layout';
 import { WidgetTile } from './WidgetTile';
 import { useWorkspaceStore, type Sheet } from '@/lib/store';
 import { EmptyState } from '@/components/ui/empty-state';
-import { useRouter } from 'next/navigation';
+// import { useRouter } from 'next/navigation';
 import { measureWidgetRender } from '@/lib/performance/monitor';
 import { Plus, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,7 @@ interface GridCanvasProps {
 }
 
 function EmptySheetState() {
-  const router = useRouter();
+  // const router = useRouter();
   const store = useWorkspaceStore();
   return (
     <EmptyState

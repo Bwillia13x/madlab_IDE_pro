@@ -5,18 +5,18 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { 
+import {
   getWidgetA11yMetadata,
   announceToScreenReader,
   createFocusTrap,
   KEYBOARD_KEYS,
-  type WidgetA11yMetadata 
+  type WidgetA11yMetadata,
 } from '@/lib/accessibility';
 import { Button } from './button';
-import { 
-  HelpCircle, 
-  Settings, 
-  Maximize2, 
+import {
+  HelpCircle,
+  Settings,
+  Maximize2,
   Minimize2,
   Volume2,
   VolumeX,
@@ -83,12 +83,12 @@ export function AccessibleWidget({
   useEffect(() => {
     if (isSelected && widgetRef.current) {
       widgetRef.current.focus();
-      
+
       // Set up focus trap for selected widget
       if (onConfigure) {
         const cleanup = createFocusTrap(widgetRef.current);
         setFocusTrapCleanup(() => cleanup);
-        
+
         return () => {
           cleanup();
           setFocusTrapCleanup(null);
@@ -107,7 +107,7 @@ export function AccessibleWidget({
           onSelect();
         }
         break;
-        
+
       case 'c':
       case 'C':
         if (event.ctrlKey || event.metaKey) {
@@ -119,7 +119,7 @@ export function AccessibleWidget({
           onConfigure();
         }
         break;
-        
+
       case 'r':
       case 'R':
         if (event.ctrlKey || event.metaKey) {
@@ -131,7 +131,7 @@ export function AccessibleWidget({
           onRefresh();
         }
         break;
-        
+
       case 'm':
       case 'M':
         if (onToggleMinimize) {
@@ -139,7 +139,7 @@ export function AccessibleWidget({
           onToggleMinimize();
         }
         break;
-        
+
       case 'h':
       case 'H':
         if (helpText) {
@@ -147,7 +147,7 @@ export function AccessibleWidget({
           announceToScreenReader(helpText, 'polite');
         }
         break;
-        
+
       case KEYBOARD_KEYS.ESCAPE:
         if (isFocused) {
           setIsFocused(false);
@@ -169,22 +169,19 @@ export function AccessibleWidget({
     if (loading) {
       announceStatus('Loading data');
     }
-  }, [loading]);
+  }, [loading, announceStatus]);
 
   // Handle error state changes
   useEffect(() => {
     if (error) {
       announceStatus(`Error: ${error}`, 'assertive');
     }
-  }, [error]);
+  }, [error, announceStatus]);
 
   // Toggle live updates
   const handleToggleLiveUpdates = () => {
     setLiveUpdatesEnabled(!liveUpdatesEnabled);
-    announceStatus(
-      liveUpdatesEnabled ? 'Live updates disabled' : 'Live updates enabled',
-      'polite'
-    );
+    announceStatus(liveUpdatesEnabled ? 'Live updates disabled' : 'Live updates enabled', 'polite');
   };
 
   return (
@@ -212,10 +209,7 @@ export function AccessibleWidget({
       {/* Widget header with accessibility controls */}
       <div className="flex items-center justify-between p-3 border-b">
         <div className="flex-1">
-          <h3 
-            id={titleId}
-            className="font-medium text-sm leading-none"
-          >
+          <h3 id={titleId} className="font-medium text-sm leading-none">
             {title}
           </h3>
           {loading && (
@@ -282,11 +276,7 @@ export function AccessibleWidget({
               aria-label={isMinimized ? 'Maximize widget' : 'Minimize widget'}
               title={isMinimized ? 'Maximize' : 'Minimize'}
             >
-              {isMinimized ? (
-                <Maximize2 className="h-3 w-3" />
-              ) : (
-                <Minimize2 className="h-3 w-3" />
-              )}
+              {isMinimized ? <Maximize2 className="h-3 w-3" /> : <Minimize2 className="h-3 w-3" />}
             </Button>
           )}
 
@@ -321,13 +311,7 @@ export function AccessibleWidget({
       </div>
 
       {/* Widget content */}
-      <div 
-        className={cn(
-          'p-3',
-          isMinimized && 'hidden'
-        )}
-        aria-hidden={isMinimized}
-      >
+      <div className={cn('p-3', isMinimized && 'hidden')} aria-hidden={isMinimized}>
         {children}
       </div>
 
@@ -355,7 +339,7 @@ export function AccessibleWidget({
 
       {/* Keyboard instructions for screen readers */}
       <div className="sr-only">
-        Keyboard shortcuts: 
+        Keyboard shortcuts:
         {onConfigure && ' Press C to configure.'}
         {onRefresh && ' Press R to refresh data.'}
         {onToggleMinimize && ' Press M to minimize or maximize.'}
@@ -370,9 +354,7 @@ export function AccessibleWidget({
 
       {/* Minimized state indicator */}
       {isMinimized && (
-        <div className="p-3 text-center text-sm text-muted-foreground">
-          Widget minimized
-        </div>
+        <div className="p-3 text-center text-sm text-muted-foreground">Widget minimized</div>
       )}
     </div>
   );
@@ -384,24 +366,26 @@ export function withAccessibility<P extends object>(
   widgetType: string,
   defaultTitle: string
 ) {
-  const AccessibleWrappedComponent = (props: P & {
-    title?: string;
-    isSelected?: boolean;
-    onSelect?: () => void;
-    onConfigure?: () => void;
-    onRefresh?: () => void;
-    loading?: boolean;
-    error?: string | null;
-  }) => {
-    const { 
-      title = defaultTitle, 
+  const AccessibleWrappedComponent = (
+    props: P & {
+      title?: string;
+      isSelected?: boolean;
+      onSelect?: () => void;
+      onConfigure?: () => void;
+      onRefresh?: () => void;
+      loading?: boolean;
+      error?: string | null;
+    }
+  ) => {
+    const {
+      title = defaultTitle,
       isSelected,
       onSelect,
       onConfigure,
       onRefresh,
       loading,
       error,
-      ...wrappedProps 
+      ...wrappedProps
     } = props;
 
     return (
@@ -421,6 +405,6 @@ export function withAccessibility<P extends object>(
   };
 
   AccessibleWrappedComponent.displayName = `withAccessibility(${WrappedComponent.displayName || WrappedComponent.name})`;
-  
+
   return AccessibleWrappedComponent;
 }
