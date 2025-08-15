@@ -11,13 +11,18 @@ import { createWidgetSchema } from '@/lib/widgets/schema';
 import { z } from 'zod';
 
 // Configuration schema for Markdown widget
-const MarkdownConfigSchema = createWidgetSchema(z.object({
-  content: z.string().default('# Welcome\n\nStart typing your markdown content here...').describe('Markdown content'),
-  fontSize: z.number().min(8).max(24).default(14).describe('Font size in pixels'),
-  showToolbar: z.boolean().default(true).describe('Show editing toolbar'),
-  defaultMode: z.enum(['edit', 'preview']).default('preview').describe('Default display mode'),
-  enableAutoSave: z.boolean().default(true).describe('Auto-save content changes'),
-}));
+const MarkdownConfigSchema = createWidgetSchema(
+  z.object({
+    content: z
+      .string()
+      .default('# Welcome\n\nStart typing your markdown content here...')
+      .describe('Markdown content'),
+    fontSize: z.number().min(8).max(24).default(14).describe('Font size in pixels'),
+    showToolbar: z.boolean().default(true).describe('Show editing toolbar'),
+    defaultMode: z.enum(['edit', 'preview']).default('preview').describe('Default display mode'),
+    enableAutoSave: z.boolean().default(true).describe('Auto-save content changes'),
+  })
+);
 
 type MarkdownConfig = z.infer<typeof MarkdownConfigSchema>;
 
@@ -46,7 +51,7 @@ function MarkdownComponent({ id, config, onConfigChange }: WidgetProps) {
       const timer = setTimeout(() => {
         onConfigChange?.({ ...typedConfig, content: localContent });
       }, 1000); // Save after 1 second of no changes
-      
+
       return () => clearTimeout(timer);
     }
   }, [localContent, typedConfig, onConfigChange]);
@@ -58,7 +63,7 @@ function MarkdownComponent({ id, config, onConfigChange }: WidgetProps) {
   const toggleMode = () => {
     const newMode = mode === 'edit' ? 'preview' : 'edit';
     setMode(newMode);
-    
+
     // Save content when switching to preview
     if (newMode === 'preview' && localContent !== typedConfig.content) {
       onConfigChange?.({ ...typedConfig, content: localContent });
@@ -66,7 +71,12 @@ function MarkdownComponent({ id, config, onConfigChange }: WidgetProps) {
   };
 
   return (
-    <div className="h-full flex flex-col" role="region" aria-label="Markdown notes" data-testid="markdown-widget">
+    <div
+      className="h-full flex flex-col"
+      role="region"
+      aria-label="Markdown notes"
+      data-testid="markdown-widget"
+    >
       {typedConfig.showToolbar && (
         <div className="flex items-center justify-between p-2 border-b border-gray-700">
           <div className="flex items-center gap-2">
@@ -102,7 +112,7 @@ function MarkdownComponent({ id, config, onConfigChange }: WidgetProps) {
           </div>
         </div>
       )}
-      
+
       <div className="flex-1 overflow-hidden">
         {mode === 'edit' ? (
           <Textarea
@@ -116,14 +126,14 @@ function MarkdownComponent({ id, config, onConfigChange }: WidgetProps) {
           />
         ) : (
           <Card className="h-full overflow-auto border-none rounded-none">
-            <CardContent 
+            <CardContent
               className="p-4 prose prose-invert max-w-none"
               style={{ fontSize: `${typedConfig.fontSize}px` }}
             >
-              <div 
+              <div
                 className="text-gray-300"
-                dangerouslySetInnerHTML={{ 
-                  __html: renderMarkdown(typedConfig.content) 
+                dangerouslySetInnerHTML={{
+                  __html: renderMarkdown(typedConfig.content),
                 }}
                 role="document"
                 aria-label="Markdown preview"
@@ -148,7 +158,8 @@ export const MarkdownDefinition: WidgetDefinition = {
     configSchema: MarkdownConfigSchema,
     defaultConfig: {
       title: 'Markdown Notes',
-      content: '# Welcome\n\nStart typing your markdown content here...\n\n## Features\n\n- **Bold text**\n- *Italic text*\n- `Inline code`\n- Headers\n\n### Getting Started\n\nClick the Edit button to start writing!',
+      content:
+        '# Welcome\n\nStart typing your markdown content here...\n\n## Features\n\n- **Bold text**\n- *Italic text*\n- `Inline code`\n- Headers\n\n### Getting Started\n\nClick the Edit button to start writing!',
       fontSize: 14,
       showToolbar: true,
       defaultMode: 'preview',
@@ -181,11 +192,11 @@ export const MarkdownDefinition: WidgetDefinition = {
 };
 
 // Export the component for backward compatibility
-export function Markdown(props: any) {
+export function Markdown(props: WidgetProps) {
   return <MarkdownComponent {...props} />;
 }
 
 // Default export for lazy import via getLazyWidget('Markdown')
 export default function MarkdownDefault(props: WidgetProps) {
-  return MarkdownComponent(props);
+  return <MarkdownComponent {...props} />;
 }
