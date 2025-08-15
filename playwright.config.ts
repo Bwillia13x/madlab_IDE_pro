@@ -48,9 +48,9 @@ export default defineConfig({
     },
   ],
 
-  // Harden server boot with a tiny wrapper that will retry availability
+  // Use Next dev server for E2E to ensure consistent hydration across browsers
   webServer: {
-    command: 'node scripts/pw-serve-with-retry.cjs',
+    command: 'pnpm dev:test',
     url: 'http://localhost:3010',
     timeout: 180000,
     reuseExistingServer: !process.env.CI,

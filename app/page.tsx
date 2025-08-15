@@ -38,7 +38,7 @@ if (typeof window !== 'undefined') {
           messagesLength: 0,
           sheetsCount: 0,
           storeReady: false,
-          inspectorOpen: false
+          inspectorOpen: false,
         }),
         storeReady: false,
         waitForStoreReady: (callback: () => void) => {},
@@ -46,15 +46,21 @@ if (typeof window !== 'undefined') {
         setBottomTab: (tab: string) => {},
         ensureChatOpen: () => {},
         openInspectorForFirstWidget: () => false,
-        helpersReady: false
+        helpersReady: false,
       };
     }
-      try {
-        if (typeof localStorage !== 'undefined' && localStorage.getItem('debugE2E') === 'true') {
-          // eslint-disable-next-line no-console
-          console.log('[E2E] Installing helpers at module scope');
-        }
-      } catch {}
+    try {
+      // Automatically enable test mode if browser automation is detected
+      const sp = new URLSearchParams(window.location.search);
+      const isE2E = sp.get('e2e') === '1' || (navigator as any)?.webdriver === true;
+      if (isE2E) {
+        localStorage.setItem('debugE2E', 'true');
+      }
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('debugE2E') === 'true') {
+        // eslint-disable-next-line no-console
+        console.log('[E2E] Installing helpers at module scope');
+      }
+    } catch {}
     if (!window.madlab.addSheetByKind || window.madlab.addSheetByKind.toString().includes('{}')) {
       window.madlab.addSheetByKind = (kind: SheetKind) => {
         try {
@@ -66,12 +72,15 @@ if (typeof window !== 'undefined') {
           if (sheetId && kind !== 'blank') {
             store.populateSheetWithPreset(sheetId, kind);
           }
-            try {
-              if (typeof localStorage !== 'undefined' && localStorage.getItem('debugE2E') === 'true') {
-                // eslint-disable-next-line no-console
-                console.log('[E2E] addSheetByKind executed for', kind);
-              }
-            } catch {}
+          try {
+            if (
+              typeof localStorage !== 'undefined' &&
+              localStorage.getItem('debugE2E') === 'true'
+            ) {
+              // eslint-disable-next-line no-console
+              console.log('[E2E] addSheetByKind executed for', kind);
+            }
+          } catch {}
         } catch {}
       };
     }
@@ -98,10 +107,17 @@ if (typeof window !== 'undefined') {
           inspectorOpen: Boolean(s.inspectorOpen),
         };
       } catch {
-        return { explorerCollapsed: false, activeBottomTab: 'output', messagesLength: 0, sheetsCount: 0, storeReady: false, inspectorOpen: false };
+        return {
+          explorerCollapsed: false,
+          activeBottomTab: 'output',
+          messagesLength: 0,
+          sheetsCount: 0,
+          storeReady: false,
+          inspectorOpen: false,
+        };
       }
     };
-    
+
     // Expose store readiness for E2E waiting
     (window as any).madlab.storeReady = false;
     (window as any).madlab.waitForStoreReady = (callback: () => void) => {
@@ -123,13 +139,19 @@ if (typeof window !== 'undefined') {
     };
     // Expose control helpers for E2E
     (window as any).madlab.toggleExplorer = () => {
-      try { require('@/lib/store').useWorkspaceStore.getState().toggleExplorer(); } catch {}
+      try {
+        require('@/lib/store').useWorkspaceStore.getState().toggleExplorer();
+      } catch {}
     };
     (window as any).madlab.setBottomTab = (tab: string) => {
-      try { require('@/lib/store').useWorkspaceStore.getState().setActiveBottomTab(tab); } catch {}
+      try {
+        require('@/lib/store').useWorkspaceStore.getState().setActiveBottomTab(tab);
+      } catch {}
     };
     (window as any).madlab.ensureChatOpen = () => {
-      try { require('@/lib/store').useWorkspaceStore.setState({ chatCollapsed: false }); } catch {}
+      try {
+        require('@/lib/store').useWorkspaceStore.setState({ chatCollapsed: false });
+      } catch {}
     };
     (window as any).madlab.openInspectorForFirstWidget = () => {
       try {
@@ -142,15 +164,21 @@ if (typeof window !== 'undefined') {
         }
         store.setInspectorOpen?.(true);
         return true;
-      } catch { return false; }
+      } catch {
+        return false;
+      }
     };
     // Early E2E bootstrap: ensure a valuation sheet exists when in automation
     try {
       const sp = new URLSearchParams(window.location.search);
-      const isE2E = sp.get('e2e') === '1' || ((navigator as any)?.webdriver === true);
+      const isE2E = sp.get('e2e') === '1' || (navigator as any)?.webdriver === true;
       if (isE2E) {
-        try { localStorage.setItem('madlab_consent_analytics', 'true'); } catch {}
-        try { localStorage.removeItem('madlab-workspace'); } catch {}
+        try {
+          localStorage.setItem('madlab_consent_analytics', 'true');
+        } catch {}
+        try {
+          localStorage.removeItem('madlab-workspace');
+        } catch {}
         const ensureSheet = () => {
           try {
             const store = require('@/lib/store').useWorkspaceStore.getState();
@@ -170,7 +198,10 @@ if (typeof window !== 'undefined') {
         const id = setInterval(() => {
           try {
             const s = require('@/lib/store').useWorkspaceStore.getState();
-            if (s.sheets && s.sheets.length > 0) { clearInterval(id); return; }
+            if (s.sheets && s.sheets.length > 0) {
+              clearInterval(id);
+              return;
+            }
           } catch {}
           ensureSheet();
           if (Date.now() - start > 4000) clearInterval(id);
@@ -206,7 +237,9 @@ if (typeof window !== 'undefined') {
       } catch {}
       try {
         window.addEventListener('madlab:set-provider', (async (ev: Event) => {
-          const detail = (ev as CustomEvent<{ provider?: 'mock' | 'extension' }>).detail || { provider: 'mock' };
+          const detail = (ev as CustomEvent<{ provider?: 'mock' | 'extension' }>).detail || {
+            provider: 'mock',
+          };
           const provider = String(detail.provider || 'mock');
           try {
             const store = require('@/lib/store').useWorkspaceStore.getState();
@@ -216,7 +249,9 @@ if (typeof window !== 'undefined') {
               try {
                 const sync = () => {
                   try {
-                    const btns = document.querySelectorAll('[data-testid="provider-toggle"], [data-testid="titlebar-provider-toggle"]');
+                    const btns = document.querySelectorAll(
+                      '[data-testid="provider-toggle"], [data-testid="titlebar-provider-toggle"]'
+                    );
                     if (btns && btns.length) {
                       btns.forEach((b) => {
                         (b as HTMLElement).setAttribute('data-provider-label', 'Extension');
@@ -237,9 +272,14 @@ if (typeof window !== 'undefined') {
                   }, 100);
                 }
                 try {
-                  if (typeof localStorage !== 'undefined' && localStorage.getItem('debugE2E') === 'true') {
+                  if (
+                    typeof localStorage !== 'undefined' &&
+                    localStorage.getItem('debugE2E') === 'true'
+                  ) {
                     // eslint-disable-next-line no-console
-                    console.log('[E2E] madlab:set-provider("extension") applied label and attribute');
+                    console.log(
+                      '[E2E] madlab:set-provider("extension") applied label and attribute'
+                    );
                   }
                 } catch {}
               } catch {}
@@ -251,12 +291,16 @@ if (typeof window !== 'undefined') {
         window.addEventListener('madlab:set-bottom-tab', ((ev: Event) => {
           const detail = (ev as CustomEvent<{ tab?: string }>).detail || { tab: 'output' };
           const tab = String(detail.tab || 'output');
-          try { require('@/lib/store').useWorkspaceStore.getState().setActiveBottomTab(tab); } catch {}
+          try {
+            require('@/lib/store').useWorkspaceStore.getState().setActiveBottomTab(tab);
+          } catch {}
         }) as EventListener);
       } catch {}
       try {
         window.addEventListener('madlab:toggle-explorer', (() => {
-          try { require('@/lib/store').useWorkspaceStore.getState().toggleExplorer(); } catch {}
+          try {
+            require('@/lib/store').useWorkspaceStore.getState().toggleExplorer();
+          } catch {}
         }) as EventListener);
       } catch {}
       (window as any).madlab.__listenersInstalled = true;
@@ -272,7 +316,10 @@ export default function Home() {
   useEffect(() => {
     try {
       const store = useWorkspaceStore.getState();
-      if (typeof window !== 'undefined' && window.localStorage.getItem('madlab_onboarding_completed') === 'true') {
+      if (
+        typeof window !== 'undefined' &&
+        window.localStorage.getItem('madlab_onboarding_completed') === 'true'
+      ) {
         store.safeUpdate?.({ onboardingCompleted: true });
       }
     } catch {}
@@ -281,7 +328,7 @@ export default function Home() {
   useEffect(() => {
     // Hydrate store from localStorage on mount
     hydrate();
-    
+
     // Complete hydration after a brief delay to ensure persistence middleware is done
     const timeoutId = setTimeout(() => {
       completeHydration();
@@ -289,7 +336,7 @@ export default function Home() {
 
     // Initialize performance monitoring
     initializePerformanceMonitoring();
-    
+
     // Initialize customer analytics for market validation
     initializeCustomerAnalytics();
 
@@ -302,7 +349,11 @@ export default function Home() {
         // Dedup guard
         const flagged = localStorage.getItem('madlab_first_return') === 'true';
         if (!flagged) {
-          analytics.track('conversion', { event: 'first_return', variant: getOnboardingVariant() }, 'user_flow');
+          analytics.track(
+            'conversion',
+            { event: 'first_return', variant: getOnboardingVariant() },
+            'user_flow'
+          );
           localStorage.setItem('madlab_first_return', 'true');
         }
         localStorage.setItem('madlab_return_seen', 'true');
@@ -323,12 +374,14 @@ export default function Home() {
       } catch {}
       return false;
     };
-    const id = setInterval(() => { if (checkTtfv()) clearInterval(id); }, 100);
+    const id = setInterval(() => {
+      if (checkTtfv()) clearInterval(id);
+    }, 100);
     setTimeout(() => clearInterval(id), 5000);
 
     // Idle preload high-usage widgets to improve UX without impacting FCP
     try {
-      const run = () => preloadWidgets(['line-chart','kpi','table']).catch(() => {});
+      const run = () => preloadWidgets(['line-chart', 'kpi', 'table']).catch(() => {});
       if ('requestIdleCallback' in window) {
         (window as any).requestIdleCallback(run);
       } else {
@@ -342,7 +395,9 @@ export default function Home() {
         | { type: 'extension:ready'; payload?: { version?: number } }
         | { type: 'pong'; payload?: unknown }
         | { type: string; payload?: unknown };
-      const onMessage = (window.madlabBridge as any).onMessage as undefined | ((h: (m: WebviewMsg) => void) => void);
+      const onMessage = (window.madlabBridge as any).onMessage as
+        | undefined
+        | ((h: (m: WebviewMsg) => void) => void);
       onMessage?.((msg: WebviewMsg) => {
         // Handle simple demo messages for now
         if (msg?.type === 'extension:ready') {
@@ -375,7 +430,10 @@ export default function Home() {
               store.populateSheetWithPreset(sheetId, kind);
             }
             try {
-              if (typeof localStorage !== 'undefined' && localStorage.getItem('debugE2E') === 'true') {
+              if (
+                typeof localStorage !== 'undefined' &&
+                localStorage.getItem('debugE2E') === 'true'
+              ) {
                 // eslint-disable-next-line no-console
                 console.log('[E2E] addSheetByKind executed within effect for', kind);
               }
@@ -390,14 +448,19 @@ export default function Home() {
           try {
             const sp = new URLSearchParams(window.location.search);
             return sp.get('e2e') === '1';
-          } catch { return false; }
+          } catch {
+            return false;
+          }
         })();
         const isWebDriver = typeof navigator !== 'undefined' && (navigator as any).webdriver;
         const inTestMode = isE2EQuery || isWebDriver;
 
         if (inTestMode) {
           try {
-            if (typeof localStorage !== 'undefined' && localStorage.getItem('debugE2E') === 'true') {
+            if (
+              typeof localStorage !== 'undefined' &&
+              localStorage.getItem('debugE2E') === 'true'
+            ) {
               // eslint-disable-next-line no-console
               console.log('[E2E] Test mode enabled');
             }
@@ -414,7 +477,9 @@ export default function Home() {
               document.documentElement.setAttribute('data-extension-bridge', 'true');
               try {
                 // Proactively sync StatusBar provider label for E2E determinism
-                const btns = document.querySelectorAll('[data-testid="provider-toggle"], [data-testid="titlebar-provider-toggle"]');
+                const btns = document.querySelectorAll(
+                  '[data-testid="provider-toggle"], [data-testid="titlebar-provider-toggle"]'
+                );
                 btns.forEach((b) => {
                   (b as HTMLElement).setAttribute('data-provider-label', 'Extension');
                   const span = b.querySelector('span');
@@ -422,14 +487,18 @@ export default function Home() {
                 });
                 // Also observe for late-mounted provider toggle and sync once
                 const mo = new MutationObserver(() => {
-                  const nodes = document.querySelectorAll('[data-testid="provider-toggle"], [data-testid="titlebar-provider-toggle"]');
+                  const nodes = document.querySelectorAll(
+                    '[data-testid="provider-toggle"], [data-testid="titlebar-provider-toggle"]'
+                  );
                   if (nodes && nodes.length) {
                     nodes.forEach((b) => {
                       (b as HTMLElement).setAttribute('data-provider-label', 'Extension');
                       const span = b.querySelector('span');
                       if (span) span.textContent = 'Extension';
                     });
-                    try { mo.disconnect(); } catch {}
+                    try {
+                      mo.disconnect();
+                    } catch {}
                   }
                 });
                 mo.observe(document.body, { childList: true, subtree: true });
@@ -453,7 +522,10 @@ export default function Home() {
                     store.populateSheetWithPreset(sheetId, 'valuation');
                   }
                   try {
-                    if (typeof localStorage !== 'undefined' && localStorage.getItem('debugE2E') === 'true') {
+                    if (
+                      typeof localStorage !== 'undefined' &&
+                      localStorage.getItem('debugE2E') === 'true'
+                    ) {
                       // eslint-disable-next-line no-console
                       console.log('[E2E] Auto-created initial valuation sheet after store ready');
                     }
@@ -463,27 +535,27 @@ export default function Home() {
               }
               return false; // Not ready yet
             };
-            
+
             // Wait for store readiness with shorter, cleaner polling
             const waitForReady = () => {
               if (ensureSheetWhenReady()) return;
-              
+
               const checkInterval = setInterval(() => {
                 if (ensureSheetWhenReady()) {
                   clearInterval(checkInterval);
                 }
               }, 50);
-              
+
               // Cleanup after 5 seconds max
               setTimeout(() => clearInterval(checkInterval), 5000);
             };
-            
+
             waitForReady();
           } catch {}
         }
       }
     } catch {}
-    
+
     return () => {
       clearTimeout(timeoutId);
     };
@@ -498,7 +570,7 @@ export default function Home() {
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
-      
+
       {/* Screen reader: Keyboard shortcuts help */}
       <div className="sr-only">
         <h2>Keyboard Shortcuts</h2>
@@ -539,28 +611,33 @@ export default function Home() {
       <DemoBanner />
       {/* Global Command Palette */}
       <CommandPalette />
-      
+
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
         {/* Activity Bar */}
         <nav role="navigation" aria-label="Activity bar">
           <ActivityBar />
         </nav>
-        
+
         {/* Explorer Panel */}
         <aside role="complementary" aria-label="Explorer sidebar">
           {/* Reflect collapsed state via hidden attribute for E2E */}
           <Explorer />
         </aside>
-        
+
         {/* Editor Region */}
-        <main id="main-content" className="flex-1 flex flex-col min-w-0" role="main" aria-label="Financial analysis workspace">
+        <main
+          id="main-content"
+          className="flex-1 flex flex-col min-w-0"
+          role="main"
+          aria-label="Financial analysis workspace"
+        >
           <ErrorBoundary>
             <Editor />
           </ErrorBoundary>
           <BottomPanel />
         </main>
-        
+
         {/* Agent Chat Panel */}
         <aside role="complementary" aria-label="AI assistant chat">
           <ErrorBoundary>
@@ -571,25 +648,29 @@ export default function Home() {
         {/* Inspector Panel */}
         {/* Legacy inspector removed; using integrated editor inspector */}
       </div>
-      
+
       {/* Status Bar */}
       <StatusBar />
-      
+
       {/* Customer Feedback Widget */}
       <CustomerFeedback />
-      
+
       {/* Success celebrations */}
       <SuccessCelebration />
 
       {/* Onboarding Tour */}
-      <OnboardingTour 
+      <OnboardingTour
         isOpen={showOnboarding}
         onComplete={() => {
-          try { useWorkspaceStore.getState().markOnboardingCompleted?.(); } catch {}
+          try {
+            useWorkspaceStore.getState().markOnboardingCompleted?.();
+          } catch {}
           completeOnboarding();
         }}
         onSkip={() => {
-          try { useWorkspaceStore.getState().markOnboardingCompleted?.(); } catch {}
+          try {
+            useWorkspaceStore.getState().markOnboardingCompleted?.();
+          } catch {}
           skipOnboarding();
         }}
       />
