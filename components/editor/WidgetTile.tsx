@@ -94,7 +94,7 @@ const LazyWidgetRenderer = memo(function LazyWidgetRenderer({
               }
             } catch {}
           }}
-          onError={(err) => {
+          onError={(_err) => {
             /* Widget error handling */
           }}
         />
@@ -112,7 +112,7 @@ const LazyWidgetRenderer = memo(function LazyWidgetRenderer({
       onConfigChange={(config) =>
         updateWidget(sheetId, { id: widget.id, props: config as Record<string, unknown> })
       }
-      onError={(err) => {
+      onError={(_err) => {
         /* Widget error handling */
       }}
       fallback={<WidgetLoadingFallback />}
