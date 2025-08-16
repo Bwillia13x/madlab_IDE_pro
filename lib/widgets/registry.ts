@@ -29,6 +29,9 @@ const widgetComponents = {
   // Interactive and real-time widgets
   'interactive-candlestick': () => import('@/components/widgets/InteractiveCandlestickChart').then(m => ({ default: m.InteractiveCandlestickChart })),
   'realtime-portfolio': () => import('@/components/widgets/RealtimePortfolioDashboard').then(m => ({ default: m.RealtimePortfolioDashboard })),
+  
+  // Advanced portfolio and charting widgets
+  'portfolio-allocation': () => import('@/components/widgets/PortfolioAllocationCharts').then(m => ({ default: m.PortfolioAllocationCharts })),
 };
 
 // Initialize widget components in registry

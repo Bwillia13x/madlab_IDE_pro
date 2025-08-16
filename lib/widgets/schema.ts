@@ -407,4 +407,31 @@ export const defaultWidgetSchemas: WidgetRegistry = {
       component: () => null, // Will be replaced by actual component
     },
   },
+  
+  'portfolio-allocation': {
+    type: 'portfolio-allocation',
+    title: 'Portfolio Allocation',
+    description: 'Interactive portfolio allocation charts with pie, treemap, and bar visualizations',
+    category: 'portfolio',
+    defaultLayout: { w: 12, h: 10, minW: 10, minH: 8 },
+    props: {
+      defaultChartType: {
+        type: 'string',
+        label: 'Default Chart Type',
+        description: 'Initial chart type to display',
+        required: false,
+        default: 'pie',
+      },
+      showSectors: {
+        type: 'boolean',
+        label: 'Show Sectors',
+        description: 'Display sector breakdown information',
+        required: false,
+        default: true,
+      },
+    },
+    runtime: {
+      component: () => null, // Will be replaced by actual component
+    },
+  },
 };
