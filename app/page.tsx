@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { TitleBar } from '@/components/chrome/TitleBar';
 import { ActivityBar } from '@/components/chrome/ActivityBar';
 import { Explorer } from '@/components/chrome/Explorer';
@@ -8,10 +8,12 @@ import { Editor } from '@/components/editor/Editor';
 import { AgentChat } from '@/components/panels/AgentChat';
 import { BottomPanel } from '@/components/panels/BottomPanel';
 import { StatusBar } from '@/components/chrome/StatusBar';
+import { SettingsPanel } from '@/components/settings/SettingsPanel';
 import { useWorkspaceStore } from '@/lib/store';
 
 export default function Home() {
   const { hydrate } = useWorkspaceStore();
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     // Hydrate store from localStorage on mount
@@ -45,7 +47,7 @@ export default function Home() {
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
         {/* Activity Bar */}
-        <ActivityBar />
+        <ActivityBar onSettingsToggle={() => setShowSettings(!showSettings)} />
         
         {/* Explorer Panel */}
         <Explorer />
@@ -58,6 +60,13 @@ export default function Home() {
         
         {/* Agent Chat Panel */}
         <AgentChat />
+        
+        {/* Settings Panel */}
+        {showSettings && (
+          <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <SettingsPanel onClose={() => setShowSettings(false)} />
+          </div>
+        )}
       </div>
       
       {/* Status Bar */}

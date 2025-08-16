@@ -22,11 +22,15 @@ const ACTIVITY_ITEMS = [
   { id: 'extensions', icon: Package, label: 'Extensions' },
 ];
 
-export function ActivityBar() {
+interface ActivityBarProps {
+  onSettingsToggle: () => void;
+}
+
+export function ActivityBar({ onSettingsToggle }: ActivityBarProps) {
   const { toggleExplorer, toggleChat } = useWorkspaceStore();
 
   return (
-  <div className="w-12 bg-[#2c2c2c] border-r border-[#2d2d30] flex flex-col" data-testid="activity-bar">
+    <div className="w-12 bg-[#2c2c2c] border-r border-[#2d2d30] flex flex-col" data-testid="activity-bar">
       <TooltipProvider>
         <div className="flex flex-col">
           {ACTIVITY_ITEMS.map((item) => (
@@ -82,6 +86,7 @@ export function ActivityBar() {
                 size="sm"
                 className="w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-[#2a2d2e]"
                 aria-label="Settings"
+                onClick={onSettingsToggle}
               >
                 <Settings className="h-5 w-5 text-[#cccccc]" />
               </Button>

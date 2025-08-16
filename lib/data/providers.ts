@@ -1,14 +1,24 @@
 import { mockAdapter } from './adapters/mock';
+import { createAlphaVantageAdapter } from './adapters/alpha-vantage';
 import type { Provider } from './provider.types';
 
 // Data provider registry
 const providers: Record<string, Provider> = {
   mock: mockAdapter,
-  // TODO: Add real providers
-  // alphaVantage: alphaVantageAdapter,
-  // yahooFinance: yahooFinanceAdapter,
-  // bloomberg: bloombergAdapter,
+  // Alpha Vantage will be added dynamically when configured
 };
+
+// Function to add Alpha Vantage provider with API key
+export function addAlphaVantageProvider(apiKey: string): void {
+  if (apiKey && apiKey !== 'demo') {
+    providers['alpha-vantage'] = createAlphaVantageAdapter(apiKey);
+  }
+}
+
+// Function to remove Alpha Vantage provider
+export function removeAlphaVantageProvider(): void {
+  delete providers['alpha-vantage'];
+}
 
 let currentProvider = 'mock';
 
