@@ -11,6 +11,8 @@ export interface Widget {
   id: string;
   type: string;
   title: string;
+  description?: string;
+  category?: string;
   layout: Layout;
   props?: Record<string, unknown>;
   version?: number;

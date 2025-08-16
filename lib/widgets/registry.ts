@@ -5,7 +5,7 @@ import type { WidgetSchema, WidgetRegistry } from './schema';
 let widgetRegistry: WidgetRegistry = { ...defaultWidgetSchemas };
 
 // Widget component imports
-const widgetComponents = {
+const widgetComponents: Record<string, () => Promise<{ default: React.ComponentType<any> }>> = {
   'kpi-card': () => import('@/components/widgets/KpiCard').then(m => ({ default: m.KpiCard })),
   'line-chart': () => import('@/components/widgets/LineChart').then(m => ({ default: m.LineChart })),
   'bar-chart': () => import('@/components/widgets/BarChart').then(m => ({ default: m.BarChart })),
@@ -76,6 +76,22 @@ export function getWidgetsByCategory(category: string): WidgetSchema[] {
 
 export function getAvailableWidgetTypes(): string[] {
   return Object.keys(widgetRegistry);
+}
+
+// Get widget component for rendering
+export function getWidgetComponent(type: string) {
+  const schema = widgetRegistry[type];
+  if (schema?.runtime?.component) {
+    return schema.runtime.component;
+  }
+  
+  // Try to load component dynamically
+  const importFn = widgetComponents[type];
+  if (importFn) {
+    return importFn().then((module: any) => module.default);
+  }
+  
+  return null;
 }
 
 // Legacy function for backward compatibility
