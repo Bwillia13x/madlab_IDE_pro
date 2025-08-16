@@ -20,6 +20,11 @@ const widgetComponents = {
   'strategy-builder': () => import('@/components/widgets/StrategyBuilder').then(m => ({ default: m.StrategyBuilder })),
   'pnl-profile': () => import('@/components/widgets/PnLProfile').then(m => ({ default: m.PnLProfile })),
   'blank-tile': () => import('@/components/widgets/BlankTile').then(m => ({ default: m.BlankTile })),
+  
+  // New enhanced widgets
+  'candlestick-chart': () => import('@/components/widgets/CandlestickChart').then(m => ({ default: m.CandlestickChart })),
+  'portfolio-tracker': () => import('@/components/widgets/PortfolioTracker').then(m => ({ default: m.PortfolioTracker })),
+  'technical-indicators': () => import('@/components/widgets/TechnicalIndicators').then(m => ({ default: m.TechnicalIndicators })),
 };
 
 // Initialize widget components in registry

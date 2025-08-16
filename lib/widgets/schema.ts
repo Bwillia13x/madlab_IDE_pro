@@ -4,7 +4,7 @@ export interface WidgetSchema {
   type: string;
   title: string;
   description: string;
-  category: 'financial' | 'charting' | 'analysis' | 'utility';
+  category: 'financial' | 'charting' | 'analysis' | 'utility' | 'portfolio';
   defaultLayout: {
     w: number;
     h: number;
@@ -306,5 +306,65 @@ export const defaultWidgetSchemas: WidgetRegistry = {
     runtime: {
       component: () => null, // Will be replaced by actual component
     }
-  }
+  },
+  
+  'candlestick-chart': {
+    type: 'candlestick-chart',
+    title: 'Candlestick Chart',
+    description: 'Professional OHLC candlestick chart with volume and indicators',
+    category: 'charting',
+    defaultLayout: { w: 10, h: 8, minW: 8, minH: 6 },
+    props: {
+      symbol: {
+        type: 'string',
+        label: 'Symbol',
+        description: 'Stock symbol to display',
+        required: true,
+        default: 'AAPL',
+      },
+    },
+    runtime: {
+      component: () => null, // Will be replaced by actual component
+    },
+  },
+  
+  'portfolio-tracker': {
+    type: 'portfolio-tracker',
+    title: 'Portfolio Tracker',
+    description: 'Track multiple assets with real-time data and performance metrics',
+    category: 'portfolio',
+    defaultLayout: { w: 12, h: 8, minW: 10, minH: 6 },
+    props: {
+      defaultSymbols: {
+        type: 'string',
+        label: 'Default Symbols',
+        description: 'Comma-separated list of default symbols',
+        required: false,
+        default: 'AAPL,MSFT,GOOGL',
+      },
+    },
+    runtime: {
+      component: () => null, // Will be replaced by actual component
+    },
+  },
+  
+  'technical-indicators': {
+    type: 'technical-indicators',
+    title: 'Technical Indicators',
+    description: 'Comprehensive technical analysis with RSI, MACD, Stochastic, and more',
+    category: 'analysis',
+    defaultLayout: { w: 8, h: 8, minW: 6, minH: 6 },
+    props: {
+      symbol: {
+        type: 'string',
+        label: 'Symbol',
+        description: 'Stock symbol to analyze',
+        required: true,
+        default: 'AAPL',
+      },
+    },
+    runtime: {
+      component: () => null, // Will be replaced by actual component
+    },
+  },
 };
