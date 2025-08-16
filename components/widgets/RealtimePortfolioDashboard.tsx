@@ -59,7 +59,7 @@ export function RealtimePortfolioDashboard({ widget, sheetId, onTitleChange }: R
       const latestPrice = prices.find(p => p.symbol === asset.symbol);
       if (!latestPrice) return asset;
 
-      const currentPrice = latestPrice.close;
+      const currentPrice = latestPrice.price;
       const marketValue = asset.shares * currentPrice;
       const totalReturn = marketValue - (asset.shares * asset.avgPrice);
       const totalReturnPercent = ((currentPrice - asset.avgPrice) / asset.avgPrice) * 100;
@@ -70,7 +70,7 @@ export function RealtimePortfolioDashboard({ widget, sheetId, onTitleChange }: R
         marketValue,
         totalReturn,
         totalReturnPercent,
-        lastUpdate: latestPrice.date,
+        lastUpdate: new Date(latestPrice.timestamp),
       };
     }));
   }, [prices]);

@@ -151,7 +151,7 @@ export function MobilePortfolioTracker({
         prevAssets.map(asset => {
           const priceUpdate = prices.find(p => p.symbol === asset.symbol);
           if (priceUpdate) {
-            const newPrice = priceUpdate.close; // Use 'close' instead of 'price'
+            const newPrice = priceUpdate.price;
             const newMarketValue = asset.shares * newPrice;
             const newTotalReturn = newMarketValue - asset.totalCost;
             const newTotalReturnPercent = (newTotalReturn / asset.totalCost) * 100;

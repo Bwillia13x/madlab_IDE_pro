@@ -1,227 +1,499 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { getRealtimeService, type RealtimeData, type RealtimeConfig } from './realtime';
-import type { PricePoint, KpiData } from './provider.types';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { webSocketService } from './websocketService';
+import { multiExchangeAggregator } from './multiExchangeAggregator';
+import { highFrequencyHandler } from './highFrequencyHandler';
 
-export interface UseRealtimeDataOptions {
-  symbols: string[];
-  types?: ('price' | 'kpi' | 'volume')[];
-  updateInterval?: number;
-  enableWebSocket?: boolean;
-  webSocketUrl?: string;
-}
+// Real-time price data hook
+export function useRealtimePrices(symbols: string[], updateInterval: number = 1000) {
+  const [prices, setPrices] = useState<Array<{
+    symbol: string;
+    price: number;
+    timestamp: number;
+    source: string;
+  }>>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<number>(0);
+  
+  const symbolsRef = useRef(symbols);
+  const updateIntervalRef = useRef(updateInterval);
+  const subscriptionRefs = useRef<Map<string, () => void>>(new Map());
 
-export interface RealtimeDataState {
-  data: RealtimeData[];
-  isConnected: boolean;
-  isRunning: boolean;
-  error: string | null;
-  lastUpdate: Date | null;
-}
-
-export function useRealtimeData(options: UseRealtimeDataOptions): RealtimeDataState & {
-  start: () => Promise<void>;
-  stop: () => void;
-  addSymbol: (symbol: string) => void;
-  removeSymbol: (symbol: string) => void;
-  updateConfig: (newConfig: Partial<RealtimeConfig>) => void;
-} {
-  const [state, setState] = useState<RealtimeDataState>({
-    data: [],
-    isConnected: false,
-    isRunning: false,
-    error: null,
-    lastUpdate: null,
-  });
-
-  const serviceRef = useRef(getRealtimeService());
-  const dataRef = useRef<RealtimeData[]>([]);
-
-  // Initialize service with options
+  // Update refs when props change
   useEffect(() => {
-    const service = serviceRef.current;
-    
-    const config: RealtimeConfig = {
-      symbols: options.symbols,
-      updateInterval: options.updateInterval || 5000,
-      enableWebSocket: options.enableWebSocket || false,
-      webSocketUrl: options.webSocketUrl,
-    };
+    symbolsRef.current = symbols;
+    updateIntervalRef.current = updateInterval;
+  }, [symbols, updateInterval]);
 
-    service.updateConfig(config);
-  }, [options.symbols, options.updateInterval, options.enableWebSocket, options.webSocketUrl]);
-
-  // Set up event listeners
+  // Connection status management
   useEffect(() => {
-    const service = serviceRef.current;
-
-    const handleData = (data: RealtimeData) => {
-      // Filter by types if specified
-      if (options.types && !options.types.includes(data.type)) {
-        return;
+    const handleConnection = (status: any) => {
+      setIsConnected(status.status === 'connected');
+      if (status.status === 'connected' && isRunning) {
+        // Resubscribe to symbols when reconnected
+        symbolsRef.current.forEach(symbol => {
+          if (!subscriptionRefs.current.has(symbol)) {
+            const unsubscribe = multiExchangeAggregator.subscribeToSymbol(symbol);
+            subscriptionRefs.current.set(symbol, unsubscribe);
+          }
+        });
       }
-
-      // Filter by symbols
-      if (!options.symbols.includes(data.symbol)) {
-        return;
-      }
-
-      // Update data
-      dataRef.current = [...dataRef.current, data];
-      
-      // Keep only last 1000 data points to prevent memory issues
-      if (dataRef.current.length > 1000) {
-        dataRef.current = dataRef.current.slice(-1000);
-      }
-
-      setState(prev => ({
-        ...prev,
-        data: [...dataRef.current],
-        lastUpdate: new Date(),
-      }));
     };
 
-    const handleConnected = () => {
-      setState(prev => ({
-        ...prev,
-        isConnected: true,
-        error: null,
-      }));
+    const handleError = (error: Error) => {
+      setError(error.message);
     };
 
-    const handleDisconnected = () => {
-      setState(prev => ({
-        ...prev,
-        isConnected: false,
-      }));
-    };
+    webSocketService.on('connection', handleConnection);
+    webSocketService.on('error', handleError);
 
-    const handleError = (error: any) => {
-      setState(prev => ({
-        ...prev,
-        error: error?.message || 'Real-time data error',
-      }));
-    };
-
-    // Add event listeners
-    service.on('data', handleData);
-    service.on('connected', handleConnected);
-    service.on('disconnected', handleDisconnected);
-    service.on('error', handleError);
-
-    // Get initial status
-    const status = service.getStatus();
-    setState(prev => ({
-      ...prev,
-      isConnected: status.isConnected,
-      isRunning: status.isRunning,
-    }));
-
-    // Cleanup
     return () => {
-      service.off('data', handleData);
-      service.off('connected', handleConnected);
-      service.off('disconnected', handleDisconnected);
-      service.off('error', handleError);
+      webSocketService.off('connection', handleConnection);
+      webSocketService.off('error', handleError);
     };
-  }, [options.symbols, options.types]);
+  }, [isRunning]);
 
+  // Start real-time updates
   const start = useCallback(async () => {
     try {
-      await serviceRef.current.start();
-      setState(prev => ({
-        ...prev,
-        isRunning: true,
-        error: null,
-      }));
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        error: error instanceof Error ? error.message : 'Failed to start real-time service',
-      }));
+      setError(null);
+      setIsRunning(true);
+
+      // Connect WebSocket if not connected
+      if (!webSocketService.getConnectionStatus().isConnected) {
+        await webSocketService.connect();
+      }
+
+      // Subscribe to all symbols
+      symbolsRef.current.forEach(symbol => {
+        if (!subscriptionRefs.current.has(symbol)) {
+          const unsubscribe = multiExchangeAggregator.subscribeToSymbol(symbol);
+          subscriptionRefs.current.set(symbol, unsubscribe);
+        }
+      });
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start real-time updates');
+      setIsRunning(false);
     }
   }, []);
 
+  // Stop real-time updates
   const stop = useCallback(() => {
-    serviceRef.current.stop();
-    setState(prev => ({
-      ...prev,
-      isRunning: false,
-    }));
+    setIsRunning(false);
+    
+    // Unsubscribe from all symbols
+    subscriptionRefs.current.forEach(unsubscribe => unsubscribe());
+    subscriptionRefs.current.clear();
   }, []);
 
-  const addSymbol = useCallback((symbol: string) => {
-    serviceRef.current.addSymbol(symbol);
-  }, []);
+  // Data subscription
+  useEffect(() => {
+    if (!isRunning) return;
 
-  const removeSymbol = useCallback((symbol: string) => {
-    serviceRef.current.removeSymbol(symbol);
-  }, []);
+    const handleAggregatedData = (data: any) => {
+      if (symbolsRef.current.includes(data.symbol)) {
+        setPrices(prev => {
+          const existing = prev.find(p => p.symbol === data.symbol);
+          if (existing) {
+            return prev.map(p => 
+              p.symbol === data.symbol 
+                ? { ...p, price: data.midPrice, timestamp: Date.now(), source: 'aggregated' }
+                : p
+            );
+          } else {
+            return [...prev, {
+              symbol: data.symbol,
+              price: data.midPrice,
+              timestamp: Date.now(),
+              source: 'aggregated',
+            }];
+          }
+        });
+        setLastUpdate(Date.now());
+      }
+    };
 
-  const updateConfig = useCallback((newConfig: Partial<RealtimeConfig>) => {
-    serviceRef.current.updateConfig(newConfig);
-  }, []);
+    const handleExchangeData = (data: any) => {
+      if (symbolsRef.current.includes(data.data.symbol)) {
+        setPrices(prev => {
+          const existing = prev.find(p => p.symbol === data.data.symbol);
+          if (existing) {
+            return prev.map(p => 
+              p.symbol === data.data.symbol 
+                ? { ...p, price: data.data.price, timestamp: Date.now(), source: data.exchange }
+                : p
+            );
+          } else {
+            return [...prev, {
+              symbol: data.data.symbol,
+              price: data.data.price,
+              timestamp: Date.now(),
+              source: data.exchange,
+            }];
+          }
+        });
+        setLastUpdate(Date.now());
+      }
+    };
+
+    // Subscribe to aggregated data updates
+    multiExchangeAggregator.on('aggregatedDataUpdate', handleAggregatedData);
+    
+    // Subscribe to individual exchange updates
+    multiExchangeAggregator.on('exchangeDataUpdate', handleExchangeData);
+
+    return () => {
+      multiExchangeAggregator.off('aggregatedDataUpdate', handleAggregatedData);
+      multiExchangeAggregator.off('exchangeDataUpdate', handleExchangeData);
+    };
+  }, [isRunning]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stop();
+    };
+  }, [stop]);
+
+  // Memoized values for performance
+  const memoizedPrices = useMemo(() => prices, [prices]);
+  const memoizedLastUpdate = useMemo(() => lastUpdate, [lastUpdate]);
 
   return {
-    ...state,
+    prices: memoizedPrices,
+    isConnected,
+    isRunning,
+    error,
+    lastUpdate: memoizedLastUpdate,
     start,
     stop,
-    addSymbol,
-    removeSymbol,
-    updateConfig,
   };
 }
 
-// Specialized hooks for specific data types
-export function useRealtimePrices(symbols: string[], updateInterval = 5000) {
-  const { data, ...rest } = useRealtimeData({
-    symbols,
-    types: ['price'],
-    updateInterval,
-  });
+// Real-time KPI data hook
+export function useRealtimeKPIs(symbols: string[], updateInterval: number = 5000) {
+  const [kpis, setKpis] = useState<Array<{
+    symbol: string;
+    change: number;
+    changePercent: number;
+    volume: number;
+    timestamp: number;
+    source: string;
+  }>>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<number>(0);
+  
+  const symbolsRef = useRef(symbols);
+  const updateIntervalRef = useRef(updateInterval);
+  const subscriptionRefs = useRef<Map<string, () => void>>(new Map());
 
-  const prices = data
-    .filter(d => d.type === 'price')
-    .map(d => ({ ...d.data as PricePoint, symbol: d.symbol }));
+  // Update refs when props change
+  useEffect(() => {
+    symbolsRef.current = symbols;
+    updateIntervalRef.current = updateInterval;
+  }, [symbols, updateInterval]);
+
+  // Connection status management
+  useEffect(() => {
+    const handleConnection = (status: any) => {
+      setIsConnected(status.status === 'connected');
+      if (status.status === 'connected' && isRunning) {
+        // Resubscribe to symbols when reconnected
+        symbolsRef.current.forEach(symbol => {
+          if (!subscriptionRefs.current.has(symbol)) {
+            const unsubscribe = multiExchangeAggregator.subscribeToSymbol(symbol);
+            subscriptionRefs.current.set(symbol, unsubscribe);
+          }
+        });
+      }
+    };
+
+    const handleError = (error: Error) => {
+      setError(error.message);
+    };
+
+    webSocketService.on('connection', handleConnection);
+    webSocketService.on('error', handleError);
+
+    return () => {
+      webSocketService.off('connection', handleConnection);
+      webSocketService.off('error', handleError);
+    };
+  }, [isRunning]);
+
+  // Start real-time updates
+  const start = useCallback(async () => {
+    try {
+      setError(null);
+      setIsRunning(true);
+
+      // Connect WebSocket if not connected
+      if (!webSocketService.getConnectionStatus().isConnected) {
+        await webSocketService.connect();
+      }
+
+      // Subscribe to all symbols
+      symbolsRef.current.forEach(symbol => {
+        if (!subscriptionRefs.current.has(symbol)) {
+          const unsubscribe = multiExchangeAggregator.subscribeToSymbol(symbol);
+          subscriptionRefs.current.set(symbol, unsubscribe);
+        }
+      });
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start real-time updates');
+      setIsRunning(false);
+    }
+  }, []);
+
+  // Stop real-time updates
+  const stop = useCallback(() => {
+    setIsRunning(false);
+    
+    // Unsubscribe from all symbols
+    subscriptionRefs.current.forEach(unsubscribe => unsubscribe());
+    subscriptionRefs.current.clear();
+  }, []);
+
+  // Data subscription
+  useEffect(() => {
+    if (!isRunning) return;
+
+    const handleAggregatedData = (data: any) => {
+      if (symbolsRef.current.includes(data.symbol)) {
+        // Calculate KPI metrics from aggregated data
+        const exchangeData = multiExchangeAggregator.getExchangeData(data.symbol);
+        if (exchangeData) {
+          const exchanges = Array.from(exchangeData.values());
+          const avgPrice = exchanges.reduce((sum, ex) => sum + ex.price, 0) / exchanges.length;
+          const change = data.midPrice - avgPrice;
+          const changePercent = (change / avgPrice) * 100;
+
+          setKpis(prev => {
+            const existing = prev.find(k => k.symbol === data.symbol);
+            if (existing) {
+              return prev.map(k => 
+                k.symbol === data.symbol 
+                  ? { ...k, change, changePercent, volume: data.totalVolume, timestamp: Date.now(), source: 'aggregated' }
+                  : k
+              );
+            } else {
+              return [...prev, {
+                symbol: data.symbol,
+                change,
+                changePercent,
+                volume: data.totalVolume,
+                timestamp: Date.now(),
+                source: 'aggregated',
+              }];
+            }
+          });
+          setLastUpdate(Date.now());
+        }
+      }
+    };
+
+    // Subscribe to aggregated data updates
+    multiExchangeAggregator.on('aggregatedDataUpdate', handleAggregatedData);
+
+    return () => {
+      multiExchangeAggregator.off('aggregatedDataUpdate', handleAggregatedData);
+    };
+  }, [isRunning]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stop();
+    };
+  }, [stop]);
+
+  // Memoized values for performance
+  const memoizedKpis = useMemo(() => kpis, [kpis]);
+  const memoizedLastUpdate = useMemo(() => lastUpdate, [lastUpdate]);
 
   return {
-    ...rest,
-    prices,
-    data,
+    kpis: memoizedKpis,
+    isConnected,
+    isRunning,
+    error,
+    lastUpdate: memoizedLastUpdate,
+    start,
+    stop,
   };
 }
 
-export function useRealtimeKPIs(symbols: string[], updateInterval = 10000) {
-  const { data, ...rest } = useRealtimeData({
-    symbols,
-    types: ['kpi'],
-    updateInterval,
-  });
+// High-frequency data hook
+export function useHighFrequencyData(symbol: string, type: 'raw' | 'compressed' = 'compressed') {
+  const [data, setData] = useState<any[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<number>(0);
+  
+  const symbolRef = useRef(symbol);
+  const typeRef = useRef(type);
 
-  const kpis = data
-    .filter(d => d.type === 'kpi')
-    .map(d => d.data as KpiData);
+  // Update refs when props change
+  useEffect(() => {
+    symbolRef.current = symbol;
+    typeRef.current = type;
+  }, [symbol, type]);
+
+  // Data subscription
+  useEffect(() => {
+    const handleRawData = (update: any) => {
+      if (update.symbol === symbolRef.current && typeRef.current === 'raw') {
+        setData(update.data);
+        setLastUpdate(Date.now());
+      }
+    };
+
+    const handleCompressedData = (update: any) => {
+      if (update.symbol === symbolRef.current && typeRef.current === 'compressed') {
+        setData(update.data);
+        setLastUpdate(Date.now());
+      }
+    };
+
+    const handleError = (error: Error) => {
+      setError(error.message);
+    };
+
+    // Subscribe to data updates
+    highFrequencyHandler.on('rawData', handleRawData);
+    highFrequencyHandler.on('compressedData', handleCompressedData);
+    highFrequencyHandler.on('error', handleError);
+
+    // Get initial data
+    const initialData = highFrequencyHandler.getData(symbolRef.current, typeRef.current);
+    if (initialData.length > 0) {
+      setData(initialData);
+      setLastUpdate(Date.now());
+    }
+
+    return () => {
+      highFrequencyHandler.off('rawData', handleRawData);
+      highFrequencyHandler.off('compressedData', handleCompressedData);
+      highFrequencyHandler.off('error', handleError);
+    };
+  }, [symbol, type]);
+
+  // Memoized values for performance
+  const memoizedData = useMemo(() => data, [data]);
+  const memoizedLastUpdate = useMemo(() => lastUpdate, [lastUpdate]);
 
   return {
-    ...rest,
-    kpis,
-    data,
+    data: memoizedData,
+    isConnected,
+    error,
+    lastUpdate: memoizedLastUpdate,
   };
 }
 
-export function useRealtimeVolume(symbols: string[], updateInterval = 2000) {
-  const { data, ...rest } = useRealtimeData({
-    symbols,
-    types: ['volume'],
-    updateInterval,
-  });
+// Exchange quality metrics hook
+export function useExchangeQualityMetrics() {
+  const [metrics, setMetrics] = useState<Map<string, any>>(new Map());
+  const [lastUpdate, setLastUpdate] = useState<number>(0);
 
-  const volumes = data
-    .filter(d => d.type === 'volume')
-    .map(d => d.data as number);
+  useEffect(() => {
+    const handleQualityMetrics = (newMetrics: Map<string, any>) => {
+      setMetrics(newMetrics);
+      setLastUpdate(Date.now());
+    };
+
+    // Get initial metrics
+    const initialMetrics = multiExchangeAggregator.getQualityMetrics();
+    setMetrics(initialMetrics);
+    setLastUpdate(Date.now());
+
+    // Subscribe to metrics updates
+    multiExchangeAggregator.on('qualityMetrics', handleQualityMetrics);
+
+    return () => {
+      multiExchangeAggregator.off('qualityMetrics', handleQualityMetrics);
+    };
+  }, []);
+
+  // Memoized values for performance
+  const memoizedMetrics = useMemo(() => metrics, [metrics]);
+  const memoizedLastUpdate = useMemo(() => lastUpdate, [lastUpdate]);
 
   return {
-    ...rest,
-    volumes,
-    data,
+    metrics: memoizedMetrics,
+    lastUpdate: memoizedLastUpdate,
   };
+}
+
+// Performance statistics hook
+export function usePerformanceStats() {
+  const [stats, setStats] = useState({
+    totalSymbols: 0,
+    totalExchanges: 0,
+    averageConfidence: 0,
+    dataUpdateRate: 0,
+  });
+  const [lastUpdate, setLastUpdate] = useState<number>(0);
+
+  useEffect(() => {
+    const updateStats = () => {
+      const newStats = multiExchangeAggregator.getPerformanceStats();
+      setStats(newStats);
+      setLastUpdate(Date.now());
+    };
+
+    // Update stats immediately
+    updateStats();
+
+    // Update stats every 10 seconds
+    const interval = setInterval(updateStats, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Memoized values for performance
+  const memoizedStats = useMemo(() => stats, [stats]);
+  const memoizedLastUpdate = useMemo(() => lastUpdate, [lastUpdate]);
+
+  return {
+    stats: memoizedStats,
+    lastUpdate: memoizedLastUpdate,
+  };
+}
+
+// Connection status hook
+export function useConnectionStatus() {
+  const [status, setStatus] = useState(webSocketService.getConnectionStatus());
+
+  useEffect(() => {
+    const updateStatus = () => {
+      setStatus(webSocketService.getConnectionStatus());
+    };
+
+    const handleConnection = () => {
+      updateStatus();
+    };
+
+    // Update status immediately
+    updateStatus();
+
+    // Subscribe to connection events
+    webSocketService.on('connection', handleConnection);
+
+    // Update status every 5 seconds
+    const interval = setInterval(updateStatus, 5000);
+
+    return () => {
+      webSocketService.off('connection', handleConnection);
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Memoized values for performance
+  const memoizedStatus = useMemo(() => status, [status]);
+
+  return memoizedStatus;
 }
