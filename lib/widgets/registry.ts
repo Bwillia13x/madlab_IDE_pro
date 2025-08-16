@@ -25,6 +25,10 @@ const widgetComponents = {
   'candlestick-chart': () => import('@/components/widgets/CandlestickChart').then(m => ({ default: m.CandlestickChart })),
   'portfolio-tracker': () => import('@/components/widgets/PortfolioTracker').then(m => ({ default: m.PortfolioTracker })),
   'technical-indicators': () => import('@/components/widgets/TechnicalIndicators').then(m => ({ default: m.TechnicalIndicators })),
+  
+  // Interactive and real-time widgets
+  'interactive-candlestick': () => import('@/components/widgets/InteractiveCandlestickChart').then(m => ({ default: m.InteractiveCandlestickChart })),
+  'realtime-portfolio': () => import('@/components/widgets/RealtimePortfolioDashboard').then(m => ({ default: m.RealtimePortfolioDashboard })),
 };
 
 // Initialize widget components in registry

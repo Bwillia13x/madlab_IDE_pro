@@ -367,4 +367,44 @@ export const defaultWidgetSchemas: WidgetRegistry = {
       component: () => null, // Will be replaced by actual component
     },
   },
+  
+  'interactive-candlestick': {
+    type: 'interactive-candlestick',
+    title: 'Interactive Candlestick',
+    description: 'Professional D3.js candlestick chart with zoom, pan, and real-time updates',
+    category: 'charting',
+    defaultLayout: { w: 12, h: 10, minW: 10, minH: 8 },
+    props: {
+      symbol: {
+        type: 'string',
+        label: 'Symbol',
+        description: 'Stock symbol to display',
+        required: true,
+        default: 'AAPL',
+      },
+    },
+    runtime: {
+      component: () => null, // Will be replaced by actual component
+    },
+  },
+  
+  'realtime-portfolio': {
+    type: 'realtime-portfolio',
+    title: 'Real-time Portfolio',
+    description: 'Live portfolio tracking with real-time data updates and performance metrics',
+    category: 'portfolio',
+    defaultLayout: { w: 14, h: 10, minW: 12, minH: 8 },
+    props: {
+      defaultSymbols: {
+        type: 'string',
+        label: 'Default Symbols',
+        description: 'Comma-separated list of default symbols',
+        required: false,
+        default: 'AAPL,MSFT,GOOGL',
+      },
+    },
+    runtime: {
+      component: () => null, // Will be replaced by actual component
+    },
+  },
 };
