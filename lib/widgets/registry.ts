@@ -2,7 +2,7 @@ import { defaultWidgetSchemas } from './schema';
 import type { WidgetSchema, WidgetRegistry } from './schema';
 
 // Global widget registry
-let widgetRegistry: WidgetRegistry = { ...defaultWidgetSchemas };
+const widgetRegistry: WidgetRegistry = { ...defaultWidgetSchemas };
 
 // Widget component imports
 const widgetComponents: Record<string, () => Promise<{ default: React.ComponentType<any> }>> = {

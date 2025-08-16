@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Trash2, TrendingUp, TrendingDown, DollarSign, Activity, RefreshCw } from 'lucide-react';
 import type { Widget } from '@/lib/store';
 import { useKpis } from '@/lib/data/hooks';
+import { useRealtimeKPIs } from '@/lib/data/useRealtimeData';
 
 interface PortfolioAsset {
   symbol: string;
@@ -40,9 +41,11 @@ export function PortfolioTracker({ widget, sheetId, onTitleChange }: PortfolioTr
   const [newAvgPrice, setNewAvgPrice] = useState('');
 
   // Fetch real-time data for all assets
+  const { kpis: kpisData, isRunning: kpisLoading, error: kpisError } = useRealtimeKPIs(assets.map(asset => asset.symbol));
+  
   const assetData = assets.map(asset => {
-    const { data, loading, error } = useKpis(asset.symbol);
-    return { asset, data, loading, error };
+    const data = kpisData.find(kpi => kpi.symbol === asset.symbol);
+    return { asset, data, loading: kpisLoading, error: kpisError };
   });
 
   // Calculate portfolio statistics
@@ -56,7 +59,8 @@ export function PortfolioTracker({ widget, sheetId, onTitleChange }: PortfolioTr
       const data = assetData[index]?.data;
       if (data) {
         const cost = asset.shares * asset.avgPrice;
-        const marketValue = asset.shares * data.price;
+        // Use average price for market value since KPI data doesn't include price
+        const marketValue = asset.shares * asset.avgPrice;
         const dayChange = asset.shares * data.change;
         const totalReturnForAsset = marketValue - cost;
 
@@ -86,10 +90,11 @@ export function PortfolioTracker({ widget, sheetId, onTitleChange }: PortfolioTr
       const data = assetData[index]?.data;
       if (!data) return asset;
 
-      const currentPrice = data.price;
+      // Use average price since KPI data doesn't include current price
+      const currentPrice = asset.avgPrice;
       const marketValue = asset.shares * currentPrice;
-      const totalReturn = marketValue - (asset.shares * asset.avgPrice);
-      const totalReturnPercent = ((currentPrice - asset.avgPrice) / asset.avgPrice) * 100;
+      const totalReturn = 0; // No price change data available
+      const totalReturnPercent = 0;
       const dayChange = asset.shares * data.change;
       const dayChangePercent = data.changePercent;
 
