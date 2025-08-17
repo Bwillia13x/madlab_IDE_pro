@@ -53,10 +53,11 @@ export function GridCanvas({ sheet }: GridCanvasProps) {
           {sheet.widgets.map((widget) => {
             const selected = selectedWidgetId === widget.id;
             return (
-        <button
+              <div
                 key={widget.id}
+                role="button"
                 className={cn(
-          'outline-0',
+                  'outline-0',
                   selected && 'ring-1 ring-[#007acc] ring-offset-0'
                 )}
                 onClick={() => setSelectedWidget(widget.id)}
@@ -68,7 +69,7 @@ export function GridCanvas({ sheet }: GridCanvasProps) {
                 data-widget-id={widget.id}
               >
                 <WidgetTile widget={widget} sheetId={sheet.id} />
-              </button>
+              </div>
             );
           })}
         </ResponsiveGridLayout>

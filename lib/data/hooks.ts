@@ -166,3 +166,107 @@ export function useDataCache() {
 
   return { clearCache, clearSymbolCache };
 }
+
+// Additional demo hooks for richer mock surfaces
+export function usePeerKpis(symbols: string[]) {
+  const [data, setData] = useState<Record<string, KpiData>>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { dataProvider } = useWorkspaceStore();
+
+  const fetchData = useCallback(async () => {
+    if (!symbols || symbols.length === 0) return;
+    const norm = symbols.map((s) => s.toUpperCase());
+    const key = getCacheKey('peer-kpis', norm.join(','));
+    const cached = getCachedData<Record<string, KpiData>>(key);
+    if (cached) {
+      setData(cached);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const provider = providers[dataProvider as keyof typeof providers] || providers.mock;
+      const results: Record<string, KpiData> = {};
+      for (const sym of norm) {
+        // Sequential to keep deterministic and simple
+        results[sym] = await provider.getKpis(sym);
+      }
+      setData(results);
+      setCachedData(key, results);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch peer KPIs');
+    } finally {
+      setLoading(false);
+    }
+  }, [symbols, dataProvider]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+export function useQuarterlyFinancials(symbol?: string, quarters = 8) {
+  type QRow = { period: string; revenue: number; netIncome: number; fcf: number };
+  const [data, setData] = useState<QRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { dataProvider } = useWorkspaceStore();
+
+  const fetchData = useCallback(async () => {
+    if (!symbol) return;
+    const key = getCacheKey('q-financials', symbol, String(quarters));
+    const cached = getCachedData<QRow[]>(key);
+    if (cached) {
+      setData(cached);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const provider = providers[dataProvider as keyof typeof providers] || providers.mock;
+      // Base financials to seed series
+      const f = await provider.getFinancials(symbol);
+      const baseRev = f.revenue;
+      const baseNi = f.netIncome;
+      const baseFcf = f.fcf;
+      // Deterministic pseudo-random based on symbol
+      const rng = (seed: number) => {
+        let x = seed | 0;
+        return () => {
+          x ^= x << 13;
+          x ^= x >> 17;
+          x ^= x << 5;
+          return (Math.abs(x) % 1000) / 1000;
+        };
+      };
+      const r = rng(symbol.split('').reduce((a, c) => a + c.charCodeAt(0), 0));
+      const now = new Date();
+      const series: QRow[] = Array.from({ length: quarters }).map((_, idxFromEnd) => {
+        const i = quarters - idxFromEnd; // 1..quarters
+        const drift = 1 + (i - quarters / 2) * 0.01;
+        const noise = (r() - 0.5) * 0.08;
+        const rev = Math.max(1, baseRev * 0.25 * drift * (1 + noise));
+        const ni = Math.max(0.1, baseNi * 0.25 * drift * (1 + (r() - 0.5) * 0.12));
+        const free = Math.max(0.1, baseFcf * 0.25 * drift * (1 + (r() - 0.5) * 0.12));
+        const d = new Date(now.getFullYear(), now.getMonth() - (quarters - i) * 3, 1);
+        const label = `${d.getFullYear()} Q${Math.floor(d.getMonth() / 3) + 1}`;
+        return { period: label, revenue: rev, netIncome: ni, fcf: free };
+      });
+      setData(series);
+      setCachedData(key, series);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to build quarterly series');
+    } finally {
+      setLoading(false);
+    }
+  }, [symbol, quarters, dataProvider]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}

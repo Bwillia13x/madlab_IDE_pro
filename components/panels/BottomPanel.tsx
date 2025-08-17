@@ -1,11 +1,12 @@
 'use client';
-
-import { useState } from 'react';
 import { X, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useWorkspaceStore } from '@/lib/store';
+import { Lightbulb } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { InsightsEngine, type Insight } from '@/lib/insights';
 
 const MOCK_OUTPUT_LOGS = [
   { time: '10:34:21', level: 'info', message: 'Portfolio loaded successfully' },
@@ -26,10 +27,28 @@ export function BottomPanel() {
     bottomPanelHeight, 
     activeBottomTab, 
     setActiveBottomTab, 
-    toggleBottomPanel 
+    toggleBottomPanel, 
+    globalSymbol,
   } = useWorkspaceStore();
   
   const [isMaximized, setIsMaximized] = useState(false);
+  const [insights, setInsights] = useState<Insight[]>([]);
+  const engineRef = useRef<InsightsEngine | null>(null);
+
+  // Start/stop insights engine when Insights tab is active
+  useEffect(() => {
+    if (activeBottomTab !== 'insights') return;
+    const engine = new InsightsEngine(6000);
+    engineRef.current = engine;
+    const onInsight = (ins: Insight) => setInsights((prev) => [ins, ...prev].slice(0, 50));
+    engine.on('insight', onInsight);
+    engine.start(globalSymbol);
+    return () => {
+      engine.off('insight', onInsight);
+      engine.stop();
+      engineRef.current = null;
+    };
+  }, [activeBottomTab, globalSymbol]);
 
   if (bottomPanelCollapsed) {
     return (
@@ -81,6 +100,13 @@ export function BottomPanel() {
               className="bg-transparent text-[#cccccc] data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] rounded-none px-3 h-full"
             >
               Terminal
+            </TabsTrigger>
+            <TabsTrigger 
+              value="insights" 
+              className="bg-transparent text-[#cccccc] data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] rounded-none px-3 h-full flex items-center gap-2"
+              title="AI-powered insights"
+            >
+              <Lightbulb className="h-3 w-3" /> Insights
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -160,6 +186,29 @@ export function BottomPanel() {
               </div>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="insights" className="flex-1 mt-0">
+          <ScrollArea className="h-full">
+            <div className="p-3 space-y-3 text-sm">
+              {insights.length === 0 ? (
+                <>
+                  <div className="text-[#cccccc]">Insights will appear here as you interact with the workspace.</div>
+                  <div className="text-[#969696]">Try adding widgets or changing the global symbol to trigger insights.</div>
+                </>
+              ) : (
+                <div className="space-y-2">
+                  {insights.map((ins) => (
+                    <div key={ins.id} className="border border-[#2d2d30] rounded p-2 bg-[#1e1e1e]">
+                      <div className="text-[#cccccc] font-medium">{ins.title}</div>
+                      <div className="text-[#969696]">{ins.message}</div>
+                      <div className="text-[10px] text-[#6f6f6f] mt-1">{ins.symbol} • {ins.timestamp.toLocaleTimeString()}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         </TabsContent>
       </Tabs>
     </div>

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mockAdapter } from '@/lib/data/adapters/mock';
-import type { PriceRange } from '@/lib/data/providers';
+import type { PriceRange } from '@/lib/data/provider.types';
 
 function approxEqual(a: number, b: number, tol = 1e-9) {
   return Math.abs(a - b) <= tol;

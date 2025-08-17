@@ -1,16 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { Send, Minimize2, Bot, User } from 'lucide-react';
+import { Send, Minimize2, Bot, User, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useWorkspaceStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { getWorkflowFromQuery, suggestWorkflows } from '@/lib/workflows';
 
 export function AgentChat() {
-  const { messages, addMessage, chatCollapsed, toggleChat } = useWorkspaceStore();
+  const { messages, addMessage, chatCollapsed, toggleChat, globalSymbol, createSheetFromWorkflow } = useWorkspaceStore();
   const [inputValue, setInputValue] = useState('');
+  const [suggestions, setSuggestions] = useState<{ id: string; title: string }[]>([]);
+  const [listening, setListening] = useState(false);
+  const recognitionRef = (typeof window !== 'undefined' ? (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition : null) ? { current: null as any } : { current: null as any };
 
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
@@ -18,13 +22,57 @@ export function AgentChat() {
     addMessage(inputValue, 'user');
     setInputValue('');
 
-    // Simulate agent response
-    setTimeout(() => {
+    // Basic workflow intent detection (Phase 2)
+    const workflow = getWorkflowFromQuery(inputValue, globalSymbol);
+    if (workflow) {
+      addMessage(`I can create a new sheet for: ${workflow.title}.`, 'agent');
+      const sheetId = createSheetFromWorkflow(workflow.title, workflow.kind, workflow.widgets);
+      if (sheetId) {
+        addMessage(`Created sheet "${workflow.title}" with an initial setup for ${globalSymbol}.`, 'agent');
+        return;
+      }
+    }
+
+    // Fallback generic response with suggestions
+    const sugg = suggestWorkflows(inputValue).slice(0, 3).map((w) => ({ id: w.id, title: w.title }));
+    if (sugg.length > 0) {
+      setSuggestions(sugg);
+      addMessage(`Did you mean: ${sugg.map((s) => s.title).join(', ')}?`, 'agent');
+    } else {
       addMessage(
-        "I understand you're looking for financial analysis assistance. I can help you with data interpretation, model validation, and insights generation. What specific analysis would you like to explore?",
+        "I can help set up analyses like Earnings Analysis, Risk Overview, Sector Comparison, or Options Playbook. Try describing what you'd like to analyze.",
         'agent'
       );
-    }, 1000);
+    }
+  };
+
+  const toggleVoice = () => {
+    try {
+      const SpeechRecognition: any = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      if (!SpeechRecognition) return;
+      if (!recognitionRef.current) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = false;
+        recognitionRef.current.lang = 'en-US';
+        recognitionRef.current.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript as string;
+          setInputValue(transcript);
+          setListening(false);
+        };
+        recognitionRef.current.onend = () => setListening(false);
+        recognitionRef.current.onerror = () => setListening(false);
+      }
+      if (!listening) {
+        setListening(true);
+        recognitionRef.current.start();
+      } else {
+        recognitionRef.current.stop();
+        setListening(false);
+      }
+    } catch {
+      setListening(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -85,12 +133,26 @@ export function AgentChat() {
               </div>
             </div>
           ))}
+          {/* Inline suggestions */}
+          {suggestions.length > 0 && (
+            <div className="text-xs text-muted-foreground">
+              Suggestions: {suggestions.map((s) => s.title).join(', ')}
+            </div>
+          )}
         </div>
       </ScrollArea>
 
       {/* Input */}
       <div className="p-3 border-t border-[#2d2d30]">
         <div className="flex gap-2">
+          <Button
+            variant={listening ? 'default' : 'outline'}
+            onClick={toggleVoice}
+            className="h-9 w-9 p-0"
+            title="Voice input (browser only)"
+          >
+            {listening ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+          </Button>
           <Input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}

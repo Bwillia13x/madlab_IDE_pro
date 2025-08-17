@@ -4,8 +4,9 @@ import type { Layout } from 'react-grid-layout';
 import { SHEET_PRESETS } from './presets';
 import { exportWorkspaceJson } from './io/export';
 import { coerceToWorkspaceState, parseWorkspaceImport } from './io/import';
+import { getSchemaWidget } from './widgets/registry';
 
-export type SheetKind = 'valuation' | 'charting' | 'risk' | 'options' | 'blank';
+export type SheetKind = 'valuation' | 'charting' | 'screening' | 'portfolio' | 'risk' | 'options' | 'blank';
 
 export interface Widget {
   id: string;
@@ -36,7 +37,7 @@ export interface WorkspaceState {
   sheets: Sheet[];
   activeSheetId?: string;
   messages: Message[];
-  theme: 'light' | 'dark';
+  theme: 'light' | 'dark' | 'malibu-sunrise' | 'malibu-sunset';
   explorerCollapsed: boolean;
   explorerWidth: number;
   chatCollapsed: boolean;
@@ -53,6 +54,10 @@ export interface WorkspaceState {
   presetVersion: number;
   // Data provider selection
   dataProvider: string;
+  // Global symbol context (Phase 1)
+  globalSymbol: string;
+  // Experience mode (Phase 2)
+  experienceMode: 'beginner' | 'expert';
 }
 
 interface WorkspaceActions {
@@ -74,7 +79,7 @@ interface WorkspaceActions {
   clearMessages: () => void;
 
   // UI state
-  setTheme: (theme: 'light' | 'dark') => void;
+  setTheme: (theme: 'light' | 'dark' | 'malibu-sunrise' | 'malibu-sunset') => void;
   toggleExplorer: () => void;
   toggleChat: () => void;
   setBottomPanelHeight: (height: number) => void;
@@ -96,6 +101,15 @@ interface WorkspaceActions {
   // Data Provider
   setDataProvider: (provider: string) => Promise<void>;
   getDataProvider: () => string;
+
+  // Global symbol context (Phase 1)
+  setGlobalSymbol: (symbol: string) => void;
+  applyGlobalSymbolToAllWidgets: (sheetId?: string, options?: { onlyEmpty?: boolean }) => void;
+
+  // Experience mode (Phase 2)
+  setExperienceMode: (mode: 'beginner' | 'expert') => void;
+  getExperienceMode: () => 'beginner' | 'expert';
+  createSheetFromWorkflow: (title: string, kind: SheetKind, widgets: Omit<Widget, 'id'>[]) => string | null;
 
   // Import/export helpers
   exportWorkspace: () => string;
@@ -124,32 +138,56 @@ export const PERSIST_VERSION = 1;
 // Persisted state can be of any shape, define a loose type for migration
 type RawState = Partial<Record<keyof WorkspaceState, unknown>>;
 
+// Helper to create default workbench sheets
+const createDefaultSheets = (): Sheet[] => {
+  const presetKinds: SheetKind[] = ['valuation', 'charting', 'screening', 'portfolio', 'risk', 'options', 'blank'];
+  return presetKinds.map((kind, index) => {
+    const preset = SHEET_PRESETS[kind];
+    const id = `default-${kind}-${Date.now()}-${index}`;
+    return {
+      id,
+      kind,
+      title: preset.label,
+      widgets: preset.widgets.map((widget, widgetIndex) => ({
+        ...widget,
+        id: `widget-${kind}-${widgetIndex}-${Date.now()}`,
+        layout: { ...widget.layout, i: `widget-${kind}-${widgetIndex}-${Date.now()}` },
+      })),
+    };
+  });
+};
+
 // Default initial state
-const createInitialState = (): WorkspaceState => ({
-  sheets: [],
-  activeSheetId: undefined,
-  messages: [
-    {
-      id: '1',
-      content:
-        "Welcome to MAD LAB! I'm your AI assistant for financial analysis. How can I help you today?",
-      timestamp: new Date(),
-      sender: 'agent',
-    },
-  ],
-  theme: 'dark',
-  explorerCollapsed: false,
-  explorerWidth: 280,
-  chatCollapsed: false,
-  bottomPanelHeight: 200,
-  bottomPanelCollapsed: false,
-  activeBottomTab: 'output',
-  selectedWidgetId: undefined,
-  inspectorOpen: false,
-  schemaVersion: 1,
-  presetVersion: 1,
-  dataProvider: 'mock',
-});
+const createInitialState = (): WorkspaceState => {
+  const defaultSheets = createDefaultSheets();
+  return {
+    sheets: defaultSheets,
+    activeSheetId: defaultSheets[0]?.id, // Start with Valuation sheet active
+    messages: [
+      {
+        id: '1',
+        content:
+          "Welcome to MAD LAB! I'm your AI assistant for financial analysis. How can I help you today?",
+        timestamp: new Date(),
+        sender: 'agent',
+      },
+    ],
+    theme: 'malibu-sunrise', // Default to Malibu theme
+    explorerCollapsed: false,
+    explorerWidth: 280,
+    chatCollapsed: false,
+    bottomPanelHeight: 200,
+    bottomPanelCollapsed: false,
+    activeBottomTab: 'output',
+    selectedWidgetId: undefined,
+    inspectorOpen: false,
+    schemaVersion: 1,
+    presetVersion: 1,
+    dataProvider: 'mock',
+    globalSymbol: 'AAPL',
+    experienceMode: 'beginner',
+  };
+};
 
 // Migration helper (exported for tests if needed)
 export function migrateState(persisted: unknown, _fromVersion: number): WorkspaceState {
@@ -169,8 +207,11 @@ export function migrateState(persisted: unknown, _fromVersion: number): Workspac
     );
   }
 
-  // Ensure basic UI defaults
-  next.theme = next.theme === 'light' ? 'light' : 'dark';
+  // Ensure basic UI defaults (allow Malibu variants)
+  const allowedThemes = new Set(['light', 'dark', 'malibu-sunrise', 'malibu-sunset']);
+  next.theme = allowedThemes.has(next.theme as string)
+    ? (next.theme as WorkspaceState['theme'])
+    : 'dark';
   next.explorerCollapsed = Boolean(next.explorerCollapsed);
   next.explorerWidth = typeof next.explorerWidth === 'number' ? next.explorerWidth : 280;
   next.chatCollapsed = Boolean(next.chatCollapsed);
@@ -191,7 +232,7 @@ export function migrateState(persisted: unknown, _fromVersion: number): Workspac
         ({
           ...s,
           id: String(s?.id ?? `sheet-${Math.random().toString(36).slice(2)}`),
-          kind: (['valuation', 'charting', 'risk', 'options', 'blank'] as const).includes(
+          kind: (['valuation', 'charting', 'screening', 'portfolio', 'risk', 'options', 'blank'] as const).includes(
             s?.kind as SheetKind
           )
             ? (s.kind as SheetKind)
@@ -247,31 +288,11 @@ export function migrateState(persisted: unknown, _fromVersion: number): Workspac
 
 export const useWorkspaceStore = create<WorkspaceStore>()(
   persist<WorkspaceStore>(
-    (set, get) => ({
-      // Initial state
-      sheets: [],
-      activeSheetId: undefined,
-      messages: [
-        {
-          id: '1',
-          content:
-            "Welcome to MAD LAB! I'm your AI assistant for financial analysis. How can I help you today?",
-          timestamp: new Date(),
-          sender: 'agent',
-        },
-      ],
-      theme: 'dark',
-      explorerCollapsed: false,
-      explorerWidth: 280,
-      chatCollapsed: false,
-      bottomPanelHeight: 200,
-      bottomPanelCollapsed: false,
-      activeBottomTab: 'output',
-      selectedWidgetId: undefined,
-      inspectorOpen: false,
-      schemaVersion: 1,
-      presetVersion: 1,
-      dataProvider: 'mock',
+    (set, get) => {
+      const initialState = createInitialState();
+      return {
+        // Initial state
+        ...initialState,
 
       // Selection
       setSelectedWidget: (id) => set({ selectedWidgetId: id }),
@@ -291,6 +312,57 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         }
       },
       getDataProvider: () => get().dataProvider,
+
+      // Global symbol context (Phase 1)
+      setGlobalSymbol: (symbol: string) => {
+        const sanitized = (symbol || '').toUpperCase().slice(0, 12);
+        set({ globalSymbol: sanitized });
+      },
+      applyGlobalSymbolToAllWidgets: (sheetId?: string, options?: { onlyEmpty?: boolean }) => {
+        const state = get();
+        const targetSheetId = sheetId || state.activeSheetId;
+        if (!targetSheetId) return;
+        const onlyEmpty = options?.onlyEmpty ?? true;
+        const symbol = state.globalSymbol;
+        set((prev) => ({
+          sheets: prev.sheets.map((s) => {
+            if (s.id !== targetSheetId) return s;
+            return {
+              ...s,
+              widgets: s.widgets.map((w) => {
+                const schema = getSchemaWidget(w.type);
+                const supportsSymbol = Boolean(schema?.props?.symbol);
+                if (!supportsSymbol) return w;
+                const hasSymbol = typeof (w.props as any)?.symbol === 'string' && ((w.props as any).symbol as string).length > 0;
+                if (onlyEmpty && hasSymbol) return w;
+                const nextProps = { ...(w.props || {}), symbol } as Record<string, unknown>;
+                return { ...w, props: nextProps } as Widget;
+              }),
+            } as Sheet;
+          }),
+        }));
+      },
+
+      // Experience mode (Phase 2)
+      setExperienceMode: (mode: 'beginner' | 'expert') => {
+        set({ experienceMode: mode });
+      },
+      getExperienceMode: () => get().experienceMode,
+
+      createSheetFromWorkflow: (title: string, kind: SheetKind, widgets: Omit<Widget, 'id'>[]) => {
+        // Create sheet and populate with provided widgets
+        const before = get().activeSheetId;
+        get().addSheet(kind, title);
+        const sheetId = get().activeSheetId;
+        if (!sheetId || sheetId === before) return null;
+        set((state) => ({
+          sheets: state.sheets.map((s) => (s.id === sheetId ? { ...s, widgets: [] } : s)),
+        }));
+        for (const w of widgets) {
+          get().addWidget(sheetId, w);
+        }
+        return sheetId;
+      },
 
       // Sheet actions
       addSheet: (kind: SheetKind, title?: string) => {
@@ -338,7 +410,19 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       // Widget actions
       addWidget: (sheetId: string, widget: Omit<Widget, 'id'>) => {
         const id = `widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const newWidget: Widget = { version: 1, ...widget, id } as Widget;
+        // Smart defaults (Phase 1): if widget supports a 'symbol' prop, default to globalSymbol when absent
+        let derivedProps = widget.props ? { ...widget.props } : undefined;
+        try {
+          const schema = getSchemaWidget(widget.type);
+          const supportsSymbol = Boolean(schema?.props?.symbol);
+          const providedSymbol = typeof (derivedProps as any)?.symbol === 'string' && ((derivedProps as any).symbol as string).length > 0;
+          if (supportsSymbol && !providedSymbol) {
+            derivedProps = { ...(derivedProps || {}), symbol: get().globalSymbol } as Record<string, unknown>;
+          }
+        } catch {
+          // ignore schema lookup errors and proceed without smart default
+        }
+        const newWidget: Widget = { version: 1, ...widget, id, props: derivedProps } as Widget;
 
         set((state) => ({
           sheets: state.sheets.map((sheet) =>
@@ -438,7 +522,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       },
 
       // UI actions
-      setTheme: (theme: 'light' | 'dark') => {
+      setTheme: (theme: WorkspaceState['theme']) => {
         set({ theme });
       },
 
@@ -574,7 +658,8 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       hydrate: () => {
         // Auto-hydrated by zustand persist middleware
       },
-    }),
+    };
+    },
     {
       name: 'madlab-workspace',
       version: PERSIST_VERSION,

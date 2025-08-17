@@ -7,7 +7,9 @@ import {
   Package, 
   Settings, 
   MessageSquare,
-  Folder
+  Folder,
+  Store,
+  Grid3X3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -24,10 +26,15 @@ const ACTIVITY_ITEMS = [
 
 interface ActivityBarProps {
   onSettingsToggle: () => void;
+  onWidgetGalleryToggle?: () => void;
 }
 
-export function ActivityBar({ onSettingsToggle }: ActivityBarProps) {
+export function ActivityBar({ onSettingsToggle, onWidgetGalleryToggle }: ActivityBarProps) {
   const { toggleExplorer, toggleChat } = useWorkspaceStore();
+  const openMarketplace = () => {
+    const ev = new CustomEvent('madlab:open-marketplace');
+    window.dispatchEvent(ev);
+  };
 
   return (
     <div className="w-12 bg-[#2c2c2c] border-r border-[#2d2d30] flex flex-col" data-testid="activity-bar">
@@ -45,9 +52,8 @@ export function ActivityBar({ onSettingsToggle }: ActivityBarProps) {
                   )}
                   aria-label={item.label}
                   onClick={() => {
-                    if (item.id === 'explorer') {
-                      toggleExplorer();
-                    }
+                    if (item.id === 'explorer') toggleExplorer();
+                    if (item.id === 'extensions') openMarketplace();
                   }}
                 >
                   <item.icon className="h-5 w-5 text-[#cccccc]" />
@@ -62,6 +68,23 @@ export function ActivityBar({ onSettingsToggle }: ActivityBarProps) {
 
         {/* Bottom section */}
         <div className="flex flex-col mt-auto">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-[#2a2d2e]"
+                onClick={onWidgetGalleryToggle}
+                aria-label="Widget Gallery"
+              >
+                <Grid3X3 className="h-5 w-5 text-[#cccccc]" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>Widget Gallery</p>
+            </TooltipContent>
+          </Tooltip>
+
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

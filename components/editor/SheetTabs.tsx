@@ -54,9 +54,9 @@ export function SheetTabs() {
   return (
     <div className="h-9 bg-[#2d2d30] border-b border-[#2d2d30] flex items-center">
       {/* Sheet Tabs */}
-      <div className="flex overflow-x-auto scrollbar-none" role="tablist" aria-label="Sheets">
+      <div className="flex overflow-x-auto scrollbar-none">
         {sheets.map((sheet) => (
-          <button
+          <div
             key={sheet.id}
             className={cn(
               "flex items-center h-9 px-3 border-r border-[#2d2d30] cursor-pointer group hover:bg-[#37373d] min-w-0",
@@ -67,8 +67,6 @@ export function SheetTabs() {
               if (e.key === 'Enter' || e.key === ' ') setActiveSheet(sheet.id);
             }}
             onMouseDown={(e) => handleMiddleClick(e, sheet.id)}
-            role="tab"
-            aria-selected={activeSheetId === sheet.id ? 'true' : 'false'}
             tabIndex={0}
           >
             <span className="text-xs text-[#cccccc] truncate max-w-32">
@@ -82,7 +80,7 @@ export function SheetTabs() {
             >
               <X className="h-3 w-3" />
             </Button>
-          </button>
+          </div>
         ))}
       </div>
 

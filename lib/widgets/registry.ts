@@ -5,6 +5,7 @@ import type { WidgetSchema, WidgetRegistry } from './schema';
 const widgetRegistry: WidgetRegistry = { ...defaultWidgetSchemas };
 
 // Widget component imports
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const widgetComponents: Record<string, () => Promise<{ default: React.ComponentType<any> }>> = {
   'kpi-card': () => import('@/components/widgets/KpiCard').then(m => ({ default: m.KpiCard })),
   'line-chart': () => import('@/components/widgets/LineChart').then(m => ({ default: m.LineChart })),
@@ -32,6 +33,21 @@ const widgetComponents: Record<string, () => Promise<{ default: React.ComponentT
   
   // Advanced portfolio and charting widgets
   'portfolio-allocation': () => import('@/components/widgets/PortfolioAllocationCharts').then(m => ({ default: m.PortfolioAllocationCharts })),
+  'predictive-insights': () => import('@/components/widgets/PredictiveInsights').then(m => ({ default: m.PredictiveInsights })),
+  'watchlist': () => import('@/components/widgets/WatchlistWidget').then(m => ({ default: m.WatchlistWidget })),
+  'options-dashboard': () => import('@/components/widgets/OptionsDashboardWidget').then(m => ({ default: m.OptionsDashboardWidget })),
+  'market-overview': () => import('@/components/widgets/MarketOverviewWidget').then(m => ({ default: m.MarketOverviewWidget })),
+  'portfolio-performance': () => import('@/components/widgets/PortfolioPerformanceWidget').then(m => ({ default: m.PortfolioPerformanceWidget })),
+  'news-events-feed': () => import('@/components/widgets/NewsEventsFeedWidget').then(m => ({ default: m.NewsEventsFeedWidget })),
+  'backtesting-framework': () => import('@/components/widgets/BacktestingFrameworkWidget').then(m => ({ default: m.BacktestingFrameworkWidget })),
+  'financials-summary': () => import('@/components/widgets/FinancialsSummary').then(m => ({ default: m.FinancialsSummary })),
+  'peer-comparison': () => import('@/components/widgets/PeerComparison').then(m => ({ default: m.PeerComparison })),
+  'quarterly-financials': () => import('@/components/widgets/QuarterlyFinancials').then(m => ({ default: m.QuarterlyFinancials })),
+  'income-statement-breakdown': () => import('@/components/widgets/IncomeStatementBreakdown').then(m => ({ default: m.IncomeStatementBreakdown })),
+  'kpi-mini-grid': () => import('@/components/widgets/KpiMiniGrid').then(m => ({ default: m.KpiMiniGrid })),
+  'screener': () => import('@/components/widgets/ScreenerWidget').then(m => ({ default: m.ScreenerWidget })),
+  'options-chain': () => import('@/components/widgets/OptionsChainWidget').then(m => ({ default: m.OptionsChainWidget })),
+  'advanced-chart': () => import('@/components/widgets/AdvancedChart').then(m => ({ default: m.AdvancedChart })),
 };
 
 // Initialize widget components in registry
@@ -79,16 +95,18 @@ export function getAvailableWidgetTypes(): string[] {
 }
 
 // Get widget component for rendering
-export function getWidgetComponent(type: string) {
-  const schema = widgetRegistry[type];
-  if (schema?.runtime?.component) {
-    return schema.runtime.component;
-  }
+export async function getWidgetComponent(type: string) {
   
   // Try to load component dynamically
   const importFn = widgetComponents[type];
   if (importFn) {
-    return importFn().then((module: any) => module.default);
+    try {
+      const mod = await importFn();
+      return mod.default;
+    } catch (error) {
+      console.warn(`Failed to load widget component for ${type}:`, error);
+      return null;
+    }
   }
   
   return null;

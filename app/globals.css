@@ -44,6 +44,7 @@
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
   }
+
   .dark {
     --background: 222 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -70,14 +71,111 @@
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
   }
+
+  /* Malibu Themes — Sunrise/Sunset (exact colors from mockup) */
+  .malibu-sunrise {
+    --bg: #0c1016;
+    --panel: rgba(255, 255, 255, .06);
+    --panel2: rgba(255, 255, 255, .10);
+    --ink: #eaf1ff;
+    --muted: #a8b6d4;
+    --stroke: rgba(255, 255, 255, .12);
+    --brand: #7DC8F7;
+    --accent: #FF7EB6;
+    --sun: #FFD29D;
+    --lime: #B8F4D8;
+    --ok: #32d693;
+    --warn: #ffcc66;
+    --err: #ff6b6b;
+
+    /* Convert to HSL for shadcn/ui compatibility */
+    --background: 214 35% 7%;
+    --foreground: 220 50% 96%;
+    --card: 0 0% 100% / 0.06;
+    --card-foreground: 220 50% 96%;
+    --popover: 0 0% 100% / 0.06;
+    --popover-foreground: 220 50% 96%;
+    --primary: 196 89% 71%;
+    /* brand blue */
+    --primary-foreground: 214 35% 7%;
+    --secondary: 328 100% 74%;
+    /* accent pink */
+    --secondary-foreground: 214 35% 7%;
+    --muted: 217 28% 77%;
+    --muted-foreground: 217 28% 77%;
+    --accent: 29 100% 79%;
+    /* sun orange */
+    --accent-foreground: 214 35% 7%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 220 50% 96%;
+    --border: 0 0% 100% / 0.12;
+    --input: 0 0% 100% / 0.06;
+    --ring: 196 89% 71%;
+  }
+
+  .malibu-sunset {
+    --bg: #0b0e14;
+    --panel: rgba(255, 255, 255, .05);
+    --panel2: rgba(255, 255, 255, .10);
+    --ink: #e9eefc;
+    --muted: #9fb0cf;
+    --stroke: rgba(255, 255, 255, .12);
+    --brand: #66CCFF;
+    --accent: #FF6B9A;
+    --sun: #FFB86B;
+    --lime: #9EF6E4;
+    --ok: #32d693;
+    --warn: #ffcc66;
+    --err: #ff6b6b;
+
+    /* Convert to HSL for shadcn/ui compatibility */
+    --background: 214 44% 7%;
+    --foreground: 220 40% 95%;
+    --card: 0 0% 100% / 0.05;
+    --card-foreground: 220 40% 95%;
+    --popover: 0 0% 100% / 0.05;
+    --popover-foreground: 220 40% 95%;
+    --primary: 200 100% 70%;
+    /* brand blue */
+    --primary-foreground: 214 44% 7%;
+    --secondary: 340 100% 70%;
+    /* accent pink */
+    --secondary-foreground: 214 44% 7%;
+    --muted: 218 23% 72%;
+    --muted-foreground: 218 23% 72%;
+    --accent: 29 100% 70%;
+    /* sun orange */
+    --accent-foreground: 214 44% 7%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 220 40% 95%;
+    --border: 0 0% 100% / 0.12;
+    --input: 0 0% 100% / 0.05;
+    --ring: 200 100% 70%;
+  }
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Malibu gradient backgrounds */
+  .malibu-sunrise body {
+    background:
+      radial-gradient(900px 500px at 15% -10%, color-mix(in oklab, var(--brand) 30%, transparent), transparent 55%),
+      radial-gradient(800px 520px at 85% 8%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 60%),
+      linear-gradient(180deg, var(--bg), color-mix(in oklab, var(--bg) 70%, black) 42%, var(--bg) 100%);
+  }
+
+  .malibu-sunset body {
+    background:
+      radial-gradient(900px 500px at 15% -10%, color-mix(in oklab, var(--brand) 30%, transparent), transparent 55%),
+      radial-gradient(800px 520px at 85% 8%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 60%),
+      linear-gradient(180deg, var(--bg), color-mix(in oklab, var(--bg) 70%, black) 42%, var(--bg) 100%);
   }
 }
 
@@ -114,4 +212,13 @@
   -ms-user-select: none;
   -o-user-select: none;
   user-select: none;
+}
+
+/* Ensure toast containers don't block clicks across the UI */
+.toaster {
+  pointer-events: none;
+}
+
+.toaster [data-sonner-toast] {
+  pointer-events: auto;
 }

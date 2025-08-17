@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:3001": "next dev -p 3001",
     "dev:test": "next dev -p 3010",
-    "build": "pnpm -w build:webview && pnpm --filter @madlab/extension build",
+    "build": "pnpm -w build:webview",
     "start": "next start",
+    "start:3001": "next start -p 3001",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -14,8 +16,8 @@
     "e2e": "playwright test",
     "dev:web": "next dev",
     "build:web": "next build",
-    "build:webview": "next build && rm -rf apps/extension/dist/webview && mkdir -p apps/extension/dist && cp -R out apps/extension/dist/webview",
-    "dev:ext": "pnpm --filter @madlab/extension dev"
+    "build:webview": "next build && rm -rf apps/extension/dist/webview && mkdir -p apps/extension/dist/webview && cp -R .next/static .next/server apps/extension/dist/webview/",
+    "dev:ext": "pnpm --filter madlab-workbench dev"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

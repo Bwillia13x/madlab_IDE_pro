@@ -15,7 +15,7 @@ interface SettingsPanelProps {
 
 export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [activeTab, setActiveTab] = useState('data');
-  const { theme, setTheme } = useWorkspaceStore();
+  const { theme, setTheme, experienceMode, setExperienceMode } = useWorkspaceStore();
 
   return (
     <Card className="w-full max-w-4xl h-full">
@@ -35,7 +35,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
       
       <CardContent className="h-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="data" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               Data
@@ -43,6 +43,10 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
             <TabsTrigger value="appearance" className="flex items-center gap-2">
               <Palette className="h-4 w-4" />
               Appearance
+            </TabsTrigger>
+            <TabsTrigger value="experience" className="flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              Experience
             </TabsTrigger>
             <TabsTrigger value="notifications" className="flex items-center gap-2">
               <Bell className="h-4 w-4" />
@@ -74,24 +78,38 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                 <CardContent className="space-y-6">
                   <div className="space-y-3">
                     <h4 className="font-medium">Theme</h4>
-                    <div className="flex gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <Button
                         variant={theme === 'light' ? 'default' : 'outline'}
                         onClick={() => setTheme('light')}
-                        className="flex-1"
+                        className="w-full"
                       >
                         Light
                       </Button>
                       <Button
                         variant={theme === 'dark' ? 'default' : 'outline'}
                         onClick={() => setTheme('dark')}
-                        className="flex-1"
+                        className="w-full"
                       >
                         Dark
                       </Button>
+                      <Button
+                        variant={theme === 'malibu-sunrise' ? 'default' : 'outline'}
+                        onClick={() => setTheme('malibu-sunrise')}
+                        className="w-full"
+                      >
+                        Malibu Sunrise
+                      </Button>
+                      <Button
+                        variant={theme === 'malibu-sunset' ? 'default' : 'outline'}
+                        onClick={() => setTheme('malibu-sunset')}
+                        className="w-full"
+                      >
+                        Malibu Sunset
+                      </Button>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Choose your preferred color scheme
+                      Choose your preferred color scheme (Malibu inspired)
                     </p>
                   </div>
                   
@@ -113,6 +131,40 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                         </Button>
                       </div>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="experience" className="h-full">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    Experience Mode
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Mode</h4>
+                    <div className="flex gap-3">
+                      <Button
+                        variant={experienceMode === 'beginner' ? 'default' : 'outline'}
+                        onClick={() => setExperienceMode('beginner')}
+                        className="flex-1"
+                      >
+                        Beginner
+                      </Button>
+                      <Button
+                        variant={experienceMode === 'expert' ? 'default' : 'outline'}
+                        onClick={() => setExperienceMode('expert')}
+                        className="flex-1"
+                      >
+                        Expert
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Beginner reduces UI clutter and adds guidance; Expert shows all controls.
+                    </p>
                   </div>
                 </CardContent>
               </Card>

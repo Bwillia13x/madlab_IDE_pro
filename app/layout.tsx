@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
+import { ThemeSync } from '@/components/ThemeSync';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -18,13 +19,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.className} min-h-screen flex flex-col`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
           enableSystem={false}
           storageKey="madlab-theme"
         >
+          <ThemeSync />
           {children}
           <Toaster />
         </ThemeProvider>

@@ -59,7 +59,7 @@ export function WidgetGrid({
     };
 
     loadComponents();
-  }, [widgets, loadedComponents]);
+  }, [widgets]);
 
   // Convert widgets to grid layout format
   const layouts = {

@@ -34,7 +34,7 @@ const zSheet = z.object({
 });
 
 const zUi = z.object({
-  theme: z.enum(['light', 'dark']).optional(),
+  theme: z.enum(['light', 'dark', 'malibu-sunrise', 'malibu-sunset']).optional(),
   explorerCollapsed: z.boolean().optional(),
   explorerWidth: z.number().optional(),
   chatCollapsed: z.boolean().optional(),
@@ -127,7 +127,10 @@ export function coerceToWorkspaceState(
     sheets,
     activeSheetId,
     messages,
-    theme: ui?.theme === 'light' ? 'light' : 'dark',
+    theme:
+      ui?.theme === 'light' || ui?.theme === 'malibu-sunrise' || ui?.theme === 'malibu-sunset'
+        ? (ui.theme as any)
+        : 'dark',
     explorerCollapsed: Boolean(ui?.explorerCollapsed),
     explorerWidth: typeof ui?.explorerWidth === 'number' ? ui.explorerWidth : 280,
     chatCollapsed: Boolean(ui?.chatCollapsed),

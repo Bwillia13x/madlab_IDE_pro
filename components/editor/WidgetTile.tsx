@@ -1,6 +1,6 @@
 'use client';
 
-import { MoreHorizontal, X, GripVertical, Plus, Settings } from 'lucide-react';
+import { MoreHorizontal, X, GripVertical, Plus, Settings, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -32,6 +32,7 @@ export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
   registerCoreWidgets();
   const { removeWidget, updateWidget, setSelectedWidget, selectedWidgetId, setInspectorOpen } =
     useWorkspaceStore();
+  const { globalSymbol, experienceMode } = useWorkspaceStore();
 
   // Prefer schema-based registry if available for this type
   const schemaEntry = getSchemaWidget(widget.type);
@@ -84,7 +85,7 @@ export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
           </div>
           <span className="text-sm font-medium text-foreground truncate">{widget.title}</span>
           {/* Symbol input */}
-          <div className="ml-2 flex items-center gap-1">
+          <div className={`ml-2 items-center gap-1 ${experienceMode === 'beginner' ? 'hidden md:flex' : 'flex'}`}>
             <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Sym</span>
             <Input
               value={currentSymbol}
@@ -99,6 +100,21 @@ export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
               }}
               className="h-6 px-2 py-0 text-xs w-[84px] bg-input border-border text-foreground"
             />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 py-0 text-[10px]"
+              title="Use global symbol"
+              onClick={() => {
+                const sym = (globalSymbol || '').toUpperCase().slice(0, 12);
+                updateWidget(sheetId, {
+                  id: widget.id,
+                  props: { ...(widget.props || {}), symbol: sym },
+                });
+              }}
+            >
+              <LinkIcon className="h-3 w-3 mr-1" />Use Global
+            </Button>
           </div>
         </div>
 
