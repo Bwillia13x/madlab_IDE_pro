@@ -1,15 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, Zap, Target } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import type { Widget } from '@/lib/store';
 
 interface OptionsDashboardWidgetProps {
@@ -61,7 +60,7 @@ const MOCK_PNL_DATA: PnLData[] = [
   { price: 190, pnl: 1800 },
 ];
 
-export function OptionsDashboardWidget({ widget }: Readonly<OptionsDashboardWidgetProps>) {
+export function OptionsDashboardWidget({ widget: _widget }: Readonly<OptionsDashboardWidgetProps>) {
   const [selectedSymbol, setSelectedSymbol] = useState('AAPL');
   const [selectedExpiry, setSelectedExpiry] = useState('2024-12-20');
   const [activeTab, setActiveTab] = useState('chain');

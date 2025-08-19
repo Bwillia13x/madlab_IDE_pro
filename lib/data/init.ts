@@ -3,13 +3,20 @@ import { registerProvider } from './providers';
 
 export async function initializeDataProviders(): Promise<void> {
   try {
-    // Register mock provider (always available)
+    // Register mock provider immediately (synchronous)
     registerProvider('mock', mockAdapter);
     
-    // TODO: Initialize real data providers
-    // await initializeAlphaVantage();
-    // await initializeYahooFinance();
-    // await initializeBloomberg();
+    // Use Promise.all for concurrent initialization of real providers
+    const initPromises = [
+      // TODO: Initialize real data providers concurrently
+      // initializeAlphaVantage(),
+      // initializeYahooFinance(),
+      // initializeBloomberg(),
+    ].filter(Boolean);
+    
+    if (initPromises.length > 0) {
+      await Promise.allSettled(initPromises);
+    }
     
     console.log('Data providers initialized successfully');
   } catch (error) {

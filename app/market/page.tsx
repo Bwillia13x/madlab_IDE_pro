@@ -107,7 +107,7 @@ export default function MarketOverviewPage() {
         <Badge variant="outline" className="ml-1">/market</Badge>
         <div className="flex-1" />
         <div className="text-xs text-muted-foreground">Theme</div>
-        <Select value={theme} onValueChange={(v: any) => setTheme(v)}>
+        <Select value={theme} onValueChange={(v: 'malibu-sunrise' | 'malibu-sunset' | 'dark' | 'light') => setTheme(v)}>
           <SelectTrigger className="w-36 h-8 ml-2"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="malibu-sunrise">Sunrise</SelectItem>

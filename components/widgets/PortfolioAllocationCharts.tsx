@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { PieChart, BarChart3, TrendingUp, TrendingDown, DollarSign, Activity, RefreshCw, Download, Camera } from 'lucide-react';
+import { PieChart, TrendingUp, TrendingDown, Activity, Download, Camera } from 'lucide-react';
 import type { Widget } from '@/lib/store';
 import { useRealtimePrices } from '@/lib/data/useRealtimeData';
 import * as d3 from 'd3';
@@ -38,7 +38,7 @@ interface ChartDimensions {
   margin: { top: number; right: number; bottom: number; left: number };
 }
 
-export function PortfolioAllocationCharts({ widget, sheetId, onTitleChange }: PortfolioAllocationChartsProps) {
+export function PortfolioAllocationCharts({ widget, sheetId: _sheetId, onTitleChange: _onTitleChange }: PortfolioAllocationChartsProps) {
   const [chartType, setChartType] = useState<'pie' | 'treemap' | 'bar' | 'donut'>('pie');
   const [showPerformance, setShowPerformance] = useState(true);
   const [showSectors, setShowSectors] = useState(false);
@@ -156,43 +156,8 @@ export function PortfolioAllocationCharts({ widget, sheetId, onTitleChange }: Po
     };
   }, [assets]);
 
-  // D3 Chart rendering
-  const renderChart = useCallback(() => {
-    if (!chartRef.current || !svgRef.current || !portfolioStats) return;
-
-    // Clear previous chart
-    d3.select(svgRef.current).selectAll("*").remove();
-
-    const { width, height, margin } = chartDimensions;
-    const chartWidth = width - margin.left - margin.right;
-    const chartHeight = height - margin.top - margin.bottom;
-
-    const svg = d3.select(svgRef.current)
-      .attr('width', width)
-      .attr('height', height);
-
-    const g = svg.append('g')
-      .attr('transform', `translate(${margin.left},${margin.top})`);
-
-    switch (chartType) {
-      case 'pie':
-        renderPieChart(g, chartWidth, chartHeight);
-        break;
-      case 'donut':
-        renderDonutChart(g, chartWidth, chartHeight);
-        break;
-      case 'treemap':
-        renderTreemapChart(g, chartWidth, chartHeight);
-        break;
-      case 'bar':
-        renderBarChart(g, chartWidth, chartHeight);
-        break;
-    }
-
-    setIsChartReady(true);
-  }, [chartType, portfolioStats, chartDimensions]);
-
-  const renderPieChart = (g: d3.Selection<SVGGElement, unknown, null, undefined>, width: number, height: number) => {
+  // D3 Chart rendering functions
+  const renderPieChart = useCallback((g: d3.Selection<SVGGElement, unknown, null, undefined>, width: number, height: number) => {
     const radius = Math.min(width, height) / 2;
     const centerX = width / 2;
     const centerY = height / 2;
@@ -222,7 +187,7 @@ export function PortfolioAllocationCharts({ widget, sheetId, onTitleChange }: Po
       .attr('fill', (d, i) => colorScale(i.toString()))
       .attr('stroke', 'white')
       .attr('stroke-width', 2)
-      .on('mouseover', function(event, d) {
+      .on('mouseover', function(_event, _d) {
         d3.select(this)
           .attr('stroke-width', 4)
           .attr('stroke', '#000');
@@ -265,9 +230,9 @@ export function PortfolioAllocationCharts({ widget, sheetId, onTitleChange }: Po
       .attr('y', 12)
       .style('font-size', '12px')
       .text(d => `${d.symbol}: ${d.allocation?.toFixed(1)}%`);
-  };
+  }, [portfolioStats]);
 
-  const renderDonutChart = (g: d3.Selection<SVGGElement, unknown, null, undefined>, width: number, height: number) => {
+  const renderDonutChart = useCallback((g: d3.Selection<SVGGElement, unknown, null, undefined>, width: number, height: number) => {
     const radius = Math.min(width, height) / 2;
     const centerX = width / 2;
     const centerY = height / 2;
@@ -297,78 +262,79 @@ export function PortfolioAllocationCharts({ widget, sheetId, onTitleChange }: Po
       .attr('d', arc)
       .attr('fill', (d, i) => colorScale(i.toString()))
       .attr('stroke', 'white')
-      .attr('stroke-width', 2);
+      .attr('stroke-width', 2)
+      .on('mouseover', function(_event, _d) {
+        d3.select(this)
+          .attr('stroke-width', 4)
+          .attr('stroke', '#000');
+      })
+      .on('mouseout', function() {
+        d3.select(this)
+          .attr('stroke-width', 2)
+          .attr('stroke', 'white');
+      });
 
-    // Add center text
-    donutGroup.append('text')
+    // Add labels
+    slices.append('text')
+      .attr('transform', d => `translate(${arc.centroid(d)})`)
       .attr('text-anchor', 'middle')
-      .attr('dy', '-0.5em')
-      .style('font-size', '16px')
-      .style('font-weight', 'bold')
-      .text('Portfolio');
-
-    donutGroup.append('text')
-      .attr('text-anchor', 'middle')
-      .attr('dy', '0.5em')
-      .style('font-size', '14px')
-      .text(`${portfolioStats.totalReturnPercent.toFixed(1)}%`);
-  };
-
-  const renderTreemapChart = (g: d3.Selection<SVGGElement, unknown, null, undefined>, width: number, height: number) => {
-    const treemap = d3.treemap<any>()
-      .size([width, height])
-      .padding(1)
-      .round(true);
-
-    const root = d3.hierarchy({ children: portfolioStats.assetsWithAllocation })
-      .sum(d => (d as any).allocation || 0)
-      .sort((a, b) => (b.value || 0) - (a.value || 0));
-
-    treemap(root as any);
-
-    const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
-
-    const nodes = g.selectAll('.node')
-      .data(root.leaves())
-      .enter()
-      .append('g')
-      .attr('class', 'node')
-      .attr('transform', d => `translate(${(d as any).x0},${(d as any).y0})`);
-
-    nodes.append('rect')
-      .attr('width', d => (d as any).x1 - (d as any).x0)
-      .attr('height', d => (d as any).y1 - (d as any).y0)
-      .attr('fill', (d, i) => colorScale(i.toString()))
-      .attr('stroke', 'white')
-      .attr('stroke-width', 1);
-
-    nodes.append('text')
-      .attr('x', 5)
-      .attr('y', 15)
+      .attr('dy', '0.35em')
       .style('font-size', '12px')
       .style('font-weight', 'bold')
       .style('fill', 'white')
-      .text(d => (d.data as any).symbol);
+      .text(d => `${d.data.symbol}\n${d.data.allocation?.toFixed(1)}%`);
 
-    nodes.append('text')
-      .attr('x', 5)
-      .attr('y', 30)
-      .style('font-size', '10px')
-      .style('fill', 'white')
-      .text(d => `${(d.data as any).allocation?.toFixed(1)}%`);
-  };
+    // Add legend
+    const legend = g.append('g')
+      .attr('class', 'legend')
+      .attr('transform', `translate(${width + 10}, 0)`);
 
-  const renderBarChart = (g: d3.Selection<SVGGElement, unknown, null, undefined>, width: number, height: number) => {
-    const xScale = d3.scaleBand()
+    const legendItems = legend.selectAll('.legend-item')
+      .data(portfolioStats.assetsWithAllocation)
+      .enter()
+      .append('g')
+      .attr('class', 'legend-item')
+      .attr('transform', (d, i) => `translate(0, ${i * 20})`);
+
+    legendItems.append('rect')
+      .attr('width', 15)
+      .attr('height', 15)
+      .attr('fill', (d, i) => colorScale(i.toString()));
+
+    legendItems.append('text')
+      .attr('x', 20)
+      .attr('y', 12)
+      .style('font-size', '12px')
+      .text(d => `${d.symbol}: ${d.allocation?.toFixed(1)}%`);
+  }, [portfolioStats]);
+
+  const renderBarChart = useCallback((g: d3.Selection<SVGGElement, unknown, null, undefined>, width: number, height: number) => {
+    const margin = { top: 20, right: 30, bottom: 40, left: 60 };
+    const chartWidth = width - margin.left - margin.right;
+    const chartHeight = height - margin.top - margin.bottom;
+
+    const x = d3.scaleBand()
       .domain(portfolioStats.assetsWithAllocation.map(d => d.symbol))
-      .range([0, width])
+      .range([0, chartWidth])
       .padding(0.1);
 
-    const yScale = d3.scaleLinear()
-      .domain([0, d3.max(portfolioStats.assetsWithAllocation, d => d.allocation || 0) as number])
-      .range([height, 0]);
+    const y = d3.scaleLinear()
+      .domain([0, d3.max(portfolioStats.assetsWithAllocation, d => d.allocation) || 0])
+      .range([chartHeight, 0]);
 
-    const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+    // Add X axis
+    g.append('g')
+      .attr('transform', `translate(0,${chartHeight})`)
+      .call(d3.axisBottom(x))
+      .selectAll('text')
+      .style('text-anchor', 'end')
+      .attr('dx', '-.8em')
+      .attr('dy', '.15em')
+      .attr('transform', 'rotate(-45)');
+
+    // Add Y axis
+    g.append('g')
+      .call(d3.axisLeft(y).ticks(5).tickFormat(d => `${d}%`));
 
     // Add bars
     g.selectAll('.bar')
@@ -376,24 +342,23 @@ export function PortfolioAllocationCharts({ widget, sheetId, onTitleChange }: Po
       .enter()
       .append('rect')
       .attr('class', 'bar')
-      .attr('x', d => xScale(d.symbol) || 0)
-      .attr('y', d => yScale(d.allocation || 0))
-      .attr('width', xScale.bandwidth())
-      .attr('height', d => height - yScale(d.allocation || 0))
-      .attr('fill', (d, i) => colorScale(i.toString()))
+      .attr('x', d => x(d.symbol)!)
+      .attr('y', d => y(d.allocation || 0))
+      .attr('width', x.bandwidth())
+      .attr('height', d => chartHeight - y(d.allocation || 0))
+      .attr('fill', (d, i) => d3.schemeCategory10[i % 10])
       .attr('stroke', 'white')
-      .attr('stroke-width', 1);
-
-    // Add X axis
-    g.append('g')
-      .attr('transform', `translate(0,${height})`)
-      .call(d3.axisBottom(xScale))
-      .style('font-size', '12px');
-
-    // Add Y axis
-    g.append('g')
-      .call(d3.axisLeft(yScale).tickFormat(d => `${d}%`))
-      .style('font-size', '12px');
+      .attr('stroke-width', 1)
+      .on('mouseover', function(_event, d) {
+        d3.select(this)
+          .attr('stroke-width', 3)
+          .attr('stroke', '#000');
+      })
+      .on('mouseout', function() {
+        d3.select(this)
+          .attr('stroke-width', 1)
+          .attr('stroke', 'white');
+      });
 
     // Add value labels on bars
     g.selectAll('.bar-label')
@@ -401,13 +366,102 @@ export function PortfolioAllocationCharts({ widget, sheetId, onTitleChange }: Po
       .enter()
       .append('text')
       .attr('class', 'bar-label')
-      .attr('x', d => (xScale(d.symbol) || 0) + xScale.bandwidth() / 2)
-      .attr('y', d => yScale(d.allocation || 0) - 5)
+      .attr('x', d => x(d.symbol)! + x.bandwidth() / 2)
+      .attr('y', d => y(d.allocation || 0) - 5)
       .attr('text-anchor', 'middle')
-      .style('font-size', '10px')
+      .style('font-size', '12px')
       .style('font-weight', 'bold')
+      .style('fill', 'white')
       .text(d => `${d.allocation?.toFixed(1)}%`);
-  };
+  }, [portfolioStats]);
+
+  const renderTreemapChart = useCallback((g: d3.Selection<SVGGElement, unknown, null, undefined>, width: number, height: number) => {
+    const treemap = d3.treemap<PortfolioAsset>()
+      .size([width, height])
+      .padding(1)
+      .round(true);
+
+    const root = d3.hierarchy({ children: portfolioStats.assetsWithAllocation } as any)
+      .sum((d: any) => d.allocation || 0)
+      .sort((a, b) => (b.value || 0) - (a.value || 0));
+
+    const nodes = treemap(root as any);
+
+    const cell = g.selectAll('.cell')
+      .data(nodes.leaves())
+      .enter()
+      .append('g')
+      .attr('class', 'cell')
+      .attr('transform', d => `translate(${d.x0},${d.y0})`);
+
+    cell.append('rect')
+      .attr('width', d => d.x1 - d.x0)
+      .attr('height', d => d.y1 - d.y0)
+      .attr('fill', (d, i) => d3.schemeCategory10[i % 10])
+      .attr('stroke', 'white')
+      .attr('stroke-width', 1)
+      .on('mouseover', function(_event, _d) {
+        d3.select(this)
+          .attr('stroke-width', 3)
+          .attr('stroke', '#000');
+      })
+      .on('mouseout', function() {
+        d3.select(this)
+          .attr('stroke-width', 1)
+          .attr('stroke', 'white');
+      });
+
+    cell.append('text')
+      .attr('x', 3)
+      .attr('y', 15)
+      .style('font-size', '11px')
+      .style('font-weight', 'bold')
+      .style('fill', 'white')
+      .text(d => d.data.symbol);
+
+    cell.append('text')
+      .attr('x', 3)
+      .attr('y', 30)
+      .style('font-size', '10px')
+      .style('fill', 'white')
+      .text(d => `${d.data.allocation?.toFixed(1)}%`);
+  }, [portfolioStats]);
+
+  // D3 Chart rendering
+  const renderChart = useCallback(() => {
+    if (!chartRef.current || !svgRef.current || !portfolioStats) return;
+
+    // Clear previous chart
+    d3.select(svgRef.current).selectAll("*").remove();
+
+    const { width, height, margin } = chartDimensions;
+    const chartWidth = width - margin.left - margin.right;
+    const chartHeight = height - margin.top - margin.bottom;
+
+    const svg = d3.select(svgRef.current)
+      .attr('width', width)
+      .attr('height', height);
+
+    const g = svg.append('g')
+      .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    switch (chartType) {
+      case 'pie':
+        renderPieChart(g, chartWidth, chartHeight);
+        break;
+      case 'donut':
+        renderDonutChart(g, chartWidth, chartHeight);
+        break;
+      case 'treemap':
+        renderTreemapChart(g, chartWidth, chartHeight);
+        break;
+      case 'bar':
+        renderBarChart(g, chartWidth, chartHeight);
+        break;
+    }
+
+    setIsChartReady(true);
+  }, [chartType, portfolioStats, chartDimensions, renderBarChart, renderDonutChart, renderPieChart, renderTreemapChart]);
 
   // Render chart when data or settings change
   useEffect(() => {

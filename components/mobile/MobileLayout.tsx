@@ -12,13 +12,11 @@ import {
   PieChart, 
   TrendingUp, 
   Activity, 
-  RefreshCw, 
   Settings,
   Plus,
   Grid3X3,
   List,
-  Search,
-  Filter
+  Search
 } from 'lucide-react';
 import type { Widget } from '@/lib/store';
 
@@ -93,11 +91,11 @@ export function MobileLayout({
   ];
 
   // Filter widgets based on search query
-  const filteredWidgets = widgets.filter(widget => 
-    widget.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    widget.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    widget.category?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // const filteredWidgets = widgets.filter(widget => 
+  //   widget.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //   widget.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //   widget.category?.toLowerCase().includes(searchQuery.toLowerCase())
+  // );
 
   // Handle scroll direction for navigation auto-hide
   useEffect(() => {

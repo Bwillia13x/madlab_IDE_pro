@@ -14,6 +14,7 @@ import type { Widget } from '@/lib/store';
 interface BacktestingFrameworkWidgetProps {
   widget: Widget;
   sheetId: string;
+  onTitleChange?: (newTitle: string) => void;
 }
 
 interface Strategy {
@@ -80,7 +81,7 @@ const MOCK_BACKTEST_RESULT: BacktestResult = {
   dates: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar']
 };
 
-export function BacktestingFrameworkWidget({ widget }: Readonly<BacktestingFrameworkWidgetProps>) {
+export function BacktestingFrameworkWidget({ widget: _widget, onTitleChange: _onTitleChange }: Readonly<BacktestingFrameworkWidgetProps>) {
   const [selectedStrategy, setSelectedStrategy] = useState<string>('1');
   const [isRunning, setIsRunning] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');

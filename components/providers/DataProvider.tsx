@@ -11,16 +11,35 @@ interface DataProviderProps {
 
 export function DataProvider({ children }: DataProviderProps) {
   const [initialized, setInitialized] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const dataProvider = useWorkspaceStore((state) => state.dataProvider);
 
-  // Initialize providers on mount
+  // Initialize providers in background without blocking UI render
   useEffect(() => {
-    initializeDataProviders()
-      .then(() => setInitialized(true))
-      .catch((error) => {
+    let mounted = true;
+    
+    const initProviders = async () => {
+      try {
+        await initializeDataProviders();
+        if (mounted) {
+          setInitialized(true);
+          setIsInitializing(false);
+        }
+      } catch (error) {
         console.error('Failed to initialize data providers:', error);
-        setInitialized(true); // Still allow app to load
-      });
+        if (mounted) {
+          setInitialized(true); // Still allow app to load
+          setIsInitializing(false);
+        }
+      }
+    };
+
+    // Start initialization immediately but don't block render
+    initProviders();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // Sync store state with provider registry
@@ -48,20 +67,20 @@ export function DataProvider({ children }: DataProviderProps) {
     );
   }, [initialized, dataProvider]);
 
-  // Don't render children until providers are initialized
-  if (!initialized) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Initializing data providers...</p>
-        </div>
+  // Show loading indicator in a non-blocking way
+  const loadingIndicator = isInitializing ? (
+    <div className="fixed top-4 right-4 z-50 bg-blue-500 text-white px-3 py-2 rounded-md shadow-lg text-sm">
+      <div className="flex items-center gap-2">
+        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+        <span>Initializing...</span>
       </div>
-    );
-  }
+    </div>
+  ) : null;
 
+  // Render children immediately - don't block on data provider initialization
   return (
     <div className="min-h-screen flex flex-col">
+      {loadingIndicator}
       {banner}
       <div className="flex-1 flex flex-col">{children}</div>
     </div>

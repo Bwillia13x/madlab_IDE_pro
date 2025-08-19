@@ -8,7 +8,6 @@ import {
   Settings, 
   MessageSquare,
   Folder,
-  Store,
   Grid3X3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';

@@ -10,7 +10,6 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Widget } from '@/lib/store';
-import { useKpis, usePrices } from '@/lib/data/hooks';
 import { Search, Filter, Download, Eye, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface ScreenerWidgetProps {
@@ -42,7 +41,7 @@ const MOCK_STOCKS: StockData[] = [
 
 const SECTORS = ['Technology', 'Healthcare', 'Financial Services', 'Consumer Cyclical', 'Energy', 'Industrials', 'Consumer Defensive', 'Real Estate', 'Utilities', 'Communication Services'];
 
-export function ScreenerWidget({ widget }: Readonly<ScreenerWidgetProps>) {
+export function ScreenerWidget({ widget: _widget }: Readonly<ScreenerWidgetProps>) {
   const [filters, setFilters] = useState({
     search: '',
     sector: '',

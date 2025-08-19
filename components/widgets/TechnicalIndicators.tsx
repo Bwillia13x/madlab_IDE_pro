@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -49,7 +49,7 @@ interface TechnicalMetrics {
   resistance: number;
 }
 
-export function TechnicalIndicators({ widget, sheetId, onTitleChange }: TechnicalIndicatorsProps) {
+export function TechnicalIndicators({ widget, sheetId: _sheetId, onTitleChange: _onTitleChange }: TechnicalIndicatorsProps) {
   const [timeRange, setTimeRange] = useState<PriceRange>('3M');
   const [showRSI, setShowRSI] = useState(true);
   const [showMACD, setShowMACD] = useState(true);
@@ -82,7 +82,7 @@ export function TechnicalIndicators({ widget, sheetId, onTitleChange }: Technica
   };
 
   // Calculate MACD (Moving Average Convergence Divergence)
-  const calculateMACD = (prices: number[]): { macd: number; signal: number; histogram: number } => {
+  const calculateMACD = useCallback((prices: number[]): { macd: number; signal: number; histogram: number } => {
     if (prices.length < 26) return { macd: 0, signal: 0, histogram: 0 };
     
     const ema12 = calculateEMA(prices, 12);
@@ -92,7 +92,7 @@ export function TechnicalIndicators({ widget, sheetId, onTitleChange }: Technica
     const histogram = macd - signal;
     
     return { macd, signal, histogram };
-  };
+  }, []);
 
   // Calculate EMA (Exponential Moving Average)
   const calculateEMA = (prices: number[], period: number): number => {
@@ -109,7 +109,7 @@ export function TechnicalIndicators({ widget, sheetId, onTitleChange }: Technica
   };
 
   // Calculate Stochastic Oscillator
-  const calculateStochastic = (prices: number[], period: number = 14): { k: number; d: number } => {
+  const calculateStochastic = useCallback((prices: number[], period: number = 14): { k: number; d: number } => {
     if (prices.length < period) return { k: 50, d: 50 };
     
     const currentPrice = prices[0];
@@ -120,7 +120,7 @@ export function TechnicalIndicators({ widget, sheetId, onTitleChange }: Technica
     const d = calculateEMA([k], 3);
     
     return { k, d };
-  };
+  }, []);
 
   // Calculate Bollinger Bands
   const calculateBollingerBands = (prices: number[], period: number = 20): { upper: number; middle: number; lower: number } => {
@@ -187,7 +187,7 @@ export function TechnicalIndicators({ widget, sheetId, onTitleChange }: Technica
       support,
       resistance,
     };
-  }, [priceData]);
+  }, [priceData, calculateMACD, calculateStochastic]);
 
   const handleRefresh = () => {
     refetch();

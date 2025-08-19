@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Responsive, WidthProvider } from 'react-grid-layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from 'react';
+import { Responsive, WidthProvider, Layout } from 'react-grid-layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -16,7 +15,7 @@ import {
   Minimize2
 } from 'lucide-react';
 import type { Widget } from '@/lib/store';
-import { getWidgetComponent } from '@/lib/widgets/registry';
+import { WidgetLoader } from '@/components/widgets/WidgetLoader';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -33,33 +32,6 @@ export function WidgetGrid({
 }: WidgetGridProps) {
   const [editingWidget, setEditingWidget] = useState<string | null>(null);
   const [expandedWidget, setExpandedWidget] = useState<string | null>(null);
-  const [loadedComponents, setLoadedComponents] = useState<Record<string, React.ComponentType<any>>>({});
-
-  // Load widget components
-  useEffect(() => {
-    const loadComponents = async () => {
-      const newLoadedComponents: Record<string, React.ComponentType<any>> = {};
-      
-      for (const widget of widgets) {
-        if (!loadedComponents[widget.type]) {
-          try {
-            const component = await getWidgetComponent(widget.type);
-            if (component) {
-              newLoadedComponents[widget.type] = component;
-            }
-          } catch (error) {
-            console.warn(`Failed to load component for widget type: ${widget.type}`, error);
-          }
-        }
-      }
-      
-      if (Object.keys(newLoadedComponents).length > 0) {
-        setLoadedComponents(prev => ({ ...prev, ...newLoadedComponents }));
-      }
-    };
-
-    loadComponents();
-  }, [widgets]);
 
   // Convert widgets to grid layout format
   const layouts = {
@@ -102,9 +74,9 @@ export function WidgetGrid({
   };
 
   // Handle layout change
-  const handleLayoutChange = (currentLayout: any, allLayouts: any) => {
+  const handleLayoutChange = (currentLayout: Layout[]) => {
     // Update widget layouts in store
-    currentLayout.forEach((item: any) => {
+    currentLayout.forEach((item: Layout) => {
       const widget = widgets.find(w => w.id === item.i);
       if (widget && onWidgetUpdate) {
         onWidgetUpdate(widget.id, {
@@ -120,24 +92,13 @@ export function WidgetGrid({
     });
   };
 
-  // Render widget content
+  // Render widget content with enhanced loading
   const renderWidget = (widget: Widget) => {
-    const WidgetComponent = loadedComponents[widget.type];
-    
-    if (!WidgetComponent) {
-      return (
-        <div className="text-center text-muted-foreground py-8">
-          <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Loading widget "{widget.type}"...</p>
-        </div>
-      );
-    }
-
     return (
-      <WidgetComponent
-        widget={widget}
-        sheetId="desktop-sheet"
-        onTitleChange={(title: string) => onWidgetUpdate?.(widget.id, { title })}
+      <WidgetLoader
+        type={widget.type}
+        config={widget.props || {}}
+        data={undefined}
       />
     );
   };

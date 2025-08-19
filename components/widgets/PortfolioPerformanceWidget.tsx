@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Plus, Trash2, TrendingUp, TrendingDown, DollarSign, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
+import { Plus, Trash2, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import type { Widget } from '@/lib/store';
 
 interface PortfolioPerformanceWidgetProps {
@@ -51,7 +51,7 @@ const MOCK_PERFORMANCE_DATA: PerformanceData[] = [
   { date: 'Aug', value: 115200, change: 2.5 },
 ];
 
-export function PortfolioPerformanceWidget({ widget }: Readonly<PortfolioPerformanceWidgetProps>) {
+export function PortfolioPerformanceWidget({ widget: _widget }: Readonly<PortfolioPerformanceWidgetProps>) {
   const [holdings, setHoldings] = useState<PortfolioHolding[]>([]);
   const [newSymbol, setNewSymbol] = useState('');
   const [newShares, setNewShares] = useState('');
@@ -66,7 +66,7 @@ export function PortfolioPerformanceWidget({ widget }: Readonly<PortfolioPerform
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setHoldings(parsed.map((item: any) => ({
+        setHoldings(parsed.map((item: PortfolioHolding) => ({
           ...item,
           addedAt: new Date(item.addedAt)
         })));

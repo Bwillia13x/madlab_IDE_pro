@@ -1,7 +1,6 @@
 'use client';
 
-import { TrendingUp, TrendingDown, DollarSign, Activity, RefreshCcw } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { RefreshCcw } from 'lucide-react';
 import type { Widget } from '@/lib/store';
 import { useKpis, useDataCache } from '@/lib/data/hooks';
 
@@ -20,10 +19,10 @@ function fmtMoney(n: number) {
   return `${sign}$${abs.toFixed(0)}`;
 }
 
-function pct(n: number) {
-  const s = (n * 100).toFixed(1) + '%';
-  return n >= 0 ? `+${s}` : s;
-}
+// function pct(n: number) {
+//   const s = (n * 100).toFixed(1) + '%';
+//   return n >= 0 ? `+${s}` : s;
+// }
 
 // Simple sparkline component
 function Sparkline({ data, color = '#7DC8F7' }: { data: number[]; color?: string }) {

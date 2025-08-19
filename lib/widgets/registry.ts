@@ -94,15 +94,41 @@ export function getAvailableWidgetTypes(): string[] {
   return Object.keys(widgetRegistry);
 }
 
-// Get widget component for rendering
-export async function getWidgetComponent(type: string) {
+// Cache for loaded components to avoid re-importing
+const componentCache = new Map<string, React.ComponentType<{ widget: any; sheetId: string }>>();
+
+// Critical widgets that should be preloaded
+const CRITICAL_WIDGETS = ['kpi-card', 'line-chart', 'bar-chart', 'watchlist', 'market-overview'];
+
+// Preload critical widgets
+export function preloadCriticalWidgets(): void {
+  CRITICAL_WIDGETS.forEach(type => {
+    if (!componentCache.has(type)) {
+      getWidgetComponent(type).catch(err => {
+        console.warn(`Failed to preload critical widget ${type}:`, err);
+      });
+    }
+  });
+}
+
+// Get widget component for rendering with caching
+export async function getWidgetComponent(type: string): Promise<React.ComponentType<{ widget: any; sheetId: string }> | null> {
+  // Return cached component if available
+  if (componentCache.has(type)) {
+    return componentCache.get(type)!;
+  }
   
   // Try to load component dynamically
   const importFn = widgetComponents[type];
   if (importFn) {
     try {
       const mod = await importFn();
-      return mod.default;
+      const component = mod.default;
+      
+      // Cache the component
+      componentCache.set(type, component);
+      
+      return component;
     } catch (error) {
       console.warn(`Failed to load widget component for ${type}:`, error);
       return null;
@@ -112,6 +138,27 @@ export async function getWidgetComponent(type: string) {
   return null;
 }
 
+// Preload a specific widget component
+export async function preloadWidget(type: string): Promise<boolean> {
+  try {
+    const component = await getWidgetComponent(type);
+    return component !== null;
+  } catch (error) {
+    console.warn(`Failed to preload widget ${type}:`, error);
+    return false;
+  }
+}
+
+// Get component cache size for debugging
+export function getComponentCacheSize(): number {
+  return componentCache.size;
+}
+
+// Clear component cache (useful for development)
+export function clearComponentCache(): void {
+  componentCache.clear();
+}
+
 // Legacy function for backward compatibility
 export function getSchemaWidget(type: string): WidgetSchema | undefined {
   return getWidgetSchema(type);
@@ -119,3 +166,11 @@ export function getSchemaWidget(type: string): WidgetSchema | undefined {
 
 // Initialize registry on module load
 initializeWidgetRegistry();
+
+// Preload critical widgets after initialization
+if (typeof window !== 'undefined') {
+  // Only preload in browser environment
+  setTimeout(() => {
+    preloadCriticalWidgets();
+  }, 100);
+}

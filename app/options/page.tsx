@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { useWorkspaceStore } from '@/lib/store';
@@ -21,15 +20,13 @@ function N_cdf(x: number): number {
   const L = Math.abs(x);
   const k = 1 / (1 + 0.2316419 * L);
   // Polynomial approximation (Abramowitz and Stegun)
-  let w = 1 - (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-L * L / 2) * (a1 * k + a2 * k ** 2 + a3 * k ** 3 + a4 * k ** 4 + a5 * k ** 5);
+  const w = 1 - (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-L * L / 2) * (a1 * k + a2 * k ** 2 + a3 * k ** 3 + a4 * k ** 4 + a5 * k ** 5);
   return x < 0 ? 1 - w : w;
 }
 function bsAll(S: number, K: number, r: number, sig: number, T: number, isCall: boolean) {
   const sqrtT = Math.sqrt(Math.max(T, 1 / 365));
   const d1 = (Math.log(S / K) + (r + 0.5 * sig * sig) * T) / (sig * sqrtT);
   const d2 = d1 - sig * sqrtT;
-  const Nd1 = N_cdf(isCall ? d1 : -d1);
-  const Nd2 = N_cdf(isCall ? d2 : -d2);
   const price = isCall ? S * N_cdf(d1) - K * Math.exp(-r * T) * N_cdf(d2) : K * Math.exp(-r * T) * N_cdf(-d2) - S * N_cdf(-d1);
   const delta = isCall ? N_cdf(d1) : N_cdf(d1) - 1;
   const gamma = N_pdf(d1) / (S * sig * sqrtT);
@@ -85,7 +82,7 @@ export default function OptionsTraderPage() {
 
   const agg = useMemo(() => {
     let netDelta = 0, netGamma = 0, netTheta = 0, netVega = 0, mtm = 0, pnl = 0;
-    const byU: Record<string, GreeksAgg> = {} as any;
+    const byU: Record<string, GreeksAgg> = {};
     positions.forEach((p) => {
       const u = underlyings[p.u];
       const S = u.S * (1 + shockPrice / 100);
@@ -115,8 +112,8 @@ export default function OptionsTraderPage() {
     const barW = W / (keys.length * 2);
     keys.forEach((k, i) => {
       const x = i * (W / keys.length) + 20;
-      const d = (agg.byU as any)[k]?.delta || 0;
-      const v = (agg.byU as any)[k]?.vega || 0;
+      const d = agg.byU[k]?.delta || 0;
+      const v = agg.byU[k]?.vega || 0;
       const h1 = Math.max(-H / 2, Math.min(H / 2, -d / 500));
       ctx.fillStyle = 'rgba(125,200,247,0.7)'; ctx.fillRect(x, H / 2, barW, h1);
       const h2 = Math.max(-H / 2, Math.min(H / 2, -v / 2000));
@@ -158,7 +155,7 @@ export default function OptionsTraderPage() {
     return strikes.map((K) => ({ K, c: bsAll(S, K, r, iv, T, true).price, p: bsAll(S, K, r, iv, T, false).price, iv }));
   }, [underlyings, selectedU, shockIV]);
 
-  const grossVega = useMemo(() => Object.values(agg.byU as any).reduce((a: number, b: any) => a + Math.abs(b.vega || 0), 0), [agg.byU]);
+  const grossVega = useMemo(() => Object.values(agg.byU).reduce((a: number, b: GreeksAgg) => a + Math.abs(b.vega || 0), 0), [agg.byU]);
   const util = useMemo(() => Math.min(99, Math.abs(agg.netDelta) / 50000 * 100), [agg.netDelta]);
 
   return (
@@ -170,7 +167,7 @@ export default function OptionsTraderPage() {
         <Badge variant="outline" className="ml-1">Malibu</Badge>
         <div className="flex-1" />
         <div className="text-xs text-muted-foreground">Theme</div>
-        <Select value={theme} onValueChange={(v: any) => setTheme(v)}>
+        <Select value={theme} onValueChange={(v: 'malibu-sunrise' | 'malibu-sunset' | 'dark' | 'light') => setTheme(v)}>
           <SelectTrigger className="w-36 h-8 ml-2"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="malibu-sunrise">Sunrise</SelectItem>

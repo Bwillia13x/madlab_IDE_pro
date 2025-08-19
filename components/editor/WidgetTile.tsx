@@ -11,7 +11,6 @@ import {
 import { Card } from '@/components/ui/card';
 import { useWorkspaceStore, type Widget } from '@/lib/store';
 import { Input } from '@/components/ui/input';
-import dynamic from 'next/dynamic';
 import { getSchemaWidget } from '@/lib/widgets/registry';
 import { registerCoreWidgets } from '@/lib/widgets/coreWidgets';
 import type { WidgetProps as SchemaWidgetProps } from '@/lib/widgets/schema';
@@ -25,7 +24,7 @@ interface WidgetTileProps {
 }
 
 // Legacy widget components - these will be replaced by schema-based registry
-const WIDGET_COMPONENTS: Record<string, React.ComponentType<any>> = {};
+const WIDGET_COMPONENTS: Record<string, React.ComponentType<{ widget: Widget; sheetId: string }>> = {};
 
 export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
   // Ensure core widgets are registered once
@@ -196,7 +195,6 @@ export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
           <WidgetComponent
             widget={widget}
             sheetId={sheetId}
-            onTitleChange={handleTitleChange}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">

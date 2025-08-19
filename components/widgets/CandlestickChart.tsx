@@ -10,7 +10,7 @@ interface CandlestickChartProps {
   onTitleChange?: (title: string) => void;
 }
 
-export function CandlestickChart({ widget, sheetId, onTitleChange }: CandlestickChartProps) {
+export function CandlestickChart({ widget, sheetId: _sheetId, onTitleChange: _onTitleChange }: CandlestickChartProps) {
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">

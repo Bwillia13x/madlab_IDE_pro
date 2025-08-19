@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, memo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import type { Widget } from '@/lib/store';
-import { Search, Settings, ExternalLink, TrendingUp, TrendingDown } from 'lucide-react';
+import { Search, ExternalLink } from 'lucide-react';
 
 interface OptionsChainWidgetProps {
   widget: Widget;
@@ -68,7 +68,7 @@ function normalCDF(x: number): number {
   
   const L = Math.abs(x);
   const k = 1 / (1 + 0.2316419 * L);
-  let w = 1 - (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-L * L / 2) *
+  const w = 1 - (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-L * L / 2) *
     (a1 * k + a2 * k ** 2 + a3 * k ** 3 + a4 * k ** 4 + a5 * k ** 5);
   
   return x < 0 ? 1 - w : w;
@@ -113,8 +113,8 @@ function generateOptionChain(underlying: UnderlyingData, dte: number, priceShock
   const strikes: number[] = [];
   const strikeSpacing = S <= 50 ? 2.5 : S <= 100 ? 5 : S <= 200 ? 10 : S <= 500 ? 25 : 50;
   
-  // Generate 10 strikes around current price
-  for (let i = -4; i <= 5; i++) {
+  // Generate more strikes for virtualization demo (30 strikes)
+  for (let i = -15; i <= 15; i++) {
     const strike = Math.round((S + i * strikeSpacing) / strikeSpacing) * strikeSpacing;
     if (strike > 0) strikes.push(strike);
   }
@@ -159,26 +159,75 @@ function generateOptionChain(underlying: UnderlyingData, dte: number, priceShock
   });
 }
 
-export function OptionsChainWidget({ widget }: OptionsChainWidgetProps) {
+const OptionsChainWidget = memo(function OptionsChainWidget({ widget: _widget }: OptionsChainWidgetProps) {
   const [symbol, setSymbol] = useState('NVDA');
   const [dte, setDte] = useState(30);
   const [showGreeks, setShowGreeks] = useState(true);
   const [priceShock, setPriceShock] = useState(0);
   const [selectedLeg, setSelectedLeg] = useState<{ side: 'C' | 'P'; strike: number; price: number } | null>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  
+  const tableRef = useRef<HTMLDivElement>(null);
+  const ITEM_HEIGHT = 32; // Height of each row in pixels
+  const VISIBLE_ITEMS = 8; // Number of visible items
+  const CONTAINER_HEIGHT = VISIBLE_ITEMS * ITEM_HEIGHT;
 
-  const underlying = MOCK_UNDERLYINGS[symbol];
-  const adjustedPrice = underlying?.price * (1 + priceShock / 100) || 0;
+  const underlying = useMemo(() => MOCK_UNDERLYINGS[symbol], [symbol]);
+  const adjustedPrice = useMemo(() => underlying?.price * (1 + priceShock / 100) || 0, [underlying, priceShock]);
 
   const optionChain = useMemo(() => {
     if (!underlying) return [];
     return generateOptionChain(underlying, dte, priceShock);
   }, [underlying, dte, priceShock]);
 
-  const atmStrike = optionChain.length > 0 
-    ? optionChain.reduce((prev, current) => 
-        Math.abs(current.strike - adjustedPrice) < Math.abs(prev.strike - adjustedPrice) ? current : prev
-      ).strike 
-    : 0;
+  const atmStrike = useMemo(() => {
+    if (optionChain.length === 0) return 0;
+    return optionChain.reduce((prev, current) => 
+      Math.abs(current.strike - adjustedPrice) < Math.abs(prev.strike - adjustedPrice) ? current : prev
+    ).strike;
+  }, [optionChain, adjustedPrice]);
+
+  const handleLegSelection = useCallback((side: 'C' | 'P', strike: number, price: number) => {
+    setSelectedLeg({ side, strike, price });
+  }, []);
+
+  const handleSymbolChange = useCallback((value: string) => {
+    setSymbol(value);
+  }, []);
+
+  const handleDteChange = useCallback((value: string) => {
+    setDte(parseInt(value));
+  }, []);
+
+  const handlePriceShockChange = useCallback(([value]: number[]) => {
+    setPriceShock(value);
+  }, []);
+
+  const handleGreeksToggle = useCallback((checked: boolean | string) => {
+    setShowGreeks(!!checked);
+  }, []);
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  }, []);
+
+  // Virtual scrolling calculations
+  const { visibleItems, offsetY } = useMemo(() => {
+    const startIndex = Math.floor(scrollTop / ITEM_HEIGHT);
+    const endIndex = Math.min(startIndex + VISIBLE_ITEMS + 2, optionChain.length);
+    const visibleOptions = optionChain.slice(startIndex, endIndex);
+    const offsetY = startIndex * ITEM_HEIGHT;
+    
+    return {
+      visibleItems: visibleOptions.map((option, index) => ({
+        ...option,
+        index: startIndex + index
+      })),
+      offsetY
+    };
+  }, [optionChain, scrollTop, ITEM_HEIGHT, VISIBLE_ITEMS]);
+
+  const totalHeight = optionChain.length * ITEM_HEIGHT;
 
   return (
     <Card className="h-full">
@@ -194,7 +243,7 @@ export function OptionsChainWidget({ widget }: OptionsChainWidgetProps) {
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground">Symbol</label>
-            <Select value={symbol} onValueChange={setSymbol}>
+            <Select value={symbol} onValueChange={handleSymbolChange}>
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
@@ -208,7 +257,7 @@ export function OptionsChainWidget({ widget }: OptionsChainWidgetProps) {
           
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground">DTE</label>
-            <Select value={dte.toString()} onValueChange={(value) => setDte(parseInt(value))}>
+            <Select value={dte.toString()} onValueChange={handleDteChange}>
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
@@ -247,7 +296,7 @@ export function OptionsChainWidget({ widget }: OptionsChainWidgetProps) {
           </div>
           <Slider
             value={[priceShock]}
-            onValueChange={([value]) => setPriceShock(value)}
+            onValueChange={handlePriceShockChange}
             max={10}
             min={-10}
             step={0.5}
@@ -261,7 +310,7 @@ export function OptionsChainWidget({ widget }: OptionsChainWidgetProps) {
             <Checkbox
               id="showGreeks"
               checked={showGreeks}
-              onCheckedChange={(checked) => setShowGreeks(!!checked)}
+              onCheckedChange={handleGreeksToggle}
             />
             <label htmlFor="showGreeks" className="text-xs">Greeks</label>
           </div>
@@ -276,11 +325,12 @@ export function OptionsChainWidget({ widget }: OptionsChainWidgetProps) {
           </Button>
         </div>
 
-        {/* Options Chain Table */}
+        {/* Virtual Options Chain Table */}
         <div className="overflow-x-auto">
+          {/* Fixed Header */}
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b">
+              <tr className="border-b bg-background">
                 <th className="text-left py-1">C</th>
                 {showGreeks && <th className="text-right py-1">Δ</th>}
                 <th className="text-right py-1">Mid</th>
@@ -290,40 +340,64 @@ export function OptionsChainWidget({ widget }: OptionsChainWidgetProps) {
                 <th className="text-right py-1">P</th>
               </tr>
             </thead>
-            <tbody>
-              {optionChain.slice(0, 8).map((option) => (
-                <tr key={option.strike} className="border-b border-border/50 hover:bg-muted/20">
-                  <td className={`py-1 text-left ${option.call.isITM ? 'bg-primary/10' : ''}`}>
-                    C
-                  </td>
-                  {showGreeks && (
-                    <td className="py-1 text-right">{option.call.delta.toFixed(2)}</td>
-                  )}
-                  <td 
-                    className="py-1 text-right cursor-pointer hover:bg-accent/20 font-medium"
-                    onClick={() => setSelectedLeg({ side: 'C', strike: option.strike, price: option.call.mid })}
-                  >
-                    {option.call.mid.toFixed(2)}
-                  </td>
-                  <td className={`py-1 text-center font-bold ${option.strike === atmStrike ? 'bg-accent/20' : ''}`}>
-                    {option.strike}
-                  </td>
-                  <td 
-                    className="py-1 text-left cursor-pointer hover:bg-accent/20 font-medium"
-                    onClick={() => setSelectedLeg({ side: 'P', strike: option.strike, price: option.put.mid })}
-                  >
-                    {option.put.mid.toFixed(2)}
-                  </td>
-                  {showGreeks && (
-                    <td className="py-1 text-left">{option.put.delta.toFixed(2)}</td>
-                  )}
-                  <td className={`py-1 text-right ${option.put.isITM ? 'bg-primary/10' : ''}`}>
-                    P
-                  </td>
-                </tr>
-              ))}
-            </tbody>
           </table>
+
+          {/* Virtualized Body */}
+          <div 
+            ref={tableRef}
+            className="relative overflow-auto border border-border rounded"
+            style={{ height: CONTAINER_HEIGHT }}
+            onScroll={handleScroll}
+          >
+            <div style={{ height: totalHeight }}>
+              <div 
+                style={{ 
+                  transform: `translateY(${offsetY}px)`,
+                  height: visibleItems.length * ITEM_HEIGHT
+                }}
+              >
+                <table className="w-full text-xs">
+                  <tbody>
+                    {visibleItems.map((option) => (
+                      <tr 
+                        key={option.strike} 
+                        className="border-b border-border/50 hover:bg-muted/20"
+                        style={{ height: ITEM_HEIGHT }}
+                      >
+                        <td className={`py-1 text-left ${option.call.isITM ? 'bg-primary/10' : ''}`}>
+                          C
+                        </td>
+                        {showGreeks && (
+                          <td className="py-1 text-right">{option.call.delta.toFixed(2)}</td>
+                        )}
+                        <td 
+                          className="py-1 text-right cursor-pointer hover:bg-accent/20 font-medium"
+                          onClick={() => handleLegSelection('C', option.strike, option.call.mid)}
+                        >
+                          {option.call.mid.toFixed(2)}
+                        </td>
+                        <td className={`py-1 text-center font-bold ${option.strike === atmStrike ? 'bg-accent/20' : ''}`}>
+                          {option.strike}
+                        </td>
+                        <td 
+                          className="py-1 text-left cursor-pointer hover:bg-accent/20 font-medium"
+                          onClick={() => handleLegSelection('P', option.strike, option.put.mid)}
+                        >
+                          {option.put.mid.toFixed(2)}
+                        </td>
+                        {showGreeks && (
+                          <td className="py-1 text-left">{option.put.delta.toFixed(2)}</td>
+                        )}
+                        <td className={`py-1 text-right ${option.put.isITM ? 'bg-primary/10' : ''}`}>
+                          P
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Selected Leg */}
@@ -351,4 +425,6 @@ export function OptionsChainWidget({ widget }: OptionsChainWidgetProps) {
       </CardContent>
     </Card>
   );
-}
+});
+
+export { OptionsChainWidget };

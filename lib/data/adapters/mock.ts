@@ -173,4 +173,8 @@ export const mockAdapter: Provider = {
     // Random time within last minute
     return new Date(Date.now() - Math.random() * 60000);
   },
+
+  async isAuthenticated(): Promise<boolean> {
+    return true; // Mock adapter is always available
+  },
 };

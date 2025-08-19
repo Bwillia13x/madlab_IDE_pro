@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, TrendingUp, TrendingDown, Minus, ExternalLink, Filter } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, Minus, ExternalLink } from 'lucide-react';
 import type { Widget } from '@/lib/store';
 
 interface NewsEventsFeedWidgetProps {
@@ -144,7 +144,7 @@ const MOCK_EVENTS: EventItem[] = [
   }
 ];
 
-export function NewsEventsFeedWidget({ widget }: Readonly<NewsEventsFeedWidgetProps>) {
+export function NewsEventsFeedWidget({ widget: _widget }: Readonly<NewsEventsFeedWidgetProps>) {
   const [activeTab, setActiveTab] = useState('news');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSentiment, setSelectedSentiment] = useState('all');
@@ -157,13 +157,7 @@ export function NewsEventsFeedWidget({ widget }: Readonly<NewsEventsFeedWidgetPr
     }
   };
 
-  const getSentimentColor = (sentiment: string) => {
-    switch (sentiment) {
-      case 'positive': return 'text-green-600';
-      case 'negative': return 'text-red-600';
-      default: return 'text-muted-foreground';
-    }
-  };
+  
 
   const getImpactColor = (impact: string) => {
     switch (impact) {

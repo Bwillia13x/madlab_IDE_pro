@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Send, Minimize2, Bot, User, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,12 +9,41 @@ import { useWorkspaceStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { getWorkflowFromQuery, suggestWorkflows } from '@/lib/workflows';
 
+// Type definition for the SpeechRecognition API
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onend: () => void;
+  onerror: (event: Event) => void;
+  start: () => void;
+  stop: () => void;
+}
+
+interface SpeechRecognitionEvent extends Event {
+  results: {
+    [key: number]: {
+      [key:number]: {
+        transcript: string;
+      }
+    }
+  }
+}
+
+declare global {
+  interface Window {
+    webkitSpeechRecognition: { new(): SpeechRecognition };
+    SpeechRecognition: { new(): SpeechRecognition };
+  }
+}
+
 export function AgentChat() {
   const { messages, addMessage, chatCollapsed, toggleChat, globalSymbol, createSheetFromWorkflow } = useWorkspaceStore();
   const [inputValue, setInputValue] = useState('');
   const [suggestions, setSuggestions] = useState<{ id: string; title: string }[]>([]);
   const [listening, setListening] = useState(false);
-  const recognitionRef = (typeof window !== 'undefined' ? (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition : null) ? { current: null as any } : { current: null as any };
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
@@ -28,7 +57,7 @@ export function AgentChat() {
       addMessage(`I can create a new sheet for: ${workflow.title}.`, 'agent');
       const sheetId = createSheetFromWorkflow(workflow.title, workflow.kind, workflow.widgets);
       if (sheetId) {
-        addMessage(`Created sheet "${workflow.title}" with an initial setup for ${globalSymbol}.`, 'agent');
+        addMessage(`Created sheet \"${workflow.title}\" with an initial setup for ${globalSymbol}.`, 'agent');
         return;
       }
     }
@@ -48,14 +77,14 @@ export function AgentChat() {
 
   const toggleVoice = () => {
     try {
-      const SpeechRecognition: any = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
       if (!SpeechRecognition) return;
       if (!recognitionRef.current) {
         recognitionRef.current = new SpeechRecognition();
         recognitionRef.current.continuous = false;
         recognitionRef.current.interimResults = false;
         recognitionRef.current.lang = 'en-US';
-        recognitionRef.current.onresult = (event: any) => {
+        recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
           const transcript = event.results[0][0].transcript as string;
           setInputValue(transcript);
           setListening(false);
@@ -74,6 +103,7 @@ export function AgentChat() {
       setListening(false);
     }
   };
+
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {

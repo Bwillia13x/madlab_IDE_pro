@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -169,7 +169,7 @@ function MACD(close: number[], fast = 12, slow = 26, sig = 9) {
 
 type WindowSetting = '30' | '90' | '180' | '252' | 'max';
 
-export function AdvancedChart({ widget, onTitleChange }: WidgetProps) {
+export function AdvancedChart({ widget, onTitleChange: _onTitleChange }: WidgetProps) {
   const defaultSymbol = (widget.props?.['symbol'] as string) || 'NVDA';
   const [symbol, setSymbol] = useState<string>(defaultSymbol);
   const [compareInput, setCompareInput] = useState<string>('');
@@ -527,7 +527,7 @@ export function AdvancedChart({ widget, onTitleChange }: WidgetProps) {
 
   function updateSnapshot() {
     // Only used in widget header badge, we can compute the bar count
-    const s = sliceWindow(dataCacheRef.current[symbol] || []);
+    // const s = sliceWindow(dataCacheRef.current[symbol] || []);
     // no-op in widget for now
   }
 
@@ -620,7 +620,7 @@ export function AdvancedChart({ widget, onTitleChange }: WidgetProps) {
     return () => {
       cv.removeEventListener('mousemove', onMove);
       cv.removeEventListener('mouseleave', onLeave);
-      cv.removeEventListener('wheel', onWheel as any);
+      cv.removeEventListener('wheel', onWheel as EventListener);
       cv.removeEventListener('click', onClick);
       window.removeEventListener('keydown', onKey);
     };

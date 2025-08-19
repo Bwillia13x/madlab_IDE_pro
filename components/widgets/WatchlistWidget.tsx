@@ -40,7 +40,7 @@ const MOCK_STOCK_DATA: Record<string, StockData> = {
   'BRK.A': { symbol: 'BRK.A', price: 523000, change: 1500, changePercent: 0.29, volume: 1234, marketCap: 745000000000 },
 };
 
-export function WatchlistWidget({ widget }: Readonly<WatchlistWidgetProps>) {
+export function WatchlistWidget({ widget: _widget }: Readonly<WatchlistWidgetProps>) {
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [newSymbol, setNewSymbol] = useState('');
   const [newNotes, setNewNotes] = useState('');
@@ -51,7 +51,7 @@ export function WatchlistWidget({ widget }: Readonly<WatchlistWidgetProps>) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setWatchlist(parsed.map((item: any) => ({
+        setWatchlist(parsed.map((item: WatchlistItem) => ({
           ...item,
           addedAt: new Date(item.addedAt)
         })));

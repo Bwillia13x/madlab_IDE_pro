@@ -4,13 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart3 } from 'lucide-react';
 import type { Widget } from '@/lib/store';
 
-interface InteractiveCandlestickChartProps {
+interface CandlestickChartProps {
   widget: Widget;
   sheetId: string;
   onTitleChange?: (title: string) => void;
 }
 
-export function InteractiveCandlestickChart({ widget, sheetId, onTitleChange }: InteractiveCandlestickChartProps) {
+export function InteractiveCandlestickChart({ widget, sheetId: _sheetId, onTitleChange: _onTitleChange }: CandlestickChartProps) {
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">

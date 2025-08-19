@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { LineChart as RechartsLineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Legend } from 'recharts';
+import type { TooltipProps } from 'recharts';
+import type { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -28,7 +30,7 @@ interface ChartData {
   lowerBand?: number;
 }
 
-export function EnhancedLineChart({ widget, sheetId, onTitleChange }: EnhancedLineChartProps) {
+export function EnhancedLineChart({ widget, sheetId: _sheetId, onTitleChange: _onTitleChange }: EnhancedLineChartProps) {
   const [timeRange, setTimeRange] = useState<PriceRange>('6M');
   const [showVolume, setShowVolume] = useState(false);
   const [showSMAs, setShowSMAs] = useState(false);
@@ -63,7 +65,8 @@ export function EnhancedLineChart({ widget, sheetId, onTitleChange }: EnhancedLi
 
       // Calculate Bollinger Bands
       if (showBollingerBands) {
-        const bbData = sma50Data.map((point, index) => {
+        // Calculate Bollinger Bands
+        sma50Data.map((point, index) => {
           if (index < 49) return { ...point, upperBand: undefined, lowerBand: undefined };
           const prices = chartData.slice(index - 49, index + 1).map(p => p.price);
           const sma = point.sma50!;
@@ -96,14 +99,16 @@ export function EnhancedLineChart({ widget, sheetId, onTitleChange }: EnhancedLi
     return value.toString();
   };
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+// ... (keep existing code)
+
+  const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
           <p className="font-medium">{label}</p>
-          {payload.map((entry: any, index: number) => (
+          {payload.map((entry, index: number) => (
             <p key={index} style={{ color: entry.color }}>
-              {entry.name}: {entry.dataKey === 'volume' ? formatVolume(entry.value) : formatPrice(entry.value)}
+              {entry.name}: {entry.dataKey === 'volume' ? formatVolume(entry.value as number) : formatPrice(entry.value as number)}
             </p>
           ))}
         </div>

@@ -31,6 +31,22 @@ export interface FinancialData {
   symbol: string;
   revenue: number;
   netIncome: number;
+  totalAssets?: number;
+  totalLiabilities?: number;
+  cash?: number;
+  debt?: number;
+  equity?: number;
+  eps?: number;
+  peRatio?: number;
+  pbRatio?: number;
+  roe?: number;
+  roa?: number;
+  debtToEquity?: number;
+  currentRatio?: number;
+  quickRatio?: number;
+  grossMargin?: number;
+  operatingMargin?: number;
+  netMargin?: number;
   cashFlow: number;
   fcf: number;
   timestamp: Date;
@@ -42,6 +58,7 @@ export interface Provider {
   getKpis(symbol: string): Promise<KpiData>;
   getFinancials(symbol: string): Promise<FinancialData>;
   isAvailable(): Promise<boolean>;
+  isAuthenticated(): Promise<boolean>;
   getLastUpdate(symbol: string): Promise<Date | null>;
 }
 

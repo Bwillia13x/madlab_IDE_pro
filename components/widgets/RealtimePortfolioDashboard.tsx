@@ -30,7 +30,7 @@ interface RealtimePortfolioDashboardProps {
   onTitleChange?: (title: string) => void;
 }
 
-export function RealtimePortfolioDashboard({ widget, sheetId, onTitleChange }: RealtimePortfolioDashboardProps) {
+export function RealtimePortfolioDashboard({ widget, sheetId: _sheetId, onTitleChange: _onTitleChange }: RealtimePortfolioDashboardProps) {
   const [assets, setAssets] = useState<PortfolioAsset[]>([
     { symbol: 'AAPL', shares: 100, avgPrice: 150.00 },
     { symbol: 'MSFT', shares: 50, avgPrice: 300.00 },

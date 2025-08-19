@@ -78,6 +78,7 @@ export function BottomPanel() {
     <div 
       className="bg-[#252526] border-t border-[#2d2d30] flex flex-col"
       style={{ height: panelHeight, minHeight: '120px' }}
+      data-testid="bottom-panel"
     >
       {/* Header */}
       <div className="h-9 px-3 flex items-center justify-between border-b border-[#2d2d30]">
@@ -86,18 +87,21 @@ export function BottomPanel() {
             <TabsTrigger 
               value="output" 
               className="bg-transparent text-[#cccccc] data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] rounded-none px-3 h-full"
+              data-testid="bottom-panel-tab"
             >
               Output
             </TabsTrigger>
             <TabsTrigger 
               value="problems" 
               className="bg-transparent text-[#cccccc] data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] rounded-none px-3 h-full"
+              data-testid="bottom-panel-tab"
             >
               Problems ({MOCK_PROBLEMS.length})
             </TabsTrigger>
             <TabsTrigger 
               value="terminal" 
               className="bg-transparent text-[#cccccc] data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] rounded-none px-3 h-full"
+              data-testid="bottom-panel-tab"
             >
               Terminal
             </TabsTrigger>
@@ -137,7 +141,7 @@ export function BottomPanel() {
 
       {/* Content */}
       <Tabs value={activeBottomTab} className="flex-1 flex flex-col">
-        <TabsContent value="output" className="flex-1 mt-0">
+        <TabsContent value="output" className="flex-1 mt-0" data-testid="bottom-panel-content">
           <ScrollArea className="h-full">
             <div className="p-2 font-mono text-xs">
               {MOCK_OUTPUT_LOGS.map((log, index) => (

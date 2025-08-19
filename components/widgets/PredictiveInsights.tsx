@@ -5,8 +5,12 @@ import type { WidgetProps } from '@/lib/widgets/schema';
 import { useEffect, useState } from 'react';
 import { getProvider } from '@/lib/data/providers';
 
+interface PredictiveInsightsProps {
+  symbol?: string;
+}
+
 export function PredictiveInsights({ widget }: WidgetProps) {
-  const symbol = String((widget.props as any)?.symbol || '').toUpperCase() || 'AAPL';
+  const symbol = String((widget.props as PredictiveInsightsProps)?.symbol || '').toUpperCase() || 'AAPL';
   const [trend, setTrend] = useState<string>('');
   const [confidence, setConfidence] = useState<number>(0);
 

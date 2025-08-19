@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, Filter, Download, Plus, Trash2, Play, RotateCcw, HelpCircle, Zap } from 'lucide-react';
+import { Search, Filter, Download, Trash2, Play, RotateCcw, HelpCircle, Zap } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -769,7 +769,7 @@ export default function ScreenerPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedStocks.map((stock, index) => (
+                {paginatedStocks.map((stock, _index) => (
                   <tr
                     key={stock.symbol}
                     className="border-b hover:bg-muted/30 cursor-pointer"

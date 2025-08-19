@@ -256,6 +256,17 @@ export class AlphaVantageAdapter implements Provider {
       return null;
     }
   }
+
+  async isAuthenticated(): Promise<boolean> {
+    try {
+      // Test authentication by making a simple API call
+      const response = await fetch(`${this.baseUrl}/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=${this.apiKey}`);
+      const data = await response.json();
+      return !data['Error Message'] && !data['Note'];
+    } catch (error) {
+      return false;
+    }
+  }
 }
 
 // Factory function to create adapter

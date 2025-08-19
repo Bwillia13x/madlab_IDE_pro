@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Search, Package, Settings, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { SheetKind, useWorkspaceStore } from '@/lib/store';
 interface WidgetSchema {
   [key: string]: {
     type: 'string' | 'number' | 'boolean';
-    default?: any;
+    default?: string | number | boolean;
     enum?: string[];
   };
 }
@@ -150,7 +150,7 @@ export default function WidgetsPage() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [selectedSheet, setSelectedSheet] = useState<SheetKind>('valuation');
   const [selectedWidget, setSelectedWidget] = useState<WidgetDefinition | null>(null);
-  const [config, setConfig] = useState<Record<string, any>>({});
+  const [config, setConfig] = useState<Record<string, string | number | boolean>>({});
   const [theme, setTheme] = useState('malibu-sunrise');
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -169,9 +169,9 @@ export default function WidgetsPage() {
   // Initialize default configuration from schema
   const getDefaultConfig = (schema?: WidgetSchema) => {
     if (!schema) return {};
-    const defaults: Record<string, any> = {};
+    const defaults: Record<string, string | number | boolean> = {};
     Object.entries(schema).forEach(([key, prop]) => {
-      if ('default' in prop) {
+      if ('default' in prop && prop.default !== undefined) {
         defaults[key] = prop.default;
       } else if (prop.type === 'number') {
         defaults[key] = 0;

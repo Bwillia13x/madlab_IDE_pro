@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, Filter, Download, Plus, Trash2, Play, RotateCcw, Copy, Settings } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Filter, Trash2, RotateCcw, Copy, Settings } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -85,7 +85,7 @@ function normalCDF(x: number): number {
   
   const L = Math.abs(x);
   const k = 1 / (1 + 0.2316419 * L);
-  let w = 1 - (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-L * L / 2) *
+  const w = 1 - (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-L * L / 2) *
     (a1 * k + a2 * k ** 2 + a3 * k ** 3 + a4 * k ** 4 + a5 * k ** 5);
   
   return x < 0 ? 1 - w : w;
@@ -237,7 +237,7 @@ export default function OptionsChainPage() {
   }, [optionChain, otmOnly]);
 
   // Draw volatility smile
-  const drawVolatilitySmile = () => {
+  const drawVolatilitySmile = useCallback(() => {
     const canvas = smileCanvasRef.current;
     if (!canvas || !underlying) return;
     
@@ -277,10 +277,10 @@ export default function OptionsChainPage() {
     const atmX = ((underlying.price - minStrike) / (maxStrike - minStrike)) * width;
     ctx.fillStyle = 'rgba(255, 126, 182, 0.8)';
     ctx.fillRect(atmX - 1, 0, 2, height);
-  };
+  }, [optionChain, underlying]);
 
   // Draw term structure
-  const drawTermStructure = () => {
+  const drawTermStructure = useCallback(() => {
     const canvas = termCanvasRef.current;
     if (!canvas || !underlying) return;
     
@@ -320,12 +320,12 @@ export default function OptionsChainPage() {
     const currentX = ((dte - minTerm) / (maxTerm - minTerm)) * width;
     ctx.fillStyle = 'rgba(255, 126, 182, 0.8)';
     ctx.fillRect(currentX - 1, 0, 2, height);
-  };
+  }, [dte, underlying, adjustedIV]);
 
   useEffect(() => {
     drawVolatilitySmile();
     drawTermStructure();
-  }, [optionChain, dte, underlying, adjustedIV]);
+  }, [optionChain, dte, underlying, adjustedIV, drawVolatilitySmile, drawTermStructure]);
 
   const addPosition = (side: 'C' | 'P', strike: number, price: number) => {
     const id = `${symbol}-${side}-${strike}-${dte}-${Date.now()}`;

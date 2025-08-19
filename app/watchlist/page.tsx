@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,11 +68,8 @@ function drawSpark(canvas: HTMLCanvasElement, data: number[]) {
 }
 
 export default function WatchlistPage() {
-  const { theme, globalSymbol } = useWorkspaceStore();
+  const { theme } = useWorkspaceStore();
   // Storage keys
-  const KEY_LISTS = 'madlab_watchlists';
-  const KEY_ACTIVE = 'madlab_watch_active';
-  const KEY_ALERTS = 'madlab_alerts';
 
   const [lists, setLists] = useState<WatchList[]>([
     { id: 'default', name: 'All Assets', symbols: DEFAULT_SEED.map((x) => x.sym) },
@@ -85,16 +82,9 @@ export default function WatchlistPage() {
   const [sortDir, setSortDir] = useState<1 | -1>(1);
   const [newSymbol, setNewSymbol] = useState('');
   const [newListName, setNewListName] = useState('');
-  const [bulkSymbols, setBulkSymbols] = useState('');
-  const [autoUpdate, setAutoUpdate] = useState(true);
 
   // Alerts
-  type AlertRule = { sym: string; type: 'price_gt' | 'price_lt' | 'chg_pct_gt' | 'chg_pct_lt' | 'rsi_gt' | 'rsi_lt'; value: number };
-  const [alerts, setAlerts] = useState<AlertRule[]>([]);
-  const [alertSym, setAlertSym] = useState<string>('');
-  const [alertType, setAlertType] = useState<AlertRule['type']>('price_gt');
-  const [alertValue, setAlertValue] = useState<string>('');
-  const [highlighted, setHighlighted] = useState<Set<string>>(new Set());
+  // type AlertRule = { sym: string; type: 'price_gt' | 'price_lt' | 'chg_pct_gt' | 'chg_pct_lt' | 'rsi_gt' | 'rsi_lt'; value: number };
 
   // Initialize rows with synthetic baseline and provider-enhanced values
   useEffect(() => {
@@ -189,7 +179,7 @@ export default function WatchlistPage() {
           va = ra?.sym || '';
           vb = rb?.sym || '';
       }
-      return ((va as any) > (vb as any) ? 1 : (va as any) < (vb as any) ? -1 : 0) * sortDir;
+      return (va > vb ? 1 : va < vb ? -1 : 0) * sortDir;
     });
     return syms;
   }, [activeSymbols, rows, search, sortBy, sortDir]);
@@ -259,7 +249,7 @@ export default function WatchlistPage() {
         <Input value={newSymbol} onChange={(e) => setNewSymbol(e.target.value)} placeholder="Add symbol (e.g., NVDA, BTC-USD)" className="w-48 h-8" />
         <Button onClick={addSymbol} className="h-8 ml-2">Add</Button>
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filter… (⌘F)" className="w-48 h-8 ml-3" />
-        <Select value={localTheme} onValueChange={(v: any) => setLocalTheme(v)}>
+        <Select value={localTheme} onValueChange={(v: 'malibu-sunrise' | 'malibu-sunset' | 'dark' | 'light') => setLocalTheme(v)}>
           <SelectTrigger className="w-36 h-8 ml-3">
             <SelectValue />
           </SelectTrigger>

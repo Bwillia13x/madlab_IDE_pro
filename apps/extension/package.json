@@ -34,6 +34,14 @@
       {
         "command": "madlab.clearApiKeys",
         "title": "MAD LAB: Clear Stored API Keys"
+      },
+      {
+        "command": "madlab.exportSettings",
+        "title": "MAD LAB: Export Settings"
+      },
+      {
+        "command": "madlab.importSettings",
+        "title": "MAD LAB: Import Settings"
       }
     ]
   },

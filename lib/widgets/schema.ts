@@ -18,7 +18,7 @@ export interface WidgetSchema {
     label: string;
     description?: string;
     required?: boolean;
-    default?: any;
+    default?: string | number | boolean;
     options?: string[];
     min?: number;
     max?: number;

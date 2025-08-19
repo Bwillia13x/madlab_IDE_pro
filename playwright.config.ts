@@ -6,7 +6,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  // Avoid keeping an HTTP server open after tests
+  reporter: [['html', { open: 'never' }]],
   use: {
     baseURL: 'http://localhost:3010',
     trace: 'on-first-retry',
@@ -22,6 +23,7 @@ export default defineConfig({
   webServer: {
     command: 'pnpm dev:test',
     url: 'http://localhost:3010',
-    reuseExistingServer: !process.env.CI,
+    // Let Playwright manage starting/stopping the server so the command exits automatically
+    reuseExistingServer: false,
   },
 });

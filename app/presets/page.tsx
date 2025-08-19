@@ -92,7 +92,7 @@ export default function PresetGalleryPage() {
         <Badge variant="outline" className="ml-1">/presets</Badge>
         <div className="flex-1" />
         <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search presets, tags… (⌘K)" className="w-72 h-8" />
-        <Select value={theme} onValueChange={(v: any) => setTheme(v)}>
+        <Select value={theme} onValueChange={(v: 'malibu-sunrise' | 'malibu-sunset' | 'dark' | 'light') => setTheme(v)}>
           <SelectTrigger className="w-36 h-8 ml-3"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="malibu-sunrise">Sunrise</SelectItem>

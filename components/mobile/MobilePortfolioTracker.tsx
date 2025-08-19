@@ -13,9 +13,6 @@ import {
   TrendingDown, 
   DollarSign, 
   Activity, 
-  RefreshCw, 
-  Play, 
-  Pause, 
   Wifi, 
   WifiOff,
   ChevronRight,
@@ -49,8 +46,8 @@ interface MobilePortfolioTrackerProps {
 
 export function MobilePortfolioTracker({ 
   widget, 
-  sheetId, 
-  onTitleChange 
+  sheetId: _sheetId, 
+  onTitleChange: _onTitleChange 
 }: MobilePortfolioTrackerProps) {
   const [assets, setAssets] = useState<PortfolioAsset[]>([
     {
@@ -102,8 +99,8 @@ export function MobilePortfolioTracker({
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
 
   const symbols = assets.map(asset => asset.symbol);
-  const { prices, isConnected, isRunning, start, stop, error: priceError } = useRealtimePrices(symbols, 2000);
-  const { kpis, error: kpiError } = useRealtimeKPIs(symbols, 5000);
+  const { prices, isConnected, start, stop } = useRealtimePrices(symbols, 2000);
+  const { kpis } = useRealtimeKPIs(symbols, 5000);
 
   const portfolioRef = useRef<HTMLDivElement>(null);
 

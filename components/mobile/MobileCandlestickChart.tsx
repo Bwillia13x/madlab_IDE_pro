@@ -11,7 +11,6 @@ import {
   TrendingUp, 
   TrendingDown, 
   BarChart3, 
-  Activity, 
   RefreshCw, 
   ZoomIn, 
   ZoomOut, 
@@ -32,15 +31,15 @@ interface MobileCandlestickChartProps {
 
 export function MobileCandlestickChart({ 
   widget, 
-  sheetId, 
-  onTitleChange 
+  sheetId: _sheetId, 
+  onTitleChange: _onTitleChange 
 }: MobileCandlestickChartProps) {
   const [timeRange, setTimeRange] = useState<PriceRange>('1M');
   const [showVolume, setShowVolume] = useState(true);
   const [showSMAs, setShowSMAs] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomLevel] = useState(1);
 
   const symbol = (widget.props?.symbol as string) || 'AAPL';
 

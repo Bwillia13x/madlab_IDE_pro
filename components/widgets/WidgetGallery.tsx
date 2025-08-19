@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Search, Package, Settings, Plus, X, Filter } from 'lucide-react';
+import { Search, Filter, Package, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -12,9 +12,10 @@ import { SheetKind, useWorkspaceStore, type Widget } from '@/lib/store';
 
 interface WidgetSchema {
   [key: string]: {
-    type: 'string' | 'number' | 'boolean';
-    default?: any;
+    type: 'string' | 'number' | 'boolean' | 'select';
+    default?: unknown;
     enum?: string[];
+    options?: string[];
   };
 }
 
@@ -144,11 +145,11 @@ export function WidgetGallery({ open, onOpenChange, targetSheet }: WidgetGallery
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [selectedSheet, setSelectedSheet] = useState<SheetKind>(targetSheet || 'valuation');
   const [selectedWidget, setSelectedWidget] = useState<WidgetDefinition | null>(null);
-  const [config, setConfig] = useState<Record<string, any>>({});
+  const [config, setConfig] = useState<Record<string, unknown>>({});
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
-  const { addWidget, sheets, activeSheetId } = useWorkspaceStore();
+  const { addWidget, sheets } = useWorkspaceStore();
 
   // Update selected sheet when targetSheet prop changes
   useEffect(() => {
@@ -170,7 +171,7 @@ export function WidgetGallery({ open, onOpenChange, targetSheet }: WidgetGallery
   // Get default config from schema
   const getDefaultConfig = (schema?: WidgetSchema) => {
     if (!schema) return {};
-    const defaults: Record<string, any> = {};
+    const defaults: Record<string, unknown> = {};
     Object.entries(schema).forEach(([key, prop]) => {
       if ('default' in prop) {
         defaults[key] = prop.default;
@@ -384,7 +385,7 @@ export function WidgetGallery({ open, onOpenChange, targetSheet }: WidgetGallery
                 {selectedWidget.schema && (
                   <div className="space-y-3">
                     <h5 className="text-sm font-medium">Configuration</h5>
-                    {Object.entries(selectedWidget.schema).map(([key, prop]) => (
+                    {Object.entries(selectedWidget.schema).map(([key, prop]: [string, WidgetSchema[keyof WidgetSchema]]) => (
                       <div key={key} className="space-y-1">
                         <label className="text-xs text-muted-foreground">{key}</label>
                         {prop.enum ? (

@@ -24,8 +24,8 @@ export default function HomePage() {
   // Listen to open-marketplace command from activity bar
   React.useEffect(() => {
     const onOpen = () => setMarketplaceOpen(true);
-    window.addEventListener('madlab:open-marketplace' as any, onOpen);
-    return () => window.removeEventListener('madlab:open-marketplace' as any, onOpen);
+    window.addEventListener('madlab:open-marketplace', onOpen);
+    return () => window.removeEventListener('madlab:open-marketplace', onOpen);
   }, []);
 
   return (

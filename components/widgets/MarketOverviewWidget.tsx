@@ -1,7 +1,6 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { Widget } from '@/lib/store';
 
@@ -53,7 +52,7 @@ const MARKET_BREADTH = {
   downVolume: 8900000000,
 };
 
-export function MarketOverviewWidget({ widget }: Readonly<MarketOverviewWidgetProps>) {
+export function MarketOverviewWidget({ widget: _widget }: Readonly<MarketOverviewWidgetProps>) {
   const getChangeIcon = (change: number) => {
     if (Math.abs(change) < 0.01) return <Minus className="w-3 h-3 text-muted-foreground" />;
     return change > 0 ? 

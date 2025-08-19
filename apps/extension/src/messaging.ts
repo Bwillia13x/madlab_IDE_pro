@@ -19,7 +19,12 @@ export type FromWebviewMessage =
     }
   | { type: 'data:kpis'; payload: { symbol: string } & { _requestId?: number } }
   | { type: 'data:financials'; payload: { symbol: string } & { _requestId?: number } }
-  | { type: 'data:vol'; payload: { symbol: string } & { _requestId?: number } };
+  | { type: 'data:vol'; payload: { symbol: string } & { _requestId?: number } }
+  // Settings sync (Phase 2)
+  | { type: 'settings:get'; payload: {} }
+  | { type: 'settings:update'; payload: { key: string; value: any } }
+  | { type: 'settings:sync'; payload: { settings: Record<string, any> } }
+  | { type: 'backtest:run'; payload: { strategy: string; params: any } };
 
 export type ToWebviewMessage =
   | { type: 'extension:ready'; payload: { version: number; extensionId: string } }
@@ -28,7 +33,11 @@ export type ToWebviewMessage =
   | { type: 'file:saved'; payload: { success: boolean; path?: string; error?: string } }
   | { type: 'file:opened'; payload: { success: boolean; content?: string; error?: string } }
   | { type: 'theme:data'; payload: { theme: 'dark' | 'light' | 'high-contrast' } }
-  | { type: 'agent:response'; payload: { response: string; error?: string } };
+  | { type: 'agent:response'; payload: { response: string; error?: string } }
+  // Settings sync responses (Phase 2)
+  | { type: 'settings:data'; payload: { settings: Record<string, any> } }
+  | { type: 'settings:updated'; payload: { success: boolean; key: string; error?: string } }
+  | { type: 'backtest:result'; payload: { success: boolean; result?: any; error?: string } };
 
 export interface WebviewBridge {
   post(type: string, payload?: any): void;
@@ -40,4 +49,9 @@ export interface WebviewBridge {
   getTheme(): Promise<'dark' | 'light' | 'high-contrast'>;
   showNotification(message: string, type?: 'info' | 'warning' | 'error'): void;
   requestAgent(message: string, history: any[]): Promise<string>;
+  // Settings sync methods (Phase 2)
+  getSettings(): Promise<Record<string, any>>;
+  updateSetting(key: string, value: any): Promise<boolean>;
+  syncSettings(settings: Record<string, any>): Promise<boolean>;
+  runBacktest(strategy: string, params: any): Promise<any>;
 }

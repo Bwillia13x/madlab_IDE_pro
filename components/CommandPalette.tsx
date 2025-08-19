@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Search, Layout, RotateCcw, Play, Palette, FileText, MessageSquare, Grid3X3, Filter } from 'lucide-react';
 import {
-  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,

@@ -19,7 +19,7 @@ interface WidgetConfigPanelProps {
   onSave: (widget: Widget) => void;
 }
 
-export function WidgetConfigPanel({ widget, sheetId, onClose, onSave }: WidgetConfigPanelProps) {
+export function WidgetConfigPanel({ widget, sheetId: _sheetId, onClose, onSave }: WidgetConfigPanelProps) {
   const [config, setConfig] = useState<Record<string, unknown>>(widget.props || {});
   const [isDirty, setIsDirty] = useState(false);
   
@@ -43,7 +43,18 @@ export function WidgetConfigPanel({ widget, sheetId, onClose, onSave }: WidgetCo
     setIsDirty(false);
   };
 
-  const renderField = (key: string, fieldSchema: any) => {
+  interface FieldSchema {
+  type: 'string' | 'number' | 'boolean' | 'select';
+  description?: string;
+  min?: number;
+  max?: number;
+  options?: string[];
+  label: string;
+  required?: boolean;
+  default?: string | number | boolean;
+}
+
+  const renderField = (key: string, fieldSchema: FieldSchema) => {
     const currentValue = config[key];
     const fieldType = fieldSchema.type;
     
@@ -81,7 +92,7 @@ export function WidgetConfigPanel({ widget, sheetId, onClose, onSave }: WidgetCo
       case 'select':
         return (
           <Select
-            value={(currentValue as string) || fieldSchema.default}
+            value={(currentValue as string) || String(fieldSchema.default || '')}
             onValueChange={(val) => handleConfigChange(key, val)}
           >
             <SelectTrigger>

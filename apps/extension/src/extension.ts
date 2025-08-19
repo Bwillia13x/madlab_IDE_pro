@@ -8,6 +8,7 @@ import * as https from 'https';
 // Storage for workspace state persistence
 let globalStorageUri: vscode.Uri;
 const WORKSPACE_STORAGE_KEY = 'madlab-workspace-data';
+const SETTINGS_STORAGE_KEY = 'madlab-settings';
 
 export function activate(context: vscode.ExtensionContext) {
   // Register secret-setting commands (Batch 04)
@@ -42,6 +43,39 @@ export function activate(context: vscode.ExtensionContext) {
       vscode.window.showInformationMessage('MAD LAB: API keys cleared.');
     })
   );
+  
+  // Register settings sync commands (Phase 2)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('madlab.exportSettings', async () => {
+      const settings = await loadSettings(context);
+      const settingsJson = JSON.stringify(settings, null, 2);
+      const document = await vscode.workspace.openTextDocument({
+        content: settingsJson,
+        language: 'json'
+      });
+      await vscode.window.showTextDocument(document);
+      vscode.window.showInformationMessage('Settings exported to new document.');
+    })
+  );
+  
+  context.subscriptions.push(
+    vscode.commands.registerCommand('madlab.importSettings', async () => {
+      const document = vscode.window.activeTextEditor?.document;
+      if (!document || document.languageId !== 'json') {
+        vscode.window.showErrorMessage('Please open a JSON file with settings to import.');
+        return;
+      }
+      
+      try {
+        const settings = JSON.parse(document.getText());
+        await saveSettings(context, settings);
+        vscode.window.showInformationMessage('Settings imported successfully.');
+      } catch (error) {
+        vscode.window.showErrorMessage(`Failed to import settings: ${error instanceof Error ? error.message : 'Invalid JSON'}`);
+      }
+    })
+  );
+  
   // Initialize global storage
   globalStorageUri = context.globalStorageUri;
 
@@ -293,6 +327,59 @@ async function handleWebviewMessage(
       break;
     }
 
+    // Settings sync handlers (Phase 2)
+    case 'settings:get': {
+      const settings = await loadSettings(context);
+      sendResponse('settings:data', { settings: settings || {} });
+      break;
+    }
+
+    case 'settings:update': {
+      const { key, value } = msg.payload as any;
+      try {
+        const currentSettings = await loadSettings(context) || {};
+        currentSettings[key] = value;
+        const success = await saveSettings(context, currentSettings);
+        sendResponse('settings:updated', { success, key });
+      } catch (error) {
+        sendResponse('settings:updated', { 
+          success: false, 
+          key, 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        });
+      }
+      break;
+    }
+
+    case 'settings:sync': {
+      const { settings } = msg.payload as any;
+      try {
+        const success = await saveSettings(context, settings);
+        sendResponse('settings:updated', { success, key: 'all' });
+      } catch (error) {
+        sendResponse('settings:updated', { 
+          success: false, 
+          key: 'all', 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        });
+      }
+      break;
+    }
+
+    case 'backtest:run': {
+      const { strategy, params } = msg.payload as any;
+      try {
+        const result = await runBacktest(strategy, params);
+        sendResponse('backtest:result', { success: true, result });
+      } catch (error) {
+        sendResponse('backtest:result', { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        });
+      }
+      break;
+    }
+
     default:
       console.warn('Unknown message type:', (msg as any).type);
   }
@@ -444,7 +531,15 @@ function bridgeScript(nonce: string): string {
           },
           
           // Agent requests
-          requestAgent: (message, history = []) => bridge.request('agent:request', { message, history })
+          requestAgent: (message, history = []) => bridge.request('agent:request', { message, history }),
+          
+          // Settings sync methods (Phase 2)
+          getSettings: () => bridge.request('settings:get', {}),
+          updateSetting: (key, value) => bridge.request('settings:update', { key, value }),
+          syncSettings: (settings) => bridge.request('settings:sync', { settings }),
+          
+          // Backtesting methods (Phase 2)
+          runBacktest: (strategy, params) => bridge.request('backtest:run', { strategy, params })
         };
         
         // Handle responses to requests
@@ -483,6 +578,134 @@ function getCached<T>(key: string): T | null {
 
 function setCached<T>(key: string, data: T, ttl = 5 * 60 * 1000) {
   memoryCache.set(key, { data, ts: Date.now(), ttl });
+}
+
+// Simple backtesting engine (Phase 2)
+async function runBacktest(strategy: string, params: any): Promise<any> {
+  // Simulate backtesting delay
+  await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+  
+  const { symbol = 'AAPL', startDate = '2024-01-01', endDate = '2024-12-31', initialCapital = 10000 } = params;
+  
+  // Generate mock backtest results
+  const trades = [];
+  const equity = [initialCapital];
+  let currentCapital = initialCapital;
+  let position = 0;
+  
+  // Simulate trading days
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  
+  for (let i = 0; i < days; i++) {
+    const date = new Date(start.getTime() + i * 24 * 60 * 60 * 1000);
+    const price = 100 + Math.sin(i / 10) * 20 + Math.random() * 10;
+    
+    // Simple strategy: buy on dips, sell on peaks
+    if (price < 95 && position === 0) {
+      position = Math.floor(currentCapital * 0.1 / price);
+      trades.push({
+        date: date.toISOString(),
+        type: 'buy',
+        price,
+        shares: position,
+        value: position * price
+      });
+    } else if (price > 105 && position > 0) {
+      const sellValue = position * price;
+      currentCapital += sellValue;
+      trades.push({
+        date: date.toISOString(),
+        type: 'sell',
+        price,
+        shares: position,
+        value: sellValue
+      });
+      position = 0;
+    }
+    
+    // Update equity curve
+    const currentValue = currentCapital + (position * price);
+    equity.push(currentValue);
+  }
+  
+  const finalValue = equity[equity.length - 1];
+  const totalReturn = ((finalValue - initialCapital) / initialCapital) * 100;
+  const maxDrawdown = calculateMaxDrawdown(equity);
+  
+  return {
+    strategy,
+    symbol,
+    startDate,
+    endDate,
+    initialCapital,
+    finalValue,
+    totalReturn: totalReturn.toFixed(2) + '%',
+    maxDrawdown: maxDrawdown.toFixed(2) + '%',
+    totalTrades: trades.length,
+    trades,
+    equity,
+    metrics: {
+      sharpeRatio: (totalReturn / Math.sqrt(days)).toFixed(2),
+      winRate: calculateWinRate(trades),
+      avgTradeReturn: calculateAvgTradeReturn(trades, initialCapital)
+    }
+  };
+}
+
+function calculateMaxDrawdown(equity: number[]): number {
+  let maxDrawdown = 0;
+  let peak = equity[0];
+  
+  for (const value of equity) {
+    if (value > peak) {
+      peak = value;
+    }
+    const drawdown = ((peak - value) / peak) * 100;
+    if (drawdown > maxDrawdown) {
+      maxDrawdown = drawdown;
+    }
+  }
+  
+  return maxDrawdown;
+}
+
+function calculateWinRate(trades: any[]): string {
+  if (trades.length === 0) return '0%';
+  
+  let wins = 0;
+  for (let i = 1; i < trades.length; i += 2) {
+    if (i < trades.length - 1) {
+      const buyTrade = trades[i - 1];
+      const sellTrade = trades[i];
+      if (sellTrade.price > buyTrade.price) {
+        wins++;
+      }
+    }
+  }
+  
+  const totalPairs = Math.floor(trades.length / 2);
+  return totalPairs > 0 ? ((wins / totalPairs) * 100).toFixed(1) + '%' : '0%';
+}
+
+function calculateAvgTradeReturn(trades: any[], initialCapital: number): string {
+  if (trades.length === 0) return '0%';
+  
+  let totalReturn = 0;
+  let tradeCount = 0;
+  
+  for (let i = 1; i < trades.length; i += 2) {
+    if (i < trades.length - 1) {
+      const buyTrade = trades[i - 1];
+      const sellTrade = trades[i];
+      const tradeReturn = ((sellTrade.price - buyTrade.price) / buyTrade.price) * 100;
+      totalReturn += tradeReturn;
+      tradeCount++;
+    }
+  }
+  
+  return tradeCount > 0 ? (totalReturn / tradeCount).toFixed(2) + '%' : '0%';
 }
 
 // Note: Use real adapters when keys present; otherwise fallback to mock
@@ -674,4 +897,24 @@ async function fetchAlphaVantageFinancials(context: vscode.ExtensionContext, sym
   };
   setCached(`fin:${symbol}`, data, 5 * 60 * 1000);
   return data;
+}
+
+async function loadSettings(context: vscode.ExtensionContext): Promise<any> {
+  try {
+    const data = context.globalState.get(SETTINGS_STORAGE_KEY);
+    return data || null;
+  } catch (error) {
+    console.error('Failed to load settings:', error);
+    return null;
+  }
+}
+
+async function saveSettings(context: vscode.ExtensionContext, data: any): Promise<boolean> {
+  try {
+    await context.globalState.update(SETTINGS_STORAGE_KEY, data);
+    return true;
+  } catch (error) {
+    console.error('Failed to save settings:', error);
+    return false;
+  }
 }

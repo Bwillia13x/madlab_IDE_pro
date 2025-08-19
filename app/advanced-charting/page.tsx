@@ -3,8 +3,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AdvancedChart } from '@/components/widgets/AdvancedChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { Widget } from '@/lib/store';
 
 export default function AdvancedChartingPage() {
   const [theme, setTheme] = useState<'sunrise' | 'sunset'>(() => {
@@ -19,7 +19,7 @@ export default function AdvancedChartingPage() {
     }
   }, [theme]);
 
-  const widget = useMemo(() => ({
+  const widget = useMemo((): Widget => ({
     id: 'advanced-chart-page',
     type: 'advanced-chart',
     title: 'MAD LAB — Advanced Charting',
@@ -60,7 +60,7 @@ export default function AdvancedChartingPage() {
         </Card>
 
         {/* Center chart */}
-        <AdvancedChart widget={widget as any} sheetId="page" />
+        <AdvancedChart widget={widget} sheetId="page" />
 
         {/* Right snapshot panel (placeholder) */}
         <Card className="overflow-hidden">
