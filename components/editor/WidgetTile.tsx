@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { getSchemaWidget } from '@/lib/widgets/registry';
 import { registerCoreWidgets } from '@/lib/widgets/coreWidgets';
 import type { WidgetProps as SchemaWidgetProps } from '@/lib/widgets/schema';
+import { WidgetShell } from '@/components/widgets/WidgetShell';
 // ...existing code...
 
 // Widget components rendered only via registry moving forward
@@ -182,25 +183,24 @@ export function WidgetTile({ widget, sheetId }: WidgetTileProps) {
 
       {/* Content */}
       <div className="flex-1 p-2 overflow-hidden">
-        {SchemaComponent ? (
-          <SchemaComponent
-            widget={widget}
-            sheetId={sheetId}
-            onTitleChange={handleTitleChange}
-            onPropsChange={(props) =>
-              updateWidget(sheetId, { id: widget.id, props })
-            }
-          />
-        ) : WidgetComponent ? (
-          <WidgetComponent
-            widget={widget}
-            sheetId={sheetId}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-            Unknown widget: {widget.type}
-          </div>
-        )}
+        <WidgetShell>
+          {SchemaComponent ? (
+            <SchemaComponent
+              widget={widget}
+              sheetId={sheetId}
+              onTitleChange={handleTitleChange}
+              onPropsChange={(props) =>
+                updateWidget(sheetId, { id: widget.id, props })
+              }
+            />
+          ) : WidgetComponent ? (
+            <WidgetComponent widget={widget} sheetId={sheetId} />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+              Unknown widget: {widget.type}
+            </div>
+          )}
+        </WidgetShell>
       </div>
     </Card>
   );

@@ -16,8 +16,8 @@ interface TestStep {
   id: string;
   action: string;
   selector?: string;
-  input?: any;
-  expectedState?: any;
+  input?: unknown;
+  expectedState?: unknown;
   waitTime?: number;
   screenshot?: boolean;
 }
@@ -33,7 +33,7 @@ interface TestResult {
   screenshots: string[];
   errors: string[];
   performance: PerformanceMetrics;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 interface TestStepResult {
@@ -42,7 +42,7 @@ interface TestStepResult {
   duration: number;
   error?: string;
   screenshot?: string;
-  actualState?: any;
+  actualState?: unknown;
 }
 
 interface PerformanceMetrics {
@@ -339,11 +339,11 @@ export class E2ETestingSystem extends EventEmitter {
           break;
 
         case 'input':
-          await this.inputText(step.selector || '', step.input || '');
+          await this.inputText(step.selector || '', String(step.input || ''));
           break;
 
         case 'select':
-          await this.selectOption(step.selector || '', step.input || '');
+          await this.selectOption(step.selector || '', String(step.input || ''));
           break;
 
         case 'wait':
@@ -420,7 +420,7 @@ export class E2ETestingSystem extends EventEmitter {
   /**
    * Verify element state
    */
-  private async verifyElement(selector: string, expectedState: any): Promise<any> {
+  private async verifyElement(selector: string, expectedState: unknown): Promise<unknown> {
     // Mock verification - in real implementation, this would use Playwright
     console.log(`Verifying element: ${selector} with expected state: ${expectedState}`);
     await this.wait(100); // Simulate verification time

@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Plus, Trash2, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import type { Widget } from '@/lib/store';
+import { usePeerKpis } from '@/lib/data/hooks';
 
 interface PortfolioPerformanceWidgetProps {
   widget: Widget;
@@ -127,16 +128,24 @@ export function PortfolioPerformanceWidget({ widget: _widget }: Readonly<Portfol
     setHoldings(prev => prev.filter(h => h.symbol !== symbol));
   };
 
+  const symbols = holdings.map((h) => h.symbol);
+  const { data: kpisMap } = usePeerKpis(symbols);
+
+  const currentPriceFor = (symbol: string, fallback: number) => {
+    const k = kpisMap?.[symbol];
+    return k ? k.price : fallback;
+  };
+
   const calculatePortfolioMetrics = () => {
     if (holdings.length === 0) return null;
 
     const totalCost = holdings.reduce((sum, h) => sum + (h.shares * h.avgPrice), 0);
-    const totalValue = holdings.reduce((sum, h) => sum + (h.shares * h.currentPrice), 0);
+    const totalValue = holdings.reduce((sum, h) => sum + (h.shares * currentPriceFor(h.symbol, h.currentPrice)), 0);
     const totalGainLoss = totalValue - totalCost;
     const totalGainLossPercent = (totalGainLoss / totalCost) * 100;
 
     const sectorAllocation = holdings.reduce((acc, h) => {
-      const value = h.shares * h.currentPrice;
+      const value = h.shares * currentPriceFor(h.symbol, h.currentPrice);
       acc[h.sector] = (acc[h.sector] || 0) + value;
       return acc;
     }, {} as Record<string, number>);
@@ -295,7 +304,8 @@ export function PortfolioPerformanceWidget({ widget: _widget }: Readonly<Portfol
                   </TableHeader>
                   <TableBody>
                     {holdings.map((holding) => {
-                      const marketValue = holding.shares * holding.currentPrice;
+                      const currentPrice = currentPriceFor(holding.symbol, holding.currentPrice);
+                      const marketValue = holding.shares * currentPrice;
                       const costBasis = holding.shares * holding.avgPrice;
                       const gainLoss = marketValue - costBasis;
                       const gainLossPercent = (gainLoss / costBasis) * 100;
@@ -305,7 +315,7 @@ export function PortfolioPerformanceWidget({ widget: _widget }: Readonly<Portfol
                           <TableCell className="font-medium text-xs">{holding.symbol}</TableCell>
                           <TableCell className="text-xs">{holding.shares.toLocaleString()}</TableCell>
                           <TableCell className="text-xs">${holding.avgPrice.toFixed(2)}</TableCell>
-                          <TableCell className="text-xs">${holding.currentPrice.toFixed(2)}</TableCell>
+                          <TableCell className="text-xs">${currentPrice.toFixed(2)}</TableCell>
                           <TableCell className="text-xs">{formatCurrency(marketValue)}</TableCell>
                           <TableCell className="text-xs">
                             <div className={`flex items-center gap-1 ${getChangeColor(gainLoss)}`}>

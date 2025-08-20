@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Widget } from '@/lib/store';
+import { usePeerKpis } from '@/lib/data/hooks';
 import { Search, Filter, Download, Eye, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface ScreenerWidgetProps {
@@ -55,8 +56,18 @@ export function ScreenerWidget({ widget: _widget }: Readonly<ScreenerWidgetProps
   const [activeTab, setActiveTab] = useState('results');
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
 
+  const { data: kpis } = usePeerKpis(MOCK_STOCKS.map(s => s.symbol));
+
   const filteredStocks = useMemo(() => {
-    return MOCK_STOCKS.filter(stock => {
+    // overlay KPI price/change when available
+    const enriched = MOCK_STOCKS.map((s) => {
+      const k = kpis?.[s.symbol];
+      return k
+        ? { ...s, price: k.price, change: k.change, changePercent: k.changePercent, volume: k.volume, marketCap: k.marketCap }
+        : s;
+    });
+
+    return enriched.filter(stock => {
       if (filters.search && !stock.symbol.toLowerCase().includes(filters.search.toLowerCase())) return false;
       if (filters.sector && stock.sector !== filters.sector) return false;
       if (filters.minPrice && stock.price < parseFloat(filters.minPrice)) return false;
@@ -66,7 +77,7 @@ export function ScreenerWidget({ widget: _widget }: Readonly<ScreenerWidgetProps
       if (filters.minVolume && stock.volume < parseFloat(filters.minVolume) * 1e6) return false;
       return true;
     });
-  }, [filters]);
+  }, [filters, kpis]);
 
   const clearFilters = () => {
     setFilters({

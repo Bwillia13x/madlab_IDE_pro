@@ -20,7 +20,7 @@ interface StrategyRule {
   type: 'entry' | 'exit' | 'risk' | 'filter';
   condition: string;
   action: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   priority: number;
 }
 

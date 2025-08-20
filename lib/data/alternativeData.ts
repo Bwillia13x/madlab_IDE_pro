@@ -176,11 +176,18 @@ export interface AlternativeDataSignal {
   strength: number;
   direction: 'bullish' | 'bearish' | 'neutral';
   confidence: number;
-  timeframe: string;
+  timeframe: '1h' | '1d' | '1w' | '1m';
   data_points: number;
   generated_at: Date;
   expires_at: Date;
-  metadata: Record<string, any>;
+  metadata: Record<string, AlternativeDataMetadata>;
+}
+
+interface AlternativeDataMetadata {
+  source: string;
+  confidence: number;
+  lastUpdated: Date;
+  [key: string]: unknown;
 }
 
 export class AlternativeDataProvider extends EventEmitter {
@@ -396,7 +403,7 @@ export class AlternativeDataProvider extends EventEmitter {
 
   async calculateMarketSentiment(symbol: string, timeframe: '1h' | '1d' | '1w' | '1m' = '1d'): Promise<MarketSentiment> {
     const now = new Date();
-    const timeMap = {
+    const timeMap: Record<'1h' | '1d' | '1w' | '1m', number> = {
       '1h': 60 * 60 * 1000,
       '1d': 24 * 60 * 60 * 1000,
       '1w': 7 * 24 * 60 * 60 * 1000,
@@ -501,7 +508,7 @@ export class AlternativeDataProvider extends EventEmitter {
     return (bullishFlow - bearishFlow) / totalPremium;
   }
 
-  private calculateSentimentTrend(symbol: string, timeframe: string): SentimentTrend {
+  private calculateSentimentTrend(symbol: string, timeframe: '1h' | '1d' | '1w' | '1m'): SentimentTrend {
     // Simplified trend calculation
     return {
       direction: 'bullish',
@@ -509,7 +516,7 @@ export class AlternativeDataProvider extends EventEmitter {
       momentum: 0.3,
       volatility: 0.2,
       consistency: 0.8,
-      timeframe: timeframe as any
+      timeframe
     };
   }
 
@@ -531,7 +538,7 @@ export class AlternativeDataProvider extends EventEmitter {
       };
     }
 
-    const distribution = {
+    const distribution: SentimentDistribution = {
       very_bullish: all_sentiments.filter(s => s > 0.6).length / total,
       bullish: all_sentiments.filter(s => s > 0.2 && s <= 0.6).length / total,
       neutral: all_sentiments.filter(s => s >= -0.2 && s <= 0.2).length / total,
@@ -636,7 +643,7 @@ export class AlternativeDataProvider extends EventEmitter {
           data_points: 100,
           generated_at: new Date(),
           expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
-          metadata: { sentiment_score: sentiment.overall_sentiment }
+          metadata: { sentiment_score: { source: 'sentiment', confidence: 1, lastUpdated: new Date() } as unknown as AlternativeDataMetadata }
         });
       }
 
@@ -660,7 +667,7 @@ export class AlternativeDataProvider extends EventEmitter {
             data_points: unusualFlows.length,
             generated_at: new Date(),
             expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            metadata: { unusual_flows: unusualFlows.length }
+            metadata: { unusual_flows: { source: 'options', confidence: 1, lastUpdated: new Date() } as unknown as AlternativeDataMetadata }
           });
         }
       }

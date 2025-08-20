@@ -153,7 +153,7 @@ export function parseQuery(query: string): ParsedQuery {
         }
 
         // Set filter
-        (result.filters as any)[mappedField] = {
+        (result.filters as Record<string, unknown>)[mappedField] = {
           operator: operator as '<' | '>' | '=' | '<=' | '>=',
           value
         };
@@ -171,40 +171,41 @@ export function parseQuery(query: string): ParsedQuery {
 }
 
 // Convert parsed query to filter state
-export function applyParsedQuery(
+export function applyParsedQuery<T extends object>(
   parsedQuery: ParsedQuery,
-  currentFilters: any
-): any {
-  const newFilters = { ...currentFilters };
+  currentFilters: T
+): T {
+  const newFilters = { ...(currentFilters as unknown as Record<string, unknown>) } as Record<string, unknown>;
 
   // Apply numeric filters
   const numericFields = ['mcap', 'pe', 'ev', 'fcf', 'mom', 'atr', 'adv', 'spr', 'iv', 'ivr'];
   
   for (const field of numericFields) {
-    const filter = (parsedQuery.filters as any)[field];
-    if (filter) {
+    const filter = (parsedQuery.filters as Record<string, unknown>)[field];
+    if (filter && typeof filter === 'object' && filter !== null) {
+      const filterObj = filter as { operator: string; value: number };
       // Convert relative operators to absolute values
-      switch (filter.operator) {
+      switch (filterObj.operator) {
         case '<':
         case '<=':
-          if (field === 'mcap') newFilters.mcap = Math.max(1, filter.value);
-          else if (field === 'pe') newFilters.pe = Math.max(1, filter.value);
-          else if (field === 'ev') newFilters.ev = Math.max(1, filter.value);
-          else if (field === 'atr') newFilters.atr = Math.max(1, filter.value);
-          else if (field === 'spr') newFilters.spr = Math.max(1, filter.value);
-          else if (field === 'iv') newFilters.iv = Math.max(1, filter.value);
+          if (field === 'mcap') (newFilters as Record<string, unknown>).mcap = Math.max(1, filterObj.value);
+          else if (field === 'pe') (newFilters as Record<string, unknown>).pe = Math.max(1, filterObj.value);
+          else if (field === 'ev') (newFilters as Record<string, unknown>).ev = Math.max(1, filterObj.value);
+          else if (field === 'atr') (newFilters as Record<string, unknown>).atr = Math.max(1, filterObj.value);
+          else if (field === 'spr') (newFilters as Record<string, unknown>).spr = Math.max(1, filterObj.value);
+          else if (field === 'iv') (newFilters as Record<string, unknown>).iv = Math.max(1, filterObj.value);
           break;
         case '>':
         case '>=':
-          if (field === 'fcf') newFilters.fcf = filter.value;
-          else if (field === 'mom') newFilters.mom = filter.value;
-          else if (field === 'adv') newFilters.adv = filter.value;
-          else if (field === 'ivr') newFilters.ivr = filter.value;
-          else if (field === 'mcap') newFilters.mcap = filter.value;
+          if (field === 'fcf') (newFilters as Record<string, unknown>).fcf = filterObj.value;
+          else if (field === 'mom') (newFilters as Record<string, unknown>).mom = filterObj.value;
+          else if (field === 'adv') (newFilters as Record<string, unknown>).adv = filterObj.value;
+          else if (field === 'ivr') (newFilters as Record<string, unknown>).ivr = filterObj.value;
+          else if (field === 'mcap') (newFilters as Record<string, unknown>).mcap = filterObj.value;
           break;
         case '=':
           // For equality, set both bounds close to the value
-          if (field === 'pe') newFilters.pe = filter.value + 1;
+          if (field === 'pe') (newFilters as Record<string, unknown>).pe = filterObj.value + 1;
           break;
       }
     }
@@ -212,19 +213,19 @@ export function applyParsedQuery(
 
   // Apply boolean filters
   if (parsedQuery.filters.optionable !== undefined) {
-    newFilters.optionable = parsedQuery.filters.optionable;
+    (newFilters as Record<string, unknown>).optionable = parsedQuery.filters.optionable;
   }
 
   if (parsedQuery.filters.exUS !== undefined) {
-    newFilters.exUS = parsedQuery.filters.exUS;
+    (newFilters as Record<string, unknown>).exUS = parsedQuery.filters.exUS;
   }
 
   // Apply sectors
   if (parsedQuery.filters.sectors && parsedQuery.filters.sectors.length > 0) {
-    newFilters.sectors = new Set(parsedQuery.filters.sectors);
+    (newFilters as Record<string, unknown>).sectors = new Set(parsedQuery.filters.sectors);
   }
 
-  return newFilters;
+  return newFilters as unknown as T;
 }
 
 // Get example queries for help

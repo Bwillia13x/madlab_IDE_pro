@@ -56,6 +56,8 @@ export interface WorkspaceState {
   dataProvider: string;
   // Global symbol context (Phase 1)
   globalSymbol: string;
+  // Global timeframe for price series
+  globalTimeframe: import('./data/provider.types').PriceRange;
   // Experience mode (Phase 2)
   experienceMode: 'beginner' | 'expert';
 }
@@ -105,6 +107,9 @@ interface WorkspaceActions {
   // Global symbol context (Phase 1)
   setGlobalSymbol: (symbol: string) => void;
   applyGlobalSymbolToAllWidgets: (sheetId?: string, options?: { onlyEmpty?: boolean }) => void;
+  // Global timeframe
+  setGlobalTimeframe: (range: import('./data/provider.types').PriceRange) => void;
+  getGlobalTimeframe: () => import('./data/provider.types').PriceRange;
 
   // Experience mode (Phase 2)
   setExperienceMode: (mode: 'beginner' | 'expert') => void;
@@ -136,7 +141,7 @@ type WorkspaceStore = WorkspaceState & WorkspaceActions;
 export const PERSIST_VERSION = 1;
 
 // Persisted state can be of any shape, define a loose type for migration
-type RawState = Partial<Record<keyof WorkspaceState, unknown>>;
+// type RawState = Partial<Record<keyof WorkspaceState, unknown>>;
 
 // Helper to create default workbench sheets
 const createDefaultSheets = (): Sheet[] => {
@@ -185,6 +190,7 @@ const createInitialState = (): WorkspaceState => {
     presetVersion: 1,
     dataProvider: 'mock',
     globalSymbol: 'AAPL',
+    globalTimeframe: '6M',
     experienceMode: 'beginner',
   };
 };
@@ -192,12 +198,12 @@ const createInitialState = (): WorkspaceState => {
 // Migration helper (exported for tests if needed)
 export function migrateState(persisted: unknown, _fromVersion: number): WorkspaceState {
   if (!persisted || typeof persisted !== 'object') return createInitialState();
-  const next = persisted as any;
+  const next = persisted as Record<string, unknown>;
 
   // Coerce messages timestamps to Date
   if (Array.isArray(next.messages)) {
     next.messages = next.messages.map(
-      (m: any) =>
+      (m: Record<string, unknown>) =>
         ({
           ...m,
           timestamp: new Date((m?.timestamp as string) ?? Date.now()),
@@ -228,7 +234,7 @@ export function migrateState(persisted: unknown, _fromVersion: number): Workspac
   // Sheets/widgets minimal coercion
   if (Array.isArray(next.sheets)) {
     next.sheets = next.sheets.map(
-      (s: any) =>
+      (s: Record<string, unknown>) =>
         ({
           ...s,
           id: String(s?.id ?? `sheet-${Math.random().toString(36).slice(2)}`),
@@ -240,7 +246,7 @@ export function migrateState(persisted: unknown, _fromVersion: number): Workspac
           title: String(s?.title ?? 'Untitled'),
           widgets: Array.isArray(s?.widgets)
             ? s.widgets.map(
-                (w: any) =>
+                (w: Record<string, unknown>) =>
                   ({
                     ...w,
                     id: String(w?.id ?? `widget-${Math.random().toString(36).slice(2)}`),
@@ -278,6 +284,15 @@ export function migrateState(persisted: unknown, _fromVersion: number): Workspac
   if (typeof next.dataProvider !== 'string') {
     next.dataProvider = 'mock';
   }
+
+  // Global timeframe default
+  const validRanges = new Set(['1D','5D','1M','3M','6M','1Y','2Y','5Y','MAX']);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const candidateRange = (next as any).globalTimeframe as string | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (next as any).globalTimeframe = validRanges.has(candidateRange || '')
+    ? (candidateRange as WorkspaceState['globalTimeframe'])
+    : '6M';
 
   // Merge with defaults to ensure all required fields are present
   return {
@@ -333,7 +348,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
                 const schema = getSchemaWidget(w.type);
                 const supportsSymbol = Boolean(schema?.props?.symbol);
                 if (!supportsSymbol) return w;
-                const hasSymbol = typeof (w.props as any)?.symbol === 'string' && ((w.props as any).symbol as string).length > 0;
+                const hasSymbol = typeof (w.props as Record<string, unknown>)?.symbol === 'string' && ((w.props as Record<string, unknown>).symbol as string).length > 0;
                 if (onlyEmpty && hasSymbol) return w;
                 const nextProps = { ...(w.props || {}), symbol } as Record<string, unknown>;
                 return { ...w, props: nextProps } as Widget;
@@ -342,6 +357,12 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           }),
         }));
       },
+
+      // Global timeframe
+      setGlobalTimeframe: (range) => {
+        set({ globalTimeframe: range });
+      },
+      getGlobalTimeframe: () => get().globalTimeframe,
 
       // Experience mode (Phase 2)
       setExperienceMode: (mode: 'beginner' | 'expert') => {
@@ -415,7 +436,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         try {
           const schema = getSchemaWidget(widget.type);
           const supportsSymbol = Boolean(schema?.props?.symbol);
-          const providedSymbol = typeof (derivedProps as any)?.symbol === 'string' && ((derivedProps as any).symbol as string).length > 0;
+          const providedSymbol = typeof (derivedProps as Record<string, unknown>)?.symbol === 'string' && ((derivedProps as Record<string, unknown>).symbol as string).length > 0;
           if (supportsSymbol && !providedSymbol) {
             derivedProps = { ...(derivedProps || {}), symbol: get().globalSymbol } as Record<string, unknown>;
           }
@@ -665,8 +686,8 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       version: PERSIST_VERSION,
       migrate: (persistedState, fromVersion) => {
         const migratedState = migrateState(persistedState, fromVersion);
-        // Zustand will merge the state with actions, so we can just return the state portion
-        return migratedState as any;
+        // Return the full store shape by merging actions at runtime; here we only provide state
+        return migratedState as unknown as WorkspaceStore;
       },
       // allow auto hydration for persisted state
     }

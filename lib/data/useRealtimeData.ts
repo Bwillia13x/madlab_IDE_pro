@@ -3,6 +3,33 @@ import { webSocketService } from './websocketService';
 import { multiExchangeAggregator } from './multiExchangeAggregator';
 import { highFrequencyHandler } from './highFrequencyHandler';
 
+interface ConnectionStatus {
+  status: string;
+}
+
+interface AggregatedData {
+  symbol: string;
+  midPrice: number;
+  totalVolume: number;
+}
+
+interface ExchangeData {
+  exchange: string;
+  data: {
+    symbol: string;
+    price: number;
+  };
+}
+
+interface HighFrequencyUpdate {
+  symbol: string;
+  data: unknown[];
+}
+
+interface QualityMetricsData {
+  [key: string]: unknown;
+}
+
 // Real-time price data hook
 export function useRealtimePrices(symbols: string[], updateInterval: number = 1000) {
   const [prices, setPrices] = useState<Array<{
@@ -28,7 +55,7 @@ export function useRealtimePrices(symbols: string[], updateInterval: number = 10
 
   // Connection status management
   useEffect(() => {
-    const handleConnection = (status: any) => {
+    const handleConnection = (status: ConnectionStatus) => {
       setIsConnected(status.status === 'connected');
       if (status.status === 'connected' && isRunning) {
         // Resubscribe to symbols when reconnected
@@ -92,7 +119,7 @@ export function useRealtimePrices(symbols: string[], updateInterval: number = 10
   useEffect(() => {
     if (!isRunning) return;
 
-    const handleAggregatedData = (data: any) => {
+    const handleAggregatedData = (data: AggregatedData) => {
       if (symbolsRef.current.includes(data.symbol)) {
         setPrices(prev => {
           const existing = prev.find(p => p.symbol === data.symbol);
@@ -115,7 +142,7 @@ export function useRealtimePrices(symbols: string[], updateInterval: number = 10
       }
     };
 
-    const handleExchangeData = (data: any) => {
+    const handleExchangeData = (data: ExchangeData) => {
       if (symbolsRef.current.includes(data.data.symbol)) {
         setPrices(prev => {
           const existing = prev.find(p => p.symbol === data.data.symbol);
@@ -199,7 +226,7 @@ export function useRealtimeKPIs(symbols: string[], updateInterval: number = 5000
 
   // Connection status management
   useEffect(() => {
-    const handleConnection = (status: any) => {
+    const handleConnection = (status: ConnectionStatus) => {
       setIsConnected(status.status === 'connected');
       if (status.status === 'connected' && isRunning) {
         // Resubscribe to symbols when reconnected
@@ -263,7 +290,7 @@ export function useRealtimeKPIs(symbols: string[], updateInterval: number = 5000
   useEffect(() => {
     if (!isRunning) return;
 
-    const handleAggregatedData = (data: any) => {
+    const handleAggregatedData = (data: AggregatedData) => {
       if (symbolsRef.current.includes(data.symbol)) {
         // Calculate KPI metrics from aggregated data
         const exchangeData = multiExchangeAggregator.getExchangeData(data.symbol);
@@ -329,8 +356,7 @@ export function useRealtimeKPIs(symbols: string[], updateInterval: number = 5000
 
 // High-frequency data hook
 export function useHighFrequencyData(symbol: string, type: 'raw' | 'compressed' = 'compressed') {
-  const [data, setData] = useState<any[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [data, setData] = useState<unknown[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<number>(0);
   
@@ -345,14 +371,14 @@ export function useHighFrequencyData(symbol: string, type: 'raw' | 'compressed' 
 
   // Data subscription
   useEffect(() => {
-    const handleRawData = (update: any) => {
+    const handleRawData = (update: HighFrequencyUpdate) => {
       if (update.symbol === symbolRef.current && typeRef.current === 'raw') {
         setData(update.data);
         setLastUpdate(Date.now());
       }
     };
 
-    const handleCompressedData = (update: any) => {
+    const handleCompressedData = (update: HighFrequencyUpdate) => {
       if (update.symbol === symbolRef.current && typeRef.current === 'compressed') {
         setData(update.data);
         setLastUpdate(Date.now());
@@ -388,7 +414,6 @@ export function useHighFrequencyData(symbol: string, type: 'raw' | 'compressed' 
 
   return {
     data: memoizedData,
-    isConnected,
     error,
     lastUpdate: memoizedLastUpdate,
   };
@@ -396,11 +421,11 @@ export function useHighFrequencyData(symbol: string, type: 'raw' | 'compressed' 
 
 // Exchange quality metrics hook
 export function useExchangeQualityMetrics() {
-  const [metrics, setMetrics] = useState<Map<string, any>>(new Map());
+  const [metrics, setMetrics] = useState<Map<string, QualityMetricsData>>(new Map());
   const [lastUpdate, setLastUpdate] = useState<number>(0);
 
   useEffect(() => {
-    const handleQualityMetrics = (newMetrics: Map<string, any>) => {
+    const handleQualityMetrics = (newMetrics: Map<string, QualityMetricsData>) => {
       setMetrics(newMetrics);
       setLastUpdate(Date.now());
     };

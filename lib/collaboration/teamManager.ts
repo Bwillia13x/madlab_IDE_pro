@@ -63,7 +63,7 @@ export interface SharedData {
   id: string;
   type: 'chart' | 'analysis' | 'portfolio' | 'report' | 'document';
   name: string;
-  content: any;
+  content: Record<string, unknown> | string | number | boolean;
   sharedBy: string;
   sharedAt: Date;
   permissions: 'view' | 'edit' | 'comment';
@@ -135,7 +135,16 @@ export class TeamManager extends EventEmitter {
   private sessions: Map<string, CollaborationSession> = new Map();
   private analytics: Map<string, TeamAnalytics[]> = new Map();
   private activeUsers: Map<string, TeamMember> = new Map();
-  private invitations: Map<string, any> = new Map();
+  private invitations: Map<string, {
+    id: string;
+    teamId: string;
+    email: string;
+    role: 'member' | 'viewer' | 'manager' | 'analyst';
+    invitedBy: string;
+    invitedAt: Date;
+    expiresAt: Date;
+    status: 'pending' | 'accepted' | 'declined' | 'expired';
+  }> = new Map();
 
   constructor() {
     super();
@@ -483,7 +492,7 @@ export class TeamManager extends EventEmitter {
     return start;
   }
 
-  private calculateLoginCount(memberId: string, startDate: Date): number {
+  private calculateLoginCount(_memberId: string, _startDate: Date): number {
     // This would typically integrate with authentication system
     return Math.floor(Math.random() * 10) + 1; // Mock data
   }
@@ -570,7 +579,7 @@ export class TeamManager extends EventEmitter {
     }
   }
 
-  private calculateTeamEfficiency(memberActivity: MemberActivity[], collaborationMetrics: CollaborationMetrics): number {
+  private calculateTeamEfficiency(memberActivity: MemberActivity[], _collaborationMetrics: CollaborationMetrics): number {
     const totalActivity = memberActivity.reduce((sum, member) => 
       sum + member.collaborationActions + member.dataAccessCount, 0
     );

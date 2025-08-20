@@ -667,7 +667,7 @@ export class MarketMicrostructureAnalyzer extends EventEmitter {
       const detection: FlashCrashDetection = {
         symbol,
         timestamp: new Date(),
-        severity: severity as any,
+        severity: severity as 'low' | 'medium' | 'high',
         price_move_percent: priceChange * 100,
         volume_spike: volumeSpike,
         liquidity_evaporation: 1 - ((orderBook.totalBidVolume + orderBook.totalAskVolume) / (avgVolume * 10)),

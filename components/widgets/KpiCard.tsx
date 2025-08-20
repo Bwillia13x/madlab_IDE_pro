@@ -3,6 +3,7 @@
 import { RefreshCcw } from 'lucide-react';
 import type { Widget } from '@/lib/store';
 import { useKpis, useDataCache } from '@/lib/data/hooks';
+import { useWorkspaceStore } from '@/lib/store';
 
 interface KpiCardProps {
   widget: Widget;
@@ -54,7 +55,9 @@ function Sparkline({ data, color = '#7DC8F7' }: { data: number[]; color?: string
 }
 
 export function KpiCard({ widget: _widget, symbol }: Readonly<KpiCardProps>) {
-  const { data, loading, error } = useKpis(symbol);
+  const globalSymbol = useWorkspaceStore((s) => s.globalSymbol);
+  const sym = symbol || globalSymbol;
+  const { data, loading, error } = useKpis(sym);
   const { clearCache } = useDataCache();
   
   // Generate mock sparkline data

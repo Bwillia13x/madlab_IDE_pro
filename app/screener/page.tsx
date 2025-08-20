@@ -138,7 +138,7 @@ export default function ScreenerPage() {
   
   const [query, setQuery] = useState('');
   const [queryHelpVisible, setQueryHelpVisible] = useState(false);
-  const [sortConfig, setSortConfig] = useState({ key: 'mcap', direction: 'desc' });
+  const [sortConfig, setSortConfig] = useState<{ key: keyof StockData | string; direction: 'asc' | 'desc' }>({ key: 'mcap', direction: 'desc' });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
@@ -259,7 +259,7 @@ export default function ScreenerPage() {
   const totalPages = Math.ceil(sortedStocks.length / pageSize);
 
   // Handle sort
-  const handleSort = (key: string) => {
+  const handleSort = (key: keyof StockData | string) => {
     setSortConfig(prev => ({
       key,
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
@@ -427,7 +427,7 @@ export default function ScreenerPage() {
       return;
     }
 
-    const newFilters = applyParsedQuery(parsedQuery, filters);
+    const newFilters = applyParsedQuery<ScreenFilters>(parsedQuery, filters);
     setFilters(newFilters);
     setCurrentPage(1);
     toast({ 
@@ -447,7 +447,7 @@ export default function ScreenerPage() {
     setTimeout(() => {
       const parsedQuery = parseQuery(exampleQuery);
       if (parsedQuery.errors.length === 0) {
-        const newFilters = applyParsedQuery(parsedQuery, filters);
+        const newFilters = applyParsedQuery<ScreenFilters>(parsedQuery, filters);
         setFilters(newFilters);
         setCurrentPage(1);
       }

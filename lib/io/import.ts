@@ -116,7 +116,7 @@ export function coerceToWorkspaceState(
         id: String(m.id ?? `msg-${Math.random().toString(36).slice(2)}`),
         content: String(m.content ?? ''),
         sender: m.sender === 'user' ? 'user' : 'agent',
-        timestamp: new Date((m.timestamp as any) ?? Date.now()),
+        timestamp: new Date((m.timestamp as string | number) ?? Date.now()),
       }))
     : [];
 
@@ -129,7 +129,7 @@ export function coerceToWorkspaceState(
     messages,
     theme:
       ui?.theme === 'light' || ui?.theme === 'malibu-sunrise' || ui?.theme === 'malibu-sunset'
-        ? (ui.theme as any)
+        ? (ui.theme as 'light' | 'malibu-sunrise' | 'malibu-sunset')
         : 'dark',
     explorerCollapsed: Boolean(ui?.explorerCollapsed),
     explorerWidth: typeof ui?.explorerWidth === 'number' ? ui.explorerWidth : 280,

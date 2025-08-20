@@ -23,12 +23,10 @@ export interface CompressedDataPoint {
 }
 
 export interface DataCache {
-  [symbol: string]: {
-    raw: DataPoint[];
-    compressed: CompressedDataPoint[];
-    lastUpdate: number;
-    cacheSize: number;
-  };
+  raw: DataPoint[];
+  compressed: CompressedDataPoint[];
+  lastUpdate: number;
+  cacheSize: number;
 }
 
 export interface CompressionConfig {
@@ -40,7 +38,7 @@ export interface CompressionConfig {
 }
 
 export class HighFrequencyDataHandler extends EventEmitter {
-  private dataCache: DataCache = {};
+  private dataCache: { [symbol: string]: DataCache } = {};
   private compressionConfig: CompressionConfig;
   private updateQueue: Map<string, DataPoint[]> = new Map();
   private processingQueue = false;
@@ -290,13 +288,13 @@ export class HighFrequencyDataHandler extends EventEmitter {
 
   // Real-time data streaming
   streamData(symbol: string, callback: (data: DataPoint | CompressedDataPoint) => void): () => void {
-    const rawHandler = (data: any) => {
+    const rawHandler = (data: { symbol: string; data: DataPoint[] }) => {
       if (data.symbol === symbol) {
         callback(data.data[0]); // Send first data point from batch
       }
     };
 
-    const compressedHandler = (data: any) => {
+    const compressedHandler = (data: { symbol: string; data: CompressedDataPoint[] }) => {
       if (data.symbol === symbol) {
         callback(data.data[0]); // Send first compressed point from batch
       }
@@ -313,7 +311,7 @@ export class HighFrequencyDataHandler extends EventEmitter {
   }
 
   // Cache management
-  private calculateCacheSize(cache: any): number {
+  private calculateCacheSize(cache: DataCache): number {
     return JSON.stringify(cache).length;
   }
 

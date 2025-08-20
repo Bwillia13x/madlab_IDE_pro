@@ -163,7 +163,7 @@ export class MobileExperienceEnhancer {
   /**
    * Handle touch end event
    */
-  private handleTouchEnd(event: TouchEvent): void {
+  private handleTouchEnd(_event: TouchEvent): void {
     const touchDuration = Date.now() - this.touchStartTime;
     
     if (touchDuration < 200) {
@@ -455,7 +455,7 @@ export class MobileExperienceEnhancer {
    * Optimize layout for current screen size
    */
   private optimizeLayout(): void {
-    const { width, height } = this.metrics.screenSize;
+    const { width } = this.metrics.screenSize;
     
     // Adjust touch targets for screen size
     if (width < 768) {

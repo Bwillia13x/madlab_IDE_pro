@@ -95,7 +95,7 @@ export function getAvailableWidgetTypes(): string[] {
 }
 
 // Cache for loaded components to avoid re-importing
-const componentCache = new Map<string, React.ComponentType<{ widget: any; sheetId: string }>>();
+const componentCache = new Map<string, React.ComponentType<{ widget: unknown; sheetId: string }>>();
 
 // Critical widgets that should be preloaded
 const CRITICAL_WIDGETS = ['kpi-card', 'line-chart', 'bar-chart', 'watchlist', 'market-overview'];
@@ -112,7 +112,7 @@ export function preloadCriticalWidgets(): void {
 }
 
 // Get widget component for rendering with caching
-export async function getWidgetComponent(type: string): Promise<React.ComponentType<{ widget: any; sheetId: string }> | null> {
+export async function getWidgetComponent(type: string): Promise<React.ComponentType<{ widget: unknown; sheetId: string }> | null> {
   // Return cached component if available
   if (componentCache.has(type)) {
     return componentCache.get(type)!;

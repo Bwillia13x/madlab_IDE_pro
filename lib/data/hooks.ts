@@ -1,16 +1,25 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useWorkspaceStore } from '@/lib/store';
-import { mockAdapter } from './adapters/mock';
+import { getProvider } from './providers';
 import type { PriceRange, KpiData, PricePoint, FinancialData } from './provider.types';
 
-// Data provider registry
-const providers = {
-  mock: mockAdapter,
-  // TODO: Add real providers (Alpha Vantage, Yahoo Finance, etc.)
-};
+// In-flight request cancellation helpers
+function useAbortRef() {
+  const ref = useRef<AbortController | null>(null);
+  useEffect(() => () => {
+    ref.current?.abort();
+  }, []);
+  return ref;
+}
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  ttl: number;
+}
 
 // Cache for data
-const cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+const cache = new Map<string, CacheEntry<unknown>>();
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -27,10 +36,10 @@ function getCachedData<T>(key: string): T | null {
     return null;
   }
   
-  return cached.data;
+  return cached.data as T;
 }
 
-function setCachedData(key: string, data: any, ttl: number = CACHE_TTL): void {
+function setCachedData<T>(key: string, data: T, ttl: number = CACHE_TTL): void {
   cache.set(key, { data, timestamp: Date.now(), ttl });
 }
 
@@ -38,12 +47,14 @@ export function useKpis(symbol?: string) {
   const [data, setData] = useState<KpiData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { dataProvider } = useWorkspaceStore();
+  const { dataProvider, globalSymbol } = useWorkspaceStore();
+  const abortRef = useAbortRef();
 
   const fetchData = useCallback(async () => {
-    if (!symbol) return;
+    const sym = (symbol || globalSymbol || '').toUpperCase();
+    if (!sym) return;
     
-    const cacheKey = getCacheKey('kpis', symbol);
+    const cacheKey = getCacheKey('kpis', sym);
     const cached = getCachedData<KpiData>(cacheKey);
     
     if (cached) {
@@ -55,16 +66,28 @@ export function useKpis(symbol?: string) {
     setError(null);
     
     try {
-      const provider = providers[dataProvider as keyof typeof providers] || providers.mock;
-      const kpiData = await provider.getKpis(symbol);
+      const controller = new AbortController();
+      abortRef.current?.abort();
+      abortRef.current = controller;
+      const provider = getProvider(dataProvider);
+      const attempt = async (tries = 2, delay = 250): Promise<KpiData> => {
+        try {
+          return await provider.getKpis(sym);
+        } catch (e) {
+          if (tries <= 0 || controller.signal.aborted) throw e;
+          await new Promise((r) => setTimeout(r, delay));
+          return attempt(tries - 1, Math.min(delay * 2, 2000));
+        }
+      };
+      const kpiData = await attempt();
       setData(kpiData);
       setCachedData(cacheKey, kpiData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch KPI data');
     } finally {
       setLoading(false);
-    }
-  }, [symbol, dataProvider]);
+      }
+  }, [symbol, globalSymbol, dataProvider]);
 
   useEffect(() => {
     fetchData();
@@ -73,16 +96,19 @@ export function useKpis(symbol?: string) {
   return { data, loading, error, refetch: fetchData };
 }
 
-export function usePrices(symbol?: string, range: PriceRange = '6M') {
+export function usePrices(symbol?: string, range?: PriceRange) {
   const [data, setData] = useState<PricePoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { dataProvider } = useWorkspaceStore();
+  const { dataProvider, globalSymbol, globalTimeframe } = useWorkspaceStore();
+  const abortRef = useAbortRef();
 
   const fetchData = useCallback(async () => {
-    if (!symbol) return;
+    const sym = (symbol || globalSymbol || '').toUpperCase();
+    const rng = range || globalTimeframe || '6M';
+    if (!sym) return;
     
-    const cacheKey = getCacheKey('prices', symbol, range);
+    const cacheKey = getCacheKey('prices', sym, rng);
     const cached = getCachedData<PricePoint[]>(cacheKey);
     
     if (cached) {
@@ -94,8 +120,20 @@ export function usePrices(symbol?: string, range: PriceRange = '6M') {
     setError(null);
     
     try {
-      const provider = providers[dataProvider as keyof typeof providers] || providers.mock;
-      const priceData = await provider.getPrices(symbol, range);
+      const controller = new AbortController();
+      abortRef.current?.abort();
+      abortRef.current = controller;
+      const provider = getProvider(dataProvider);
+      const attempt = async (tries = 2, delay = 250): Promise<PricePoint[]> => {
+        try {
+          return await provider.getPrices(sym, rng);
+        } catch (e) {
+          if (tries <= 0 || controller.signal.aborted) throw e;
+          await new Promise((r) => setTimeout(r, delay));
+          return attempt(tries - 1, Math.min(delay * 2, 2000));
+        }
+      };
+      const priceData = await attempt();
       setData(priceData);
       setCachedData(cacheKey, priceData);
     } catch (err) {
@@ -103,7 +141,7 @@ export function usePrices(symbol?: string, range: PriceRange = '6M') {
     } finally {
       setLoading(false);
     }
-  }, [symbol, range, dataProvider]);
+  }, [symbol, range, dataProvider, globalSymbol, globalTimeframe]);
 
   useEffect(() => {
     fetchData();
@@ -116,12 +154,14 @@ export function useFinancials(symbol?: string) {
   const [data, setData] = useState<FinancialData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { dataProvider } = useWorkspaceStore();
+  const { dataProvider, globalSymbol } = useWorkspaceStore();
+  const abortRef = useAbortRef();
 
   const fetchData = useCallback(async () => {
-    if (!symbol) return;
+    const sym = (symbol || globalSymbol || '').toUpperCase();
+    if (!sym) return;
     
-    const cacheKey = getCacheKey('financials', symbol);
+    const cacheKey = getCacheKey('financials', sym);
     const cached = getCachedData<FinancialData>(cacheKey);
     
     if (cached) {
@@ -133,8 +173,20 @@ export function useFinancials(symbol?: string) {
     setError(null);
     
     try {
-      const provider = providers[dataProvider as keyof typeof providers] || providers.mock;
-      const financialData = await provider.getFinancials(symbol);
+      const controller = new AbortController();
+      abortRef.current?.abort();
+      abortRef.current = controller;
+      const provider = getProvider(dataProvider);
+      const attempt = async (tries = 2, delay = 250): Promise<FinancialData> => {
+        try {
+          return await provider.getFinancials(sym);
+        } catch (e) {
+          if (tries <= 0 || controller.signal.aborted) throw e;
+          await new Promise((r) => setTimeout(r, delay));
+          return attempt(tries - 1, Math.min(delay * 2, 2000));
+        }
+      };
+      const financialData = await attempt();
       setData(financialData);
       setCachedData(cacheKey, financialData);
     } catch (err) {
@@ -142,7 +194,7 @@ export function useFinancials(symbol?: string) {
     } finally {
       setLoading(false);
     }
-  }, [symbol, dataProvider]);
+  }, [symbol, dataProvider, globalSymbol]);
 
   useEffect(() => {
     fetchData();
@@ -186,7 +238,7 @@ export function usePeerKpis(symbols: string[]) {
     setLoading(true);
     setError(null);
     try {
-      const provider = providers[dataProvider as keyof typeof providers] || providers.mock;
+      const provider = getProvider(dataProvider);
       const results: Record<string, KpiData> = {};
       for (const sym of norm) {
         // Sequential to keep deterministic and simple
@@ -226,7 +278,7 @@ export function useQuarterlyFinancials(symbol?: string, quarters = 8) {
     setLoading(true);
     setError(null);
     try {
-      const provider = providers[dataProvider as keyof typeof providers] || providers.mock;
+      const provider = getProvider(dataProvider);
       // Base financials to seed series
       const f = await provider.getFinancials(symbol);
       const baseRev = f.revenue;

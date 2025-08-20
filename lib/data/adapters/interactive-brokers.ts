@@ -74,17 +74,6 @@ interface IBKROrder {
   isPtpOrder: boolean;
 }
 
-interface IBKRBar {
-  time: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-  wap: number;
-  count: number;
-}
-
 export class InteractiveBrokersAdapter implements Provider {
   name = 'Interactive Brokers';
   private config: IBKRConfig;
@@ -143,9 +132,6 @@ export class InteractiveBrokersAdapter implements Provider {
     }
 
     try {
-      // Convert range to IBKR format
-      const duration = this.convertRangeToDuration(range);
-      
       // Mock implementation - in real scenario, this would call IBKR API
       const mockData: PricePoint[] = [];
       const now = new Date();
@@ -248,13 +234,13 @@ export class InteractiveBrokersAdapter implements Provider {
   /**
    * Get last update timestamp for a symbol
    */
-  async getLastUpdate(symbol: string): Promise<Date | null> {
+  async getLastUpdate(_symbol: string): Promise<Date | null> {
     try {
       if (!this.connected) {
         return null;
       }
       return new Date();
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -294,8 +280,8 @@ export class InteractiveBrokersAdapter implements Provider {
         realTimePnL: 2000,
         unrealizedPnL: 2000
       };
-    } catch (error) {
-      console.error('Error getting account from IBKR:', error);
+    } catch {
+      console.error('Error getting account from IBKR');
       return null;
     }
   }
@@ -323,8 +309,8 @@ export class InteractiveBrokersAdapter implements Provider {
           accountName: 'DU1234567'
         }
       ];
-    } catch (error) {
-      console.error('Error getting positions from IBKR:', error);
+    } catch {
+      console.error('Error getting positions from IBKR');
       return [];
     }
   }
@@ -332,7 +318,7 @@ export class InteractiveBrokersAdapter implements Provider {
   /**
    * Place an order
    */
-  async placeOrder(order: Partial<IBKROrder>): Promise<number> {
+  async placeOrder(_order: Partial<IBKROrder>): Promise<number> {
     try {
       if (!this.connected) {
         throw new Error('Not connected to IBKR');
@@ -340,16 +326,16 @@ export class InteractiveBrokersAdapter implements Provider {
 
       // Mock implementation - return a mock order ID
       return Math.floor(Math.random() * 1000000);
-    } catch (error) {
-      console.error('Error placing order with IBKR:', error);
-      throw error;
+    } catch {
+      console.error('Error placing order with IBKR');
+      throw new Error('Failed to place order');
     }
   }
 
   /**
    * Cancel an order
    */
-  async cancelOrder(orderId: number): Promise<boolean> {
+  async cancelOrder(_orderId: number): Promise<boolean> {
     try {
       if (!this.connected) {
         return false;
@@ -357,8 +343,8 @@ export class InteractiveBrokersAdapter implements Provider {
 
       // Mock implementation
       return true;
-    } catch (error) {
-      console.error('Error canceling order with IBKR:', error);
+    } catch {
+      console.error('Error canceling order with IBKR');
       return false;
     }
   }
@@ -366,7 +352,7 @@ export class InteractiveBrokersAdapter implements Provider {
   /**
    * Get order status
    */
-  async getOrderStatus(orderId: number): Promise<string> {
+  async getOrderStatus(_orderId: number): Promise<string> {
     try {
       if (!this.connected) {
         return 'Unknown';
@@ -374,8 +360,8 @@ export class InteractiveBrokersAdapter implements Provider {
 
       // Mock implementation
       return 'Filled';
-    } catch (error) {
-      console.error('Error getting order status from IBKR:', error);
+    } catch {
+      console.error('Error getting order status from IBKR');
       return 'Unknown';
     }
   }
@@ -420,7 +406,7 @@ export class InteractiveBrokersAdapter implements Provider {
     try {
       // For mock IB adapter, always return true
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

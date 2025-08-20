@@ -1,54 +1,46 @@
 'use client';
 
-import { Search, Save, RotateCcw, Play } from 'lucide-react';
+import { Search, Save, RotateCcw, Play, Upload, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useWorkspaceStore } from '@/lib/store';
-import { useState } from 'react';
+import { useRef } from 'react';
+import { useTheme } from 'next-themes';
+import { saveActiveSheetLayout, restoreActiveSheetLayout, resetActiveSheetLayout } from '@/lib/ui/layoutPersistence';
+import { toast } from 'sonner';
 
 export function TitleBar() {
-  const { sheets, activeSheetId } = useWorkspaceStore();
+  const { sheets, activeSheetId, exportWorkspace, importWorkspace, theme, setTheme } = useWorkspaceStore();
   const activeSheet = sheets.find(s => s.id === activeSheetId);
-  const [theme, setTheme] = useState('malibu-sunrise');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { setTheme: setNextTheme } = useTheme();
 
   const handleSaveLayout = () => {
-    if (!activeSheetId) return;
-    const sheet = sheets.find(s => s.id === activeSheetId);
-    if (!sheet) return;
-    
-    // Save current layout to localStorage
-    const layoutData = sheet.widgets.map(w => ({ id: w.id, layout: w.layout }));
-    localStorage.setItem(`madlab_layout_${activeSheetId}`, JSON.stringify(layoutData));
-    console.log('Layout saved for sheet:', activeSheetId);
+    const ok = saveActiveSheetLayout();
+    if (ok) {
+      toast.success('Layout saved');
+    } else {
+      toast.error('No active sheet to save');
+    }
   };
 
   const handleRestoreLayout = () => {
-    if (!activeSheetId) return;
-    
-    // Restore layout from localStorage
-    const saved = localStorage.getItem(`madlab_layout_${activeSheetId}`);
-    if (!saved) {
-      console.log('No saved layout found for this sheet');
-      return;
-    }
-    
-    try {
-      const layoutData = JSON.parse(saved);
-      // TODO: Apply the restored layout to widgets
-      console.log('Layout restored for sheet:', activeSheetId, layoutData);
-    } catch (e) {
-      console.error('Failed to restore layout:', e);
+    const ok = restoreActiveSheetLayout();
+    if (ok) {
+      toast.success('Layout restored');
+    } else {
+      toast.warning('No saved layout for this sheet');
     }
   };
 
   const handleResetLayout = () => {
-    if (!activeSheetId) return;
-    
-    // Remove saved layout and reset to defaults
-    localStorage.removeItem(`madlab_layout_${activeSheetId}`);
-    // TODO: Reset widgets to default positions
-    console.log('Layout reset for sheet:', activeSheetId);
+    const ok = resetActiveSheetLayout();
+    if (ok) {
+      toast.success('Layout reset');
+    } else {
+      toast.error('Unable to reset layout');
+    }
   };
 
   const handleRunTests = () => {
@@ -57,9 +49,43 @@ export function TitleBar() {
   };
 
   const handleThemeChange = (newTheme: string) => {
-    setTheme(newTheme);
-    document.body.className = document.body.className.replace(/malibu-\w+/g, '');
-    document.body.classList.add(newTheme);
+    setTheme(newTheme as typeof theme);
+    setNextTheme(newTheme);
+  };
+
+  const handleExport = () => {
+    try {
+      const json = exportWorkspace();
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `madlab-workspace-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Workspace exported');
+    } catch (e) {
+      toast.error('Export failed');
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFile: React.ChangeEventHandler<HTMLInputElement> = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const ok = importWorkspace(JSON.parse(text));
+      if (!ok) toast.error('Import failed: invalid data');
+      else toast.success('Workspace imported');
+    } catch (err) {
+      toast.error('Import error');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -116,6 +142,25 @@ export function TitleBar() {
         >
           <RotateCcw className="w-3 h-3 mr-1" />
           Reset
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExport}
+          className="h-8 px-3 text-xs"
+        >
+          <Download className="w-3 h-3 mr-1" />
+          Export
+        </Button>
+        <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={handleImportFile} />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleImportClick}
+          className="h-8 px-3 text-xs"
+        >
+          <Upload className="w-3 h-3 mr-1" />
+          Import
         </Button>
         <Button
           variant="outline"

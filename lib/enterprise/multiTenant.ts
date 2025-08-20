@@ -22,7 +22,7 @@ export interface Tenant {
     currency: string;
     dataRetention: number; // days
   };
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   createdAt: number;
   updatedAt: number;
 }
@@ -46,7 +46,7 @@ export interface TenantResource {
   name: string;
   size: number; // bytes
   lastAccessed: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface TenantUsage {
@@ -87,11 +87,11 @@ export interface TenantBilling {
 }
 
 export class MultiTenantManager extends EventEmitter {
-  private tenantCache: AdvancedCache<Tenant>;
-  private userCache: AdvancedCache<TenantUser[]>;
-  private resourceCache: AdvancedCache<TenantResource[]>;
-  private usageCache: AdvancedCache<TenantUsage[]>;
-  private billingCache: AdvancedCache<TenantBilling[]>;
+  private tenantCache: AdvancedCache;
+  private userCache: AdvancedCache;
+  private resourceCache: AdvancedCache;
+  private usageCache: AdvancedCache;
+  private billingCache: AdvancedCache;
   private currentTenantId?: string;
 
   constructor() {
@@ -161,10 +161,12 @@ export class MultiTenantManager extends EventEmitter {
 
     this.tenantCache.set(`tenant:${tenant.id}`, tenant, { priority: 'high' });
     
-    // Initialize default resources
+    // Emit created immediately so listeners are notified without awaiting init
+    this.emit('tenantCreated', tenant);
+    
+    // Initialize default resources (non-blocking for event emission)
     await this.initializeTenantResources(tenant.id);
     
-    this.emit('tenantCreated', tenant);
     return tenant;
   }
 
@@ -172,7 +174,7 @@ export class MultiTenantManager extends EventEmitter {
    * Get tenant by ID
    */
   async getTenant(tenantId: string): Promise<Tenant | null> {
-    return this.tenantCache.get(`tenant:${tenantId}`);
+    return this.tenantCache.get<Tenant>(`tenant:${tenantId}`);
   }
 
   /**
@@ -185,7 +187,7 @@ export class MultiTenantManager extends EventEmitter {
     const updatedTenant: Tenant = {
       ...tenant,
       ...updates,
-      updatedAt: Date.now()
+      updatedAt: Math.max(Date.now(), tenant.updatedAt + 1)
     };
 
     this.tenantCache.set(`tenant:${tenantId}`, updatedTenant, { priority: 'high' });
@@ -224,7 +226,7 @@ export class MultiTenantManager extends EventEmitter {
     
     for (const key of keys) {
       if (key.startsWith('tenant:')) {
-        const tenant = this.tenantCache.get(key);
+        const tenant = this.tenantCache.get<Tenant>(key);
         if (tenant) tenants.push(tenant);
       }
     }
@@ -243,11 +245,15 @@ export class MultiTenantManager extends EventEmitter {
       updatedAt: Date.now()
     };
 
-    const users = await this.getUsers(userData.tenantId);
+    let users = await this.getUsers(userData.tenantId);
+    if (!Array.isArray(users)) {
+      users = [];
+    }
     users.push(user);
     this.userCache.set(`users:${userData.tenantId}`, users, { priority: 'high' });
     
     this.emit('userCreated', user);
+    await this.recalculateUserMetrics(userData.tenantId);
     return user;
   }
 
@@ -255,7 +261,7 @@ export class MultiTenantManager extends EventEmitter {
    * Get users for a tenant
    */
   async getUsers(tenantId: string): Promise<TenantUser[]> {
-    return this.userCache.get(`users:${tenantId}`) || [];
+    return this.userCache.get<TenantUser[]>(`users:${tenantId}`) || [];
   }
 
   /**
@@ -278,7 +284,7 @@ export class MultiTenantManager extends EventEmitter {
     users[userIndex] = {
       ...users[userIndex],
       ...updates,
-      updatedAt: Date.now()
+      updatedAt: Math.max(Date.now(), users[userIndex].updatedAt + 1)
     };
 
     this.userCache.set(`users:${tenantId}`, users, { priority: 'high' });
@@ -300,6 +306,7 @@ export class MultiTenantManager extends EventEmitter {
     this.userCache.set(`users:${tenantId}`, users, { priority: 'high' });
     
     this.emit('userDeleted', deletedUser);
+    await this.recalculateUserMetrics(tenantId);
     return true;
   }
 
@@ -311,7 +318,7 @@ export class MultiTenantManager extends EventEmitter {
     resourceType: TenantResource['type'],
     name: string,
     size: number,
-    metadata: Record<string, any> = {}
+    metadata: Record<string, unknown> = {}
   ): Promise<void> {
     const resource: TenantResource = {
       id: this.generateResourceId(),
@@ -335,14 +342,14 @@ export class MultiTenantManager extends EventEmitter {
    * Get resources for a tenant
    */
   async getResources(tenantId: string): Promise<TenantResource[]> {
-    return this.resourceCache.get(`resources:${tenantId}`) || [];
+    return this.resourceCache.get<TenantResource[]>(`resources:${tenantId}`) || [];
   }
 
   /**
    * Get tenant usage metrics
    */
   async getTenantUsage(tenantId: string, period: string = 'monthly'): Promise<TenantUsage | null> {
-    const usage = this.usageCache.get(`usage:${tenantId}`) || [];
+    const usage = this.usageCache.get<TenantUsage[]>(`usage:${tenantId}`) || [];
     return usage.find(u => u.period === period) || null;
   }
 
@@ -370,28 +377,28 @@ export class MultiTenantManager extends EventEmitter {
     // Check user limit
     if (usage.metrics.users > usage.limits.users) {
       exceeded.push('users');
-    } else if (usage.metrics.users > usage.limits.users * 0.8) {
+    } else if (usage.metrics.users >= usage.limits.users * 0.8) {
       warnings.push('users');
     }
 
     // Check storage limit
     if (usage.metrics.storage > usage.limits.storage) {
       exceeded.push('storage');
-    } else if (usage.metrics.storage > usage.limits.storage * 0.8) {
+    } else if (usage.metrics.storage >= usage.limits.storage * 0.8) {
       warnings.push('storage');
     }
 
     // Check API calls limit
     if (usage.metrics.apiCalls > usage.limits.apiCalls) {
       exceeded.push('apiCalls');
-    } else if (usage.metrics.apiCalls > usage.limits.apiCalls * 0.8) {
+    } else if (usage.metrics.apiCalls >= usage.limits.apiCalls * 0.8) {
       warnings.push('apiCalls');
     }
 
     // Check widgets limit
     if (usage.metrics.widgets > usage.limits.widgets) {
       exceeded.push('widgets');
-    } else if (usage.metrics.widgets > usage.limits.widgets * 0.8) {
+    } else if (usage.metrics.widgets >= usage.limits.widgets * 0.8) {
       warnings.push('widgets');
     }
 
@@ -406,7 +413,7 @@ export class MultiTenantManager extends EventEmitter {
    * Get tenant billing information
    */
   async getTenantBilling(tenantId: string): Promise<TenantBilling | null> {
-    const billing = this.billingCache.get(`billing:${tenantId}`) || [];
+    const billing = this.billingCache.get<TenantBilling[]>(`billing:${tenantId}`) || [];
     return billing[0] || null;
   }
 
@@ -415,12 +422,21 @@ export class MultiTenantManager extends EventEmitter {
    */
   async updateTenantBilling(tenantId: string, billingData: Partial<TenantBilling>): Promise<TenantBilling | null> {
     const existingBilling = await this.getTenantBilling(tenantId);
-    if (!existingBilling) return null;
-
-    const updatedBilling: TenantBilling = {
-      ...existingBilling,
-      ...billingData
-    };
+    let updatedBilling: TenantBilling;
+    if (!existingBilling) {
+      updatedBilling = {
+        tenantId,
+        plan: (billingData.plan as string) || 'basic',
+        amount: billingData.amount ?? 0,
+        currency: billingData.currency || 'USD',
+        billingCycle: (billingData.billingCycle as TenantBilling['billingCycle']) || 'monthly',
+        nextBillingDate: billingData.nextBillingDate ?? Date.now(),
+        status: (billingData.status as TenantBilling['status']) || 'active',
+        features: billingData.features || []
+      };
+    } else {
+      updatedBilling = { ...existingBilling, ...billingData } as TenantBilling;
+    }
 
     this.billingCache.set(`billing:${tenantId}`, [updatedBilling], { priority: 'high' });
     
@@ -438,11 +454,11 @@ export class MultiTenantManager extends EventEmitter {
     totalUsage: number;
     totalBilling: number;
     cacheStats: {
-      tenantCache: any;
-      userCache: any;
-      resourceCache: any;
-      usageCache: any;
-      billingCache: any;
+      tenantCache: unknown;
+      userCache: unknown;
+      resourceCache: unknown;
+      usageCache: unknown;
+      billingCache: unknown;
     };
   } {
     const tenantKeys = Array.from(this.tenantCache.keys()).filter(k => k.startsWith('tenant:'));
@@ -508,7 +524,7 @@ export class MultiTenantManager extends EventEmitter {
   /**
    * Cleanup tenant resources
    */
-  private async cleanupTenantResources(tenantId: string): Promise<void> {
+  private async cleanupTenantResources(_tenantId: string): Promise<void> {
     // This would typically involve cleaning up database records,
     // file storage, and other persistent resources
     // For now, we just clear the caches
@@ -525,6 +541,7 @@ export class MultiTenantManager extends EventEmitter {
     switch (resourceType) {
       case 'widget':
         usage.metrics.widgets++;
+        usage.metrics.storage += size;
         break;
       case 'data':
         usage.metrics.dataRequests++;
@@ -539,6 +556,16 @@ export class MultiTenantManager extends EventEmitter {
     usage.utilization.storage = (usage.metrics.storage / usage.limits.storage) * 100;
     usage.utilization.widgets = (usage.metrics.widgets / usage.limits.widgets) * 100;
 
+    this.usageCache.set(`usage:${tenantId}`, [usage], { priority: 'high' });
+  }
+
+  private async recalculateUserMetrics(tenantId: string): Promise<void> {
+    const usage = await this.getTenantUsage(tenantId, 'monthly');
+    const tenant = await this.getTenant(tenantId);
+    if (!usage || !tenant) return;
+    const users = await this.getUsers(tenantId);
+    usage.metrics.users = users.length;
+    usage.utilization.users = (users.length / tenant.limits.users) * 100;
     this.usageCache.set(`usage:${tenantId}`, [usage], { priority: 'high' });
   }
 

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Trash2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { Widget } from '@/lib/store';
+import { usePeerKpis } from '@/lib/data/hooks';
 
 interface WatchlistWidgetProps {
   widget: Widget;
@@ -99,7 +100,22 @@ export function WatchlistWidget({ widget: _widget }: Readonly<WatchlistWidgetPro
     setWatchlist(prev => prev.filter(item => item.symbol !== symbol));
   };
 
+  // Fetch KPI data for symbols in the watchlist (fallback to mock when missing)
+  const symbols = watchlist.map((w) => w.symbol);
+  const { data: peerData } = usePeerKpis(symbols);
+
   const getStockData = (symbol: string): StockData | null => {
+    const k = peerData?.[symbol];
+    if (k) {
+      return {
+        symbol,
+        price: k.price,
+        change: k.change,
+        changePercent: k.changePercent,
+        volume: k.volume,
+        marketCap: k.marketCap,
+      } as StockData;
+    }
     return MOCK_STOCK_DATA[symbol] || null;
   };
 
@@ -254,5 +270,4 @@ export function WatchlistWidget({ widget: _widget }: Readonly<WatchlistWidgetPro
     </Card>
   );
 }
-
 

@@ -87,7 +87,15 @@ interface AlpacaOrder {
   stop_price: number;
   status: string;
   extended_hours: boolean;
-  legs: any[];
+  legs: Array<{
+    asset_id: string;
+    symbol: string;
+    qty: number;
+    side: string;
+    order_type: string;
+    limit_price?: number;
+    stop_price?: number;
+  }>;
   trail_percent: number;
   trail_price: number;
   hwm: number;
@@ -120,7 +128,7 @@ export class AlpacaAdapter implements Provider {
     this.paperTrading = config.paperTrading ?? true;
   }
 
-  private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
+  private async makeRequest<T = Record<string, unknown>>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     
     const headers = new Headers({
@@ -148,7 +156,7 @@ export class AlpacaAdapter implements Provider {
         throw new Error(`HTTP ${response.status}: ${errorData.message || response.statusText}`);
       }
 
-      return await response.json();
+      return (await response.json()) as T;
     } catch (error) {
       console.error('Alpaca API request failed:', error);
       throw error;
@@ -170,15 +178,21 @@ export class AlpacaAdapter implements Provider {
   // Account and portfolio methods
   async getAccount(): Promise<AlpacaAccount> {
     const endpoint = this.paperTrading ? '/v2/accounts' : '/v2/accounts';
-    return this.makeRequest(endpoint);
+    return this.makeRequest<AlpacaAccount>(endpoint);
   }
 
   async getPositions(): Promise<AlpacaPosition[]> {
     const endpoint = this.paperTrading ? '/v2/positions' : '/v2/positions';
-    return this.makeRequest(endpoint);
+    return this.makeRequest<AlpacaPosition[]>(endpoint);
   }
 
-  async getPortfolioHistory(start: string, end: string, timeframe: string = '1D'): Promise<any> {
+  async getPortfolioHistory(start: string, end: string, timeframe: string = '1D'): Promise<{
+    equity: Array<{ v: string | number }>;
+    profit_loss: Array<{ v: string | number }>;
+    profit_loss_pct: Array<{ v: string | number }>;
+    base_value: number;
+    timeframe: string;
+  }> {
     const endpoint = this.paperTrading ? '/v2/account/portfolio/history' : '/v2/account/portfolio/history';
     const params = new URLSearchParams({
       start,
@@ -186,7 +200,13 @@ export class AlpacaAdapter implements Provider {
       timeframe,
     });
     
-    return this.makeRequest(`${endpoint}?${params.toString()}`);
+    return this.makeRequest(`${endpoint}?${params.toString()}`) as Promise<{
+      equity: Array<{ v: string | number }>;
+      profit_loss: Array<{ v: string | number }>;
+      profit_loss_pct: Array<{ v: string | number }>;
+      base_value: number;
+      timeframe: string;
+    }>;
   }
 
   // Order management methods
@@ -204,7 +224,7 @@ export class AlpacaAdapter implements Provider {
   }): Promise<AlpacaOrder> {
     const endpoint = this.paperTrading ? '/v2/orders' : '/v2/orders';
     
-    return this.makeRequest(endpoint, {
+    return this.makeRequest<AlpacaOrder>(endpoint, {
       method: 'POST',
       body: JSON.stringify(order),
     });
@@ -222,12 +242,12 @@ export class AlpacaAdapter implements Provider {
     const queryString = params.toString();
     const url = queryString ? `${endpoint}?${queryString}` : endpoint;
     
-    return this.makeRequest(url);
+    return this.makeRequest<AlpacaOrder[]>(url);
   }
 
   async getOrder(orderId: string): Promise<AlpacaOrder> {
     const endpoint = this.paperTrading ? `/v2/orders/${orderId}` : `/v2/orders/${orderId}`;
-    return this.makeRequest(endpoint);
+    return this.makeRequest<AlpacaOrder>(endpoint);
   }
 
   async cancelOrder(orderId: string): Promise<void> {
@@ -238,7 +258,7 @@ export class AlpacaAdapter implements Provider {
   async replaceOrder(orderId: string, order: Partial<AlpacaOrder>): Promise<AlpacaOrder> {
     const endpoint = this.paperTrading ? `/v2/orders/${orderId}` : `/v2/orders/${orderId}`;
     
-    return this.makeRequest(endpoint, {
+    return this.makeRequest<AlpacaOrder>(endpoint, {
       method: 'PATCH',
       body: JSON.stringify(order),
     });
@@ -259,7 +279,7 @@ export class AlpacaAdapter implements Provider {
     const endpoint = this.paperTrading ? '/v2/orders' : '/v2/orders';
     
     // Create main order
-    const mainOrder = await this.makeRequest(endpoint, {
+    const mainOrder = await this.makeRequest<AlpacaOrder>(endpoint, {
       method: 'POST',
       body: JSON.stringify({
         symbol: order.symbol.toUpperCase(),
@@ -273,7 +293,7 @@ export class AlpacaAdapter implements Provider {
     });
 
     // Create take profit order
-    const takeProfitOrder = await this.makeRequest(endpoint, {
+    const takeProfitOrder = await this.makeRequest<AlpacaOrder>(endpoint, {
       method: 'POST',
       body: JSON.stringify({
         symbol: order.symbol.toUpperCase(),
@@ -287,7 +307,7 @@ export class AlpacaAdapter implements Provider {
     });
 
     // Create stop loss order
-    const stopLossOrder = await this.makeRequest(endpoint, {
+    const stopLossOrder = await this.makeRequest<AlpacaOrder>(endpoint, {
       method: 'POST',
       body: JSON.stringify({
         symbol: order.symbol.toUpperCase(),
@@ -313,7 +333,7 @@ export class AlpacaAdapter implements Provider {
   }): Promise<AlpacaOrder> {
     const endpoint = this.paperTrading ? '/v2/orders' : '/v2/orders';
     
-    return this.makeRequest(endpoint, {
+    return this.makeRequest<AlpacaOrder>(endpoint, {
       method: 'POST',
       body: JSON.stringify({
         symbol: order.symbol.toUpperCase(),
@@ -402,7 +422,7 @@ export class AlpacaAdapter implements Provider {
       throw new Error('No portfolio history available for risk calculation');
     }
 
-    const equityValues = history.equity.map((point: any) => parseFloat(point.v));
+    const equityValues = history.equity.map((point: { v: string | number }) => parseFloat(point.v.toString()));
     const returns = [];
     
     for (let i = 1; i < equityValues.length; i++) {
@@ -528,7 +548,7 @@ export class AlpacaAdapter implements Provider {
     };
   }
 
-  async getFinancials(symbol: string): Promise<FinancialData> {
+  async getFinancials(_symbol: string): Promise<FinancialData> {
     // Alpaca doesn't provide financial statements directly
     // This would need to be supplemented with another data source
     throw new Error('Financial data not available through Alpaca API');
@@ -538,9 +558,9 @@ export class AlpacaAdapter implements Provider {
     return !!(this.apiKey && this.secretKey && this.apiKey !== 'demo' && this.secretKey !== 'demo');
   }
 
-  async getLastUpdate(symbol: string): Promise<Date | null> {
+  async getLastUpdate(_symbol: string): Promise<Date | null> {
     try {
-      const kpis = await this.getKpis(symbol);
+      const kpis = await this.getKpis(_symbol);
       return kpis.timestamp;
     } catch {
       return null;
@@ -548,17 +568,42 @@ export class AlpacaAdapter implements Provider {
   }
 
   // Additional Alpaca-specific methods
-  async getLatestTrade(symbol: string): Promise<any> {
+  async getLatestTrade(symbol: string): Promise<{
+    symbol: string;
+    price: number;
+    size: number;
+    timestamp: string;
+    exchange: string;
+  }> {
     const endpoint = this.paperTrading ? '/v2/stocks' : '/v2/stocks';
-    return this.makeRequest(`${endpoint}/${symbol.toUpperCase()}/trades/latest`);
+    return this.makeRequest<{ symbol: string; price: number; size: number; timestamp: string; exchange: string }>(`${endpoint}/${symbol.toUpperCase()}/trades/latest`);
   }
 
-  async getLatestQuote(symbol: string): Promise<any> {
+  async getLatestQuote(symbol: string): Promise<{
+    symbol: string;
+    bid: number;
+    ask: number;
+    bidSize: number;
+    askSize: number;
+    timestamp: string;
+    exchange: string;
+  }> {
     const endpoint = this.paperTrading ? '/v2/stocks' : '/v2/stocks';
-    return this.makeRequest(`${endpoint}/${symbol.toUpperCase()}/quotes/latest`);
+    return this.makeRequest<{ symbol: string; bid: number; ask: number; bidSize: number; askSize: number; timestamp: string; exchange: string }>(`${endpoint}/${symbol.toUpperCase()}/quotes/latest`);
   }
 
-  async getMultiBars(symbols: string[], timeframe: string = '1Day', start: string, end: string): Promise<any> {
+  async getMultiBars(symbols: string[], timeframe: string = '1Day', start: string, end: string): Promise<{
+    [symbol: string]: Array<{
+      t: string;
+      o: number;
+      h: number;
+      l: number;
+      c: number;
+      v: number;
+      n: number;
+      vw: number;
+    }>;
+  }> {
     const endpoint = this.paperTrading ? '/v2/stocks' : '/v2/stocks';
     const params = new URLSearchParams({
       symbols: symbols.join(','),
@@ -568,28 +613,46 @@ export class AlpacaAdapter implements Provider {
       adjustment: 'all',
     });
 
-    return this.makeRequest(`${endpoint}/bars?${params.toString()}`);
+    return this.makeRequest<{ [symbol: string]: Array<{ t: string; o: number; h: number; l: number; c: number; v: number; n: number; vw: number }> }>(`${endpoint}/bars?${params.toString()}`);
   }
 
   // Watchlist methods
-  async getWatchlists(): Promise<any[]> {
+  async getWatchlists(): Promise<Array<{
+    id: string;
+    name: string;
+    symbols: string[];
+    created_at: string;
+    updated_at: string;
+  }>> {
     const endpoint = this.paperTrading ? '/v2/watchlists' : '/v2/watchlists';
-    return this.makeRequest(endpoint);
+    return this.makeRequest<Array<{ id: string; name: string; symbols: string[]; created_at: string; updated_at: string }>>(endpoint);
   }
 
-  async createWatchlist(name: string, symbols: string[]): Promise<any> {
+  async createWatchlist(name: string, symbols: string[]): Promise<{
+    id: string;
+    name: string;
+    symbols: string[];
+    created_at: string;
+    updated_at: string;
+  }> {
     const endpoint = this.paperTrading ? '/v2/watchlists' : '/v2/watchlists';
     
-    return this.makeRequest(endpoint, {
+    return this.makeRequest<{ id: string; name: string; symbols: string[]; created_at: string; updated_at: string }>(endpoint, {
       method: 'POST',
       body: JSON.stringify({ name, symbols }),
     });
   }
 
-  async updateWatchlist(watchlistId: string, symbols: string[]): Promise<any> {
+  async updateWatchlist(watchlistId: string, symbols: string[]): Promise<{
+    id: string;
+    name: string;
+    symbols: string[];
+    created_at: string;
+    updated_at: string;
+  }> {
     const endpoint = this.paperTrading ? `/v2/watchlists/${watchlistId}` : `/v2/watchlists/${watchlistId}`;
     
-    return this.makeRequest(endpoint, {
+    return this.makeRequest<{ id: string; name: string; symbols: string[]; created_at: string; updated_at: string }>(endpoint, {
       method: 'PUT',
       body: JSON.stringify({ symbols }),
     });
@@ -601,14 +664,25 @@ export class AlpacaAdapter implements Provider {
   }
 
   // Calendar methods
-  async getMarketCalendar(start: string, end: string): Promise<any[]> {
+  async getMarketCalendar(start: string, end: string): Promise<Array<{
+    date: string;
+    open: string;
+    close: string;
+    session_open: string;
+    session_close: string;
+  }>> {
     const endpoint = this.paperTrading ? '/v2/calendar' : '/v2/calendar';
     const params = new URLSearchParams({ start, end });
     
     return this.makeRequest(`${endpoint}?${params.toString()}`);
   }
 
-  async getClock(): Promise<any> {
+  async getClock(): Promise<{
+    timestamp: string;
+    is_open: boolean;
+    next_open: string;
+    next_close: string;
+  }> {
     const endpoint = this.paperTrading ? '/v2/clock' : '/v2/clock';
     return this.makeRequest(endpoint);
   }

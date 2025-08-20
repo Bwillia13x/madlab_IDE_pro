@@ -23,6 +23,8 @@ interface WidgetComponentProps {
   data?: Record<string, unknown>;
 }
 
+import type { Widget } from '@/lib/store';
+
 // Widget loading skeleton
 function WidgetSkeleton() {
   return (
@@ -35,118 +37,109 @@ function WidgetSkeleton() {
 
 // Adapter components to convert config/data to expected props
 const KpiCardAdapter = ({ config, data }: { config: Record<string, unknown>; data?: Record<string, unknown> }) => {
-  const mockWidget = {
+  const mockWidget: Widget = {
     id: 'kpi-card',
     type: 'kpi-card',
     title: 'KPI Card',
-    config: config,
-    position: { x: 0, y: 0, w: 1, h: 1 },
-    data: data || {}
-  } as any;
+    layout: { x: 0, y: 0, w: 1, h: 1, i: 'kpi-card' },
+    props: { ...config, ...data },
+  };
   
   return <KpiCard widget={mockWidget} symbol={data?.symbol as string} />;
 };
 
 const LineChartAdapter = ({ config, data }: { config: Record<string, unknown>; data?: Record<string, unknown> }) => {
-  const mockWidget = {
+  const mockWidget: Widget = {
     id: 'line-chart',
     type: 'line-chart',
     title: 'Line Chart',
-    config: config,
-    position: { x: 0, y: 0, w: 1, h: 1 },
-    data: data || {}
-  } as any;
+    layout: { x: 0, y: 0, w: 1, h: 1, i: 'line-chart' },
+    props: { ...config, ...data },
+  };
   
   return <LineChart widget={mockWidget} />;
 };
 
 const BarChartAdapter = ({ config, data }: { config: Record<string, unknown>; data?: Record<string, unknown> }) => {
-  const mockWidget = {
+  const mockWidget: Widget = {
     id: 'bar-chart',
     type: 'bar-chart',
     title: 'Bar Chart',
-    config: config,
-    position: { x: 0, y: 0, w: 1, h: 1 },
-    data: data || {}
-  } as any;
+    layout: { x: 0, y: 0, w: 1, h: 1, i: 'bar-chart' },
+    props: { ...config, ...data },
+  };
   
   return <BarChart widget={mockWidget} />;
 };
 
 const HeatmapAdapter = ({ config, data }: { config: Record<string, unknown>; data?: Record<string, unknown> }) => {
-  const mockWidget = {
+  const mockWidget: Widget = {
     id: 'heatmap',
     type: 'heatmap',
     title: 'Heatmap',
-    config: config,
-    position: { x: 0, y: 0, w: 1, h: 1 },
-    data: data || {}
-  } as any;
+    layout: { x: 0, y: 0, w: 1, h: 1, i: 'heatmap' },
+    props: { ...config, ...data },
+  };
   
   return <Heatmap widget={mockWidget} />;
 };
 
 const AdvancedChartAdapter = ({ config, data }: { config: Record<string, unknown>; data?: Record<string, unknown> }) => {
-  const mockWidget = {
+  const mockWidget: Widget = {
     id: 'advanced-chart',
     type: 'advanced-chart',
     title: 'Advanced Chart',
-    config: config,
-    position: { x: 0, y: 0, w: 1, h: 1 },
-    data: data || {}
-  } as any;
+    layout: { x: 0, y: 0, w: 1, h: 1, i: 'advanced-chart' },
+    props: { ...config, ...data },
+  };
   
   return <AdvancedChart widget={mockWidget} sheetId="default" />;
 };
 
 const CandlestickChartAdapter = ({ config, data }: { config: Record<string, unknown>; data?: Record<string, unknown> }) => {
-  const mockWidget = {
+  const mockWidget: Widget = {
     id: 'candlestick-chart',
     type: 'candlestick-chart',
     title: 'Candlestick Chart',
-    config: config,
-    position: { x: 0, y: 0, w: 1, h: 1 },
-    data: data || {}
-  } as any;
+    layout: { x: 0, y: 0, w: 1, h: 1, i: 'candlestick-chart' },
+    props: { ...config, ...data },
+  };
   
   return <CandlestickChart widget={mockWidget} sheetId="default" />;
 };
 
 const PortfolioTrackerAdapter = ({ config, data }: { config: Record<string, unknown>; data?: Record<string, unknown> }) => {
-  const mockWidget = {
+  const mockWidget: Widget = {
     id: 'portfolio-tracker',
     type: 'portfolio-tracker',
     title: 'Portfolio Tracker',
-    config: config,
-    position: { x: 0, y: 0, w: 1, h: 1 },
-    data: data || {}
-  } as any;
+    layout: { x: 0, y: 0, w: 1, h: 1, i: 'portfolio-tracker' },
+    props: { ...config, ...data },
+  };
   
   return <PortfolioTracker widget={mockWidget} sheetId="default" />;
 };
 
 const OptionsChainWidgetAdapter = ({ config, data }: { config: Record<string, unknown>; data?: Record<string, unknown> }) => {
-  const mockWidget = {
+  const mockWidget: Widget = {
     id: 'options-chain',
     type: 'options-chain',
     title: 'Options Chain',
-    config: config,
-    position: { x: 0, y: 0, w: 1, h: 1 },
-    data: data || {}
-  } as any;
+    layout: { x: 0, y: 0, w: 1, h: 1, i: 'options-chain' },
+    props: { ...config, ...data },
+  };
   
   return <OptionsChainWidget widget={mockWidget} sheetId="default" />;
 };
 
 const BacktestingFrameworkWidgetAdapter = ({ config, data }: { config: Record<string, unknown>; data?: Record<string, unknown> }) => {
-  const mockWidget = {
+  const mockWidget: Widget = {
     id: 'backtesting-framework',
     type: 'backtesting-framework',
     title: 'Backtesting Framework',
-    config: config,
-    position: { x: 0, y: 0, w: 1, h: 1 },
-    data: data || {}
-  } as any;
+    layout: { x: 0, y: 0, w: 1, h: 1, i: 'backtesting-framework' },
+    props: { ...config, ...data },
+  };
   
   return <BacktestingFrameworkWidget widget={mockWidget} sheetId="default" />;
 };

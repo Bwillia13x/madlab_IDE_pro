@@ -1,11 +1,12 @@
 import type { MarketplaceTemplate } from './templates';
+import type { SheetKind, Widget } from '../store';
 
 export interface TemplateShareData {
   id: string;
   title: string;
   description: string;
   kind: string;
-  widgets: any[];
+  widgets: unknown[];
   author: string;
   tags: string[];
   version: string;
@@ -74,8 +75,8 @@ export class TemplateSharingService {
         id: templateId,
         title: data.title,
         description: data.description,
-        kind: data.kind as any,
-        widgets: data.widgets,
+        kind: data.kind as SheetKind,
+        widgets: data.widgets as Omit<Widget, 'id'>[],
         author: data.author,
         tags: data.tags,
         version: data.version,
@@ -192,7 +193,7 @@ export class TemplateSharingService {
 
     // Apply filters
     if (filters?.kind) {
-      templates = templates.filter(t => t.kind === filters.kind);
+      templates = templates.filter(t => t.kind === (filters.kind as SheetKind));
     }
     if (filters?.author) {
       templates = templates.filter(t => t.author === filters.author);
@@ -215,7 +216,7 @@ export class TemplateSharingService {
   /**
    * Rate a template
    */
-  async rateTemplate(templateId: string, rating: number, review?: string): Promise<boolean> {
+  async rateTemplate(templateId: string, rating: number, _review?: string): Promise<boolean> {
     try {
       const template = this.templates.get(templateId);
       if (!template) {
@@ -233,7 +234,7 @@ export class TemplateSharingService {
       template.popularity = Math.min(100, (template.popularity || 0) + (rating - 2.5) * 2);
 
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -252,7 +253,7 @@ export class TemplateSharingService {
       template.popularity = Math.min(100, (template.popularity || 0) + 1);
 
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -271,7 +272,7 @@ export class TemplateSharingService {
       template.popularity = Math.min(100, (template.popularity || 0) + 0.1);
 
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -290,7 +291,7 @@ export class TemplateSharingService {
       template.popularity = Math.min(100, (template.popularity || 0) + 10);
 
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -321,7 +322,7 @@ export class TemplateSharingService {
       }
 
       return JSON.stringify(template, null, 2);
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -343,7 +344,7 @@ export class TemplateSharingService {
 
       // Share the imported template
       return await this.shareTemplate(data);
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: 'Failed to parse template data'

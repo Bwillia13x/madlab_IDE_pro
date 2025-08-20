@@ -4,7 +4,7 @@ export interface TradingStrategy {
   id: string;
   name: string;
   description: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   rules: TradingRule[];
   riskManagement: RiskParameters;
   created: Date;
@@ -16,7 +16,7 @@ export interface TradingRule {
   type: 'entry' | 'exit' | 'stop_loss' | 'take_profit';
   condition: string;
   action: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   priority: number;
 }
 
@@ -83,8 +83,8 @@ export interface PerformanceData {
 export interface OptimizationResult {
   strategyId: string;
   parameter: string;
-  originalValue: any;
-  optimizedValue: any;
+  originalValue: unknown;
+  optimizedValue: unknown;
   originalMetric: number;
   optimizedMetric: number;
   improvement: number;
@@ -172,8 +172,7 @@ export class TradingEngine extends EventEmitter {
     const {
       commission = 0.001,
       slippage = 0.0005,
-      symbols = ['SPY'],
-      benchmark = 'SPY'
+      symbols = ['SPY']
     } = options;
 
     const trades: BacktestTrade[] = [];

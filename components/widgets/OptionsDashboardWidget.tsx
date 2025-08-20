@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Zap } from 'lucide-react';
+import { useWorkspaceStore } from '@/lib/store';
+import { useKpis } from '@/lib/data/hooks';
 import type { Widget } from '@/lib/store';
 
 interface OptionsDashboardWidgetProps {
@@ -61,14 +63,22 @@ const MOCK_PNL_DATA: PnLData[] = [
 ];
 
 export function OptionsDashboardWidget({ widget: _widget }: Readonly<OptionsDashboardWidgetProps>) {
-  const [selectedSymbol, setSelectedSymbol] = useState('AAPL');
+  const globalSymbol = useWorkspaceStore((s) => s.globalSymbol);
+  const symbols = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'SPY'];
+  const initial = symbols.includes(globalSymbol) ? globalSymbol : 'AAPL';
+  const [selectedSymbol, setSelectedSymbol] = useState(initial);
   const [selectedExpiry, setSelectedExpiry] = useState('2024-12-20');
   const [activeTab, setActiveTab] = useState('chain');
   const [positionSize, setPositionSize] = useState('100');
-  const [currentPrice, setCurrentPrice] = useState('175.43');
+  const { data: kpi } = useKpis(selectedSymbol);
+  const [currentPrice, setCurrentPrice] = useState(kpi ? kpi.price.toFixed(2) : '175.43');
+  // keep current price in sync with KPI changes unless user has edited
+  const [touched, setTouched] = useState(false);
+  if (kpi && !touched && currentPrice !== kpi.price.toFixed(2)) {
+    setCurrentPrice(kpi.price.toFixed(2));
+  }
 
   const expiries = ['2024-12-20', '2025-01-17', '2025-02-21'];
-  const symbols = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'SPY'];
 
   const filteredOptions = MOCK_OPTIONS_DATA.filter(
     option => option.symbol === selectedSymbol && option.expiry === selectedExpiry
@@ -165,7 +175,7 @@ export function OptionsDashboardWidget({ widget: _widget }: Readonly<OptionsDash
           <Input
             placeholder="Current Price"
             value={currentPrice}
-            onChange={(e) => setCurrentPrice(e.target.value)}
+            onChange={(e) => { setTouched(true); setCurrentPrice(e.target.value); }}
             className="h-8 text-xs"
           />
         </div>

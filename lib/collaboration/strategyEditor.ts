@@ -46,7 +46,7 @@ export class CollaborativeStrategyEditor extends EventEmitter {
   private documents: Map<string, StrategyDocument> = new Map();
   private userSessions: Map<string, { userId: string; documentId: string; lastActivity: Date }> = new Map();
   private changeHistory: Map<string, DocumentChange[]> = new Map();
-  private operationalTransforms: Map<string, any[]> = new Map();
+  private operationalTransforms: Map<string, DocumentChange[]> = new Map();
 
   constructor() {
     super();
@@ -304,7 +304,7 @@ export class CollaborativeStrategyEditor extends EventEmitter {
   /**
    * Resolve a comment
    */
-  async resolveComment(documentId: string, commentId: string, userId: string): Promise<void> {
+  async resolveComment(documentId: string, commentId: string, _userId: string): Promise<void> {
     const document = this.documents.get(documentId);
     if (!document) throw new Error('Document not found');
 
@@ -314,7 +314,7 @@ export class CollaborativeStrategyEditor extends EventEmitter {
     comment.resolved = true;
 
     // Broadcast comment resolution to other users
-    this.emit('commentResolved', { documentId, commentId, userId });
+    this.emit('commentResolved', { documentId, commentId, userId: _userId });
   }
 
   /**
@@ -342,7 +342,7 @@ export class CollaborativeStrategyEditor extends EventEmitter {
     const now = Date.now();
     const activeCursors: CursorPosition[] = [];
 
-    document.cursors.forEach((cursor, userId) => {
+    document.cursors.forEach((cursor, _userId) => {
       // Only show cursors active in the last 30 seconds
       if (now - cursor.timestamp < 30000) {
         activeCursors.push(cursor);

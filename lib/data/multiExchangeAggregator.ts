@@ -40,6 +40,31 @@ export interface ExchangeConfig {
   supportedSymbols: string[];
 }
 
+
+
+interface ExchangeDataMessage {
+  source: string;
+  data: {
+    symbol: string;
+    price: string | number;
+    volume: string | number;
+    timestamp?: number;
+    bid?: string | number;
+    ask?: string | number;
+    bidSize?: string | number;
+    askSize?: string | number;
+  };
+}
+
+interface ConnectionStatus {
+  source: string;
+  status: string;
+}
+
+interface QualityMetrics {
+  [key: string]: unknown;
+}
+
 export class MultiExchangeAggregator extends EventEmitter {
   private exchangeData: Map<string, Map<string, ExchangeData>> = new Map();
   private aggregatedData: Map<string, AggregatedData> = new Map();
@@ -104,15 +129,15 @@ export class MultiExchangeAggregator extends EventEmitter {
 
   // Setup WebSocket listeners for real-time data
   private setupWebSocketListeners(): void {
-    webSocketService.on('price', (message: any) => {
+    webSocketService.on('price', (message: ExchangeDataMessage) => {
       this.processExchangeData(message.source, message.data);
     });
 
-    webSocketService.on('trade', (message: any) => {
+    webSocketService.on('trade', (message: ExchangeDataMessage) => {
       this.processExchangeData(message.source, message.data);
     });
 
-    webSocketService.on('connection', (status: any) => {
+    webSocketService.on('connection', (status: ConnectionStatus) => {
       if (status.status === 'connected') {
         this.emit('exchangeConnected', { exchange: status.source, timestamp: Date.now() });
       } else {
@@ -122,7 +147,7 @@ export class MultiExchangeAggregator extends EventEmitter {
   }
 
   // Process incoming exchange data
-  private processExchangeData(exchange: string, data: any): void {
+  private processExchangeData(exchange: string, data: ExchangeDataMessage['data']): void {
     const config = this.exchangeConfigs.get(exchange);
     if (!config) return;
 
@@ -133,13 +158,13 @@ export class MultiExchangeAggregator extends EventEmitter {
       const exchangeData: ExchangeData = {
         exchange,
         symbol: data.symbol,
-        price: parseFloat(data.price) || 0,
-        volume: parseFloat(data.volume) || 0,
+        price: parseFloat(data.price as string) || 0,
+        volume: parseFloat(data.volume as string) || 0,
         timestamp: data.timestamp || Date.now(),
-        bid: parseFloat(data.bid) || undefined,
-        ask: parseFloat(data.ask) || undefined,
-        bidSize: parseFloat(data.bidSize) || undefined,
-        askSize: parseFloat(data.askSize) || undefined,
+        bid: parseFloat(data.bid as string) || undefined,
+        ask: parseFloat(data.ask as string) || undefined,
+        bidSize: parseFloat(data.bidSize as string) || undefined,
+        askSize: parseFloat(data.askSize as string) || undefined,
         lastUpdate: Date.now(),
         reliability: this.calculateReliability(exchange, data),
       };
@@ -313,7 +338,7 @@ export class MultiExchangeAggregator extends EventEmitter {
   }
 
   // Calculate exchange-specific reliability score
-  private calculateReliability(exchange: string, data: any): number {
+  private calculateReliability(exchange: string, data: ExchangeDataMessage['data']): number {
     const config = this.exchangeConfigs.get(exchange);
     if (!config) return 0;
 
@@ -324,7 +349,7 @@ export class MultiExchangeAggregator extends EventEmitter {
     if (!data.timestamp) score -= 0.2;
 
     // Check data validity
-    if (data.price <= 0 || data.volume < 0) score -= 0.4;
+    if (Number(data.price) <= 0 || Number(data.volume) < 0) score -= 0.4;
 
     // Check timestamp freshness
     const age = Date.now() - (data.timestamp || Date.now());
@@ -399,8 +424,8 @@ export class MultiExchangeAggregator extends EventEmitter {
   }
 
   // Get quality metrics
-  getQualityMetrics(): Map<string, any> {
-    const metrics = new Map();
+  getQualityMetrics(): Map<string, QualityMetrics> {
+    const metrics = new Map<string, QualityMetrics>();
     
     for (const [exchange, quality] of Array.from(this.dataQualityMetrics.entries())) {
       const latencies = this.exchangeLatencies.get(exchange) || [];

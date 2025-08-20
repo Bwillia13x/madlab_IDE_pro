@@ -12,41 +12,73 @@ interface PolygonQuote {
   ask: number;
   bidSize: number;
   askSize: number;
-  timestamp: number;
+  timestamp?: number;
 }
 
 interface PolygonTrade {
-  symbol: string;
-  price: number;
-  size: number;
-  timestamp: number;
-  exchange: number;
-  conditions: number[];
+  [key: string]: unknown;
 }
 
 interface PolygonAggregate {
-  symbol: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-  timestamp: number;
-  transactions: number;
+  t: number;
+  o: number;
+  h: number;
+  l: number;
+  c: number;
+  v: number;
 }
 
-interface PolygonFinancials {
-  symbol: string;
-  financials: Array<{
-    period: string;
-    calendarDate: string;
-    reportPeriod: string;
-    revenue: number;
-    netIncome: number;
-    operatingCashFlow: number;
-    freeCashFlow: number;
-  }>;
+interface WebSocketData {
+  ev: string;
+  [key: string]: unknown;
 }
+
+interface PolygonSnapshotQuote {
+  lastTrade?: { p?: number; s?: number; t?: number };
+  lastQuote?: { ap?: number; bp?: number; t?: number };
+  prevClose?: { p?: number };
+}
+
+interface PolygonFinancialsItem {
+  ticker?: string;
+  revenue?: number;
+  net_income_loss?: number;
+  assets?: number;
+  liabilities?: number;
+  cash_and_cash_equivalents?: number;
+  debt?: number;
+  equity?: number;
+  earnings_per_share?: number;
+  price_earnings_ratio?: number;
+  price_book_ratio?: number;
+  return_on_equity?: number;
+  return_on_assets?: number;
+  debt_to_equity_ratio?: number;
+  current_ratio?: number;
+  quick_ratio?: number;
+  gross_margin?: number;
+  operating_margin?: number;
+  net_margin?: number;
+  operating_cash_flow?: number;
+  free_cash_flow?: number;
+}
+
+interface PolygonCompanyOverview {
+  name?: string;
+  market_cap?: number;
+  pe_ratio?: number;
+  eps?: number;
+  dividend_yield?: number;
+  beta?: number;
+  high_52_weeks?: number;
+  low_52_weeks?: number;
+}
+
+interface PolygonData {
+  results?: PolygonAggregate[] | PolygonSnapshotQuote | PolygonFinancialsItem[] | PolygonCompanyOverview | Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 
 export class PolygonAdapter implements Provider {
   name = 'polygon';
@@ -59,7 +91,7 @@ export class PolygonAdapter implements Provider {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
   private subscribedSymbols = new Set<string>();
-  private eventHandlers = new Map<string, (data: any) => void>();
+  private eventHandlers = new Map<string, (data: PolygonData) => void>();
   private lastRequestTime: number | null = null;
   private rateLimitDelay = 1000; // 1 second rate limit
 
@@ -69,7 +101,7 @@ export class PolygonAdapter implements Provider {
     this.wsUrl = config.wsUrl || 'wss://delayed.polygon.io';
   }
 
-  private async makeRequest(endpoint: string, params: Record<string, string> = {}): Promise<any> {
+  private async makeRequest(endpoint: string, params: Record<string, string> = {}): Promise<PolygonData> {
     const url = new URL(this.baseUrl + endpoint);
     
     // Add API key
@@ -150,7 +182,8 @@ export class PolygonAdapter implements Provider {
       throw new Error('No time series data received');
     }
 
-    return data.results.map((agg: any) => ({
+    const results = data.results as PolygonAggregate[];
+    return results.map((agg: PolygonAggregate) => ({
       date: new Date(agg.t),
       open: Number(agg.o) || 0,
       high: Number(agg.h) || 0,
@@ -164,11 +197,11 @@ export class PolygonAdapter implements Provider {
     // Get latest quote
     const quoteData = await this.makeRequest('/v2/snapshot/locale/us/markets/stocks/tickers/' + symbol.toUpperCase() + '/quote');
     
-    if (!quoteData.results || !quoteData.results.lastTrade) {
+    if (!quoteData.results || !(quoteData.results as PolygonSnapshotQuote).lastTrade) {
       throw new Error('No quote data received');
     }
 
-    const quote = quoteData.results;
+    const quote = quoteData.results as PolygonSnapshotQuote;
     const lastTrade = quote.lastTrade;
     const lastQuote = quote.lastQuote;
     
@@ -182,7 +215,7 @@ export class PolygonAdapter implements Provider {
     const companyInfo = await this.getCompanyOverview(symbol);
 
     return {
-      symbol: quote['01. symbol'] || symbol.toUpperCase(),
+      symbol: symbol.toUpperCase(),
       name: companyInfo?.name || symbol.toUpperCase(),
       price,
       change,
@@ -209,7 +242,7 @@ export class PolygonAdapter implements Provider {
     }
 
     // Get the most recent financial data
-    const latest = financialData.results[0];
+    const latest = (financialData.results as PolygonFinancialsItem[])[0];
     
     return {
       symbol: latest.ticker || symbol.toUpperCase(),
@@ -251,11 +284,11 @@ export class PolygonAdapter implements Provider {
     try {
       const data = await this.makeRequest('/v3/reference/tickers/' + symbol.toUpperCase());
       
-      if (!data.results) {
+      if (!(data.results as PolygonCompanyOverview)) {
         return {};
       }
 
-      const company = data.results;
+      const company = data.results as PolygonCompanyOverview;
       
       return {
         name: company.name,
@@ -356,21 +389,21 @@ export class PolygonAdapter implements Provider {
     }
   }
 
-  private handleWebSocketMessage(data: any): void {
+  private handleWebSocketMessage(data: WebSocketData): void {
     if (!data || !data.ev) return;
 
     switch (data.ev) {
       case 'T': // Trade
-        const tradeHandler = this.eventHandlers.get('trade');
-        if (tradeHandler) tradeHandler(data);
+        const tradeHandler = this.eventHandlers.get('trade') as ((t: PolygonTrade) => void) | undefined;
+        if (tradeHandler) tradeHandler(data as unknown as PolygonTrade);
         break;
       case 'Q': // Quote
-        const quoteHandler = this.eventHandlers.get('quote');
-        if (quoteHandler) quoteHandler(data);
+        const quoteHandler = this.eventHandlers.get('quote') as ((q: PolygonQuote) => void) | undefined;
+        if (quoteHandler) quoteHandler(data as unknown as PolygonQuote);
         break;
       case 'AM': // Aggregate
-        const aggregateHandler = this.eventHandlers.get('aggregate');
-        if (aggregateHandler) aggregateHandler(data);
+        const aggregateHandler = this.eventHandlers.get('aggregate') as ((a: PolygonAggregate) => void) | undefined;
+        if (aggregateHandler) aggregateHandler(data as unknown as PolygonAggregate);
         break;
       default:
         console.log('Unknown WebSocket event:', data.ev);
@@ -406,15 +439,15 @@ export class PolygonAdapter implements Provider {
   }
 
   onTrade(handler: (trade: PolygonTrade) => void): void {
-    this.eventHandlers.set('trade', handler);
+    this.eventHandlers.set('trade', handler as unknown as (data: PolygonData) => void);
   }
 
   onQuote(handler: (quote: PolygonQuote) => void): void {
-    this.eventHandlers.set('quote', handler);
+    this.eventHandlers.set('quote', handler as unknown as (data: PolygonData) => void);
   }
 
   onAggregate(handler: (agg: PolygonAggregate) => void): void {
-    this.eventHandlers.set('aggregate', handler);
+    this.eventHandlers.set('aggregate', handler as unknown as (data: PolygonData) => void);
   }
 
   disconnectWebSocket(): void {
@@ -433,18 +466,18 @@ export class PolygonAdapter implements Provider {
     try {
       const data = await this.makeRequest('/v2/snapshot/locale/us/markets/stocks/tickers/' + symbol.toUpperCase() + '/quote');
       
-      if (!data.results || !data.results.lastTrade) {
+      if (!data.results || !(data.results as PolygonSnapshotQuote).lastTrade) {
         return null;
       }
 
       // Use the last trade timestamp if available, otherwise use current time
-      const lastTrade = data.results.lastTrade;
-      if (lastTrade.t) {
+      const lastTrade = (data.results as PolygonSnapshotQuote).lastTrade;
+      if (lastTrade?.t) {
         return new Date(lastTrade.t);
       }
       
       return new Date();
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -467,7 +500,8 @@ export class PolygonAdapter implements Provider {
       throw new Error('No minute data received');
     }
 
-    return data.results.map((agg: any) => ({
+    const results = data.results as PolygonAggregate[];
+    return results.map((agg: PolygonAggregate) => ({
       date: new Date(agg.t),
       open: Number(agg.o) || 0,
       high: Number(agg.h) || 0,
@@ -492,7 +526,7 @@ export class PolygonAdapter implements Provider {
       throw new Error('No trade data received');
     }
 
-    return data.results;
+    return data.results as PolygonTrade[];
   }
 
   async isAuthenticated(): Promise<boolean> {
@@ -500,7 +534,7 @@ export class PolygonAdapter implements Provider {
       // Test authentication by making a simple API call
       await this.makeRequest('/v3/reference/tickers', { limit: '1' });
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

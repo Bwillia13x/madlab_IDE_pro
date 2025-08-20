@@ -6,7 +6,7 @@ export interface ParsedQuery {
   timeframe?: PriceRange;
   metric?: string;
   comparison?: string;
-  filters?: Record<string, any>;
+  filters?: Record<string, unknown>;
   rawQuery: string;
 }
 
@@ -473,7 +473,7 @@ export class NaturalLanguageQueryParser {
   // Helper method to generate API calls from parsed queries
   generateAPICall(parsedQuery: ParsedQuery): {
     endpoint: string;
-    params: Record<string, any>;
+    params: Record<string, unknown>;
     method: string;
   } {
     const baseParams = { symbol: parsedQuery.symbol };
@@ -546,7 +546,7 @@ export class NaturalLanguageQueryParser {
     ];
 
     // Filter out suggestions that are too similar to the original query
-    const filtered = suggestions.filter(suggestion => 
+    suggestions.filter(suggestion => 
       !suggestion.toLowerCase().includes(query.toLowerCase().split(' ')[0])
     );
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,11 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Activity, 
-  Clock, 
-  Database, 
-  HardDrive, 
-  TrendingUp, 
-  Zap, 
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -31,15 +26,59 @@ import {
   newsCache 
 } from '@/lib/data/cache';
 
+interface CacheStats {
+  size: number;
+  maxSize: number;
+  hitRate: number;
+  totalHits: number;
+  totalMisses: number;
+  averageTTL: number;
+  memoryUsage: number;
+  maxMemoryUsage: number;
+  compressionRatio: number;
+  averageEntrySize: number;
+  priorityDistribution: Record<string, number>;
+  performanceMetrics?: {
+    totalRequests: number;
+    averageResponseTime: number;
+    evictionCount: number;
+    compressionCount: number;
+    uptime: number;
+    requestsPerSecond: number;
+  };
+}
+
+interface DetailedPerformanceMetrics {
+  cacheEfficiency: number;
+  memoryEfficiency: number;
+  compressionEfficiency: number;
+  responseTimePercentiles: {
+    p50: number;
+    p90: number;
+    p95: number;
+    p99: number;
+  };
+  throughputMetrics: {
+    requestsPerSecond: number;
+    hitsPerSecond: number;
+    missesPerSecond: number;
+  };
+  resourceUtilization: {
+    memoryUsagePercent: number;
+    cacheSizePercent: number;
+    compressionSavings: number;
+  };
+}
+
 interface CacheMetrics {
   name: string;
-  stats: any;
+  stats: CacheStats;
   health: {
     status: 'healthy' | 'warning' | 'critical';
     issues: string[];
     recommendations: string[];
   };
-  performance: any;
+  performance: DetailedPerformanceMetrics;
 }
 
 interface SystemMetrics {
@@ -53,11 +92,11 @@ interface SystemMetrics {
 const PerformanceMonitor: React.FC = () => {
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [metrics, setMetrics] = useState<CacheMetrics[]>([]);
-  const [systemMetrics, setSystemMetrics] = useState<SystemMetrics[]>([]);
+  const [, setSystemMetrics] = useState<SystemMetrics[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [monitoringInterval, setMonitoringInterval] = useState<NodeJS.Timeout | null>(null);
 
-  const caches = [
+  const caches = useMemo(() => [
     { name: 'Global Data Cache', instance: globalDataCache },
     { name: 'Price Cache', instance: priceCache },
     { name: 'Financial Cache', instance: financialCache },
@@ -65,10 +104,10 @@ const PerformanceMonitor: React.FC = () => {
     { name: 'Technical Indicators Cache', instance: technicalIndicatorsCache },
     { name: 'Sentiment Cache', instance: sentimentCache },
     { name: 'News Cache', instance: newsCache },
-  ];
+  ], []);
 
   const collectMetrics = useCallback(() => {
-    const newMetrics = caches.map(({ name, instance }) => ({
+    const newMetrics = caches.map(({ name, instance }: { name: string; instance: any }) => ({
       name,
       stats: instance.getStats(),
       health: instance.getHealthStatus(),
@@ -79,11 +118,11 @@ const PerformanceMonitor: React.FC = () => {
     setLastUpdate(new Date());
 
     // Add system-level metrics
-    const totalMemoryUsage = newMetrics.reduce((sum, m) => sum + m.stats.memoryUsage, 0);
-    const totalMaxMemory = newMetrics.reduce((sum, m) => sum + m.stats.maxMemoryUsage, 0);
-    const averageHitRate = newMetrics.reduce((sum, m) => sum + m.stats.hitRate, 0) / newMetrics.length;
-    const totalRequests = newMetrics.reduce((sum, m) => sum + (m.stats.performanceMetrics?.totalRequests || 0), 0);
-    const averageResponseTime = newMetrics.reduce((sum, m) => sum + (m.stats.performanceMetrics?.averageResponseTime || 0), 0) / newMetrics.length;
+    const totalMemoryUsage = newMetrics.reduce((sum: number, m: any) => sum + m.stats.memoryUsage, 0);
+    const totalMaxMemory = newMetrics.reduce((sum: number, m: any) => sum + m.stats.maxMemoryUsage, 0);
+    const averageHitRate = newMetrics.reduce((sum: number, m: any) => sum + m.stats.hitRate, 0) / newMetrics.length;
+    const totalRequests = newMetrics.reduce((sum: number, m: any) => sum + (m.stats.performanceMetrics?.totalRequests || 0), 0);
+    const averageResponseTime = newMetrics.reduce((sum: number, m: any) => sum + (m.stats.performanceMetrics?.averageResponseTime || 0), 0) / newMetrics.length;
 
     setSystemMetrics(prev => [...prev.slice(-50), {
       timestamp: Date.now(),
@@ -110,7 +149,7 @@ const PerformanceMonitor: React.FC = () => {
   }, [monitoringInterval]);
 
   const resetMetrics = useCallback(() => {
-    caches.forEach(({ instance }) => instance.resetMetrics());
+    caches.forEach(({ instance }: { name: string; instance: any }) => instance.resetMetrics());
     setSystemMetrics([]);
     collectMetrics();
   }, [caches, collectMetrics]);

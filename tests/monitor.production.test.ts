@@ -28,12 +28,12 @@ describe('ProductionMonitor', () => {
     it('should have proper default configuration', () => {
       const stats = productionMonitor.getStats();
       
-      expect(stats.totalTenants).toBe(0);
-      expect(stats.totalUsers).toBe(0);
-      expect(stats.totalResources).toBe(0);
-      expect(stats.totalUsage).toBe(0);
-      expect(stats.totalBilling).toBe(0);
-      expect(stats.cacheStats).toBeDefined();
+      expect(stats.totalAlerts).toBe(0);
+      expect(stats.activeAlerts).toBe(0);
+      expect(stats.resolvedAlerts).toBe(0);
+      expect(stats.metricsCache).toBeDefined();
+      expect(stats.alertsCache).toBeDefined();
+      expect(stats.healthCache).toBeDefined();
     });
   });
 
@@ -350,22 +350,20 @@ describe('ProductionMonitor', () => {
       const stats = productionMonitor.getStats();
       
       expect(stats).toBeDefined();
-      expect(stats.totalTenants).toBeGreaterThanOrEqual(0);
-      expect(stats.totalUsers).toBeGreaterThanOrEqual(0);
-      expect(stats.totalResources).toBeGreaterThanOrEqual(0);
-      expect(stats.totalUsage).toBeGreaterThanOrEqual(0);
-      expect(stats.totalBilling).toBeGreaterThanOrEqual(0);
-      expect(stats.cacheStats).toBeDefined();
+      expect(stats.totalAlerts).toBeGreaterThanOrEqual(0);
+      expect(stats.activeAlerts).toBeGreaterThanOrEqual(0);
+      expect(stats.resolvedAlerts).toBeGreaterThanOrEqual(0);
+      expect(stats.metricsCache).toBeDefined();
+      expect(stats.alertsCache).toBeDefined();
+      expect(stats.healthCache).toBeDefined();
     });
 
     it('should track cache performance', () => {
       const stats = productionMonitor.getStats();
       
-      expect(stats.cacheStats.tenantCache).toBeDefined();
-      expect(stats.cacheStats.userCache).toBeDefined();
-      expect(stats.cacheStats.resourceCache).toBeDefined();
-      expect(stats.cacheStats.usageCache).toBeDefined();
-      expect(stats.cacheStats.billingCache).toBeDefined();
+      expect(stats.metricsCache).toBeDefined();
+      expect(stats.alertsCache).toBeDefined();
+      expect(stats.healthCache).toBeDefined();
     });
   });
 
@@ -389,11 +387,9 @@ describe('ProductionMonitor', () => {
       productionMonitor.clearCaches();
       
       const stats = productionMonitor.getStats();
-      expect(stats.totalTenants).toBe(0);
-      expect(stats.totalUsers).toBe(0);
-      expect(stats.totalResources).toBe(0);
-      expect(stats.totalUsage).toBe(0);
-      expect(stats.totalBilling).toBe(0);
+      expect(stats.totalAlerts).toBe(0);
+      expect(stats.activeAlerts).toBe(0);
+      expect(stats.resolvedAlerts).toBe(0);
     });
 
     it('should destroy resources properly', () => {

@@ -78,7 +78,7 @@ export interface Execution {
 
 export interface SmartOrderRouting {
   algorithm: 'vwap' | 'twap' | 'implementation_shortfall' | 'arrival_price' | 'pov' | 'iceberg';
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   venues: VenueInfo[];
   routing_logic: RoutingRule[];
 }
@@ -115,7 +115,7 @@ export interface RoutingRule {
   condition: string;
   action: string;
   priority: number;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
 }
 
 export interface OrderPerformanceMetrics {
@@ -346,7 +346,7 @@ export class OrderManagementSystem extends EventEmitter {
     }
   }
 
-  private calculateFees(quantity: number, price: number, fees: VenueFees): number {
+  private calculateFees(quantity: number, price: number, _fees: VenueFees): number {
     // Additional regulatory and clearing fees
     return (quantity * price) * 0.0001; // 1 basis point in fees
   }
@@ -462,7 +462,6 @@ export class OrderManagementSystem extends EventEmitter {
 class SmartOrderRouter {
   async routeOrder(order: Order, venues: VenueInfo[]): Promise<RoutingDecision[]> {
     const activeVenues = venues.filter(v => v.isActive);
-    const routing: RoutingDecision[] = [];
     
     switch (order.routing.routingStrategy) {
       case 'smart':
@@ -561,7 +560,7 @@ class SmartOrderRouter {
     return this.smartRouting(order, sortedVenues);
   }
 
-  private calculateVenueScore(venue: VenueInfo, order: Order): number {
+  private calculateVenueScore(venue: VenueInfo, _order: Order): number {
     const liquidityScore = venue.liquidity.fillRate * 0.3;
     const feeScore = (1 - Math.abs(venue.fees.takerFee) / 0.01) * 0.2; // Normalize fees
     const latencyScore = (1 - venue.latency / 10) * 0.2; // Normalize latency

@@ -1,4 +1,4 @@
-export interface CacheEntry<T = any> {
+export interface CacheEntry<T = unknown> {
   data: T;
   timestamp: number;
   ttl: number;
@@ -80,7 +80,7 @@ export class AdvancedCache {
     if (compress && size > 1024) { // Only compress if > 1KB
       try {
         const originalSize = size;
-        processedData = this.compressData(data);
+        processedData = this.compressData(data) as T;
         compressed = true;
         size = this.estimateSize(processedData);
         compressionRatio = size / originalSize;
@@ -88,7 +88,7 @@ export class AdvancedCache {
         if (this.enablePerformanceTracking) {
           this.performanceMetrics.compressionCount++;
         }
-      } catch (error) {
+      } catch {
         // Fallback to uncompressed data
         compressed = false;
         compressionRatio = 1;
@@ -99,7 +99,7 @@ export class AdvancedCache {
       data: processedData,
       timestamp: Date.now(),
       ttl: ttl || this.defaultTTL,
-      accessCount: 0,
+      accessCount: 1,
       lastAccessed: Date.now(),
       size,
       compressed,
@@ -109,12 +109,12 @@ export class AdvancedCache {
     };
 
     // Check memory constraints
-    if (this.totalMemoryUsage + size > this.maxMemoryUsage) {
+    while (this.totalMemoryUsage + size > this.maxMemoryUsage && this.cache.size > 0) {
       this.evictByStrategy();
     }
 
     // If cache is full, remove entries based on strategy
-    if (this.cache.size >= this.maxSize) {
+    while (this.cache.size >= this.maxSize && this.cache.size > 0) {
       this.evictByStrategy();
     }
 
@@ -130,6 +130,11 @@ export class AdvancedCache {
     if (this.enablePerformanceTracking) {
       const responseTime = performance.now() - startTime;
       this.trackResponseTime(responseTime);
+    }
+
+    // Ensure size constraints are respected after insertion
+    while (this.cache.size > this.maxSize && this.cache.size > 0) {
+      this.evictByStrategy();
     }
   }
 
@@ -178,7 +183,18 @@ export class AdvancedCache {
       this.trackResponseTime(performance.now() - startTime);
     }
 
-    return entry.data;
+    // Decompress on read if needed (simple wrapper format)
+    if (entry.compressed && entry.data && typeof entry.data === 'object' && (entry.data as any).compressed && typeof (entry.data as any).data === 'string') {
+      try {
+        const raw = (entry.data as any).data as string;
+        return JSON.parse(raw) as T;
+      } catch {
+        // Fallback to returning as-is
+        return (entry.data as unknown) as T | null;
+      }
+    }
+
+    return entry.data as T | null;
   }
 
   /**
@@ -200,6 +216,10 @@ export class AdvancedCache {
    * Delete a specific key from the cache
    */
   delete(key: string): boolean {
+    const entry = this.cache.get(key);
+    if (entry) {
+      this.totalMemoryUsage -= entry.size;
+    }
     return this.cache.delete(key);
   }
 
@@ -208,6 +228,7 @@ export class AdvancedCache {
    */
   clear(): void {
     this.cache.clear();
+    this.totalMemoryUsage = 0;
   }
 
   /**
@@ -525,13 +546,14 @@ export class AdvancedCache {
   /**
    * Predictive cache warming based on access patterns
    */
-  predictAndWarmup(): void {
+  predictAndWarm(): void {
     if (!this.enablePredictiveCaching) return;
     
     const predictions = this.analyzeAccessPatterns();
     for (const prediction of predictions) {
       // Implement predictive warming logic here
       // This could involve prefetching related data or extending TTL
+      console.log('Prediction:', prediction.key, prediction.confidence);
     }
   }
 
@@ -590,7 +612,6 @@ export class AdvancedCache {
   }
 
   private cleanup(): void {
-    const now = Date.now();
     const keysToDelete: string[] = [];
 
     for (const [key, entry] of Array.from(this.cache.entries())) {
@@ -620,7 +641,7 @@ export class AdvancedCache {
   }
 
   // Private helper methods
-  private estimateSize(data: any): number {
+  private estimateSize(data: unknown): number {
     try {
       const jsonString = JSON.stringify(data);
       return new Blob([jsonString]).size;
@@ -629,7 +650,7 @@ export class AdvancedCache {
     }
   }
 
-  private compressData(data: any): any {
+  private compressData(data: unknown): unknown {
     try {
       const jsonString = JSON.stringify(data);
       // Simple compression - in production, use proper compression libraries

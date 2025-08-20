@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useWorkspaceStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
-import { getWorkflowFromQuery, suggestWorkflows } from '@/lib/workflows';
+import { getWorkflowFromQuery, suggestWorkflows, WORKFLOWS } from '@/lib/workflows';
+import { toast } from 'sonner';
 
 // Type definition for the SpeechRecognition API
 interface SpeechRecognition extends EventTarget {
@@ -57,7 +58,13 @@ export function AgentChat() {
       addMessage(`I can create a new sheet for: ${workflow.title}.`, 'agent');
       const sheetId = createSheetFromWorkflow(workflow.title, workflow.kind, workflow.widgets);
       if (sheetId) {
+        // Deep-link to the new sheet via URL param
+        const url = new URL(window.location.href);
+        url.searchParams.set('sheet', sheetId);
+        window.history.replaceState({}, '', url.toString());
+        toast.success(`Created sheet "${workflow.title}"`);
         addMessage(`Created sheet \"${workflow.title}\" with an initial setup for ${globalSymbol}.`, 'agent');
+        setSuggestions([]);
         return;
       }
     }
@@ -165,8 +172,31 @@ export function AgentChat() {
           ))}
           {/* Inline suggestions */}
           {suggestions.length > 0 && (
-            <div className="text-xs text-muted-foreground">
-              Suggestions: {suggestions.map((s) => s.title).join(', ')}
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((s) => (
+                <Button
+                  key={s.id}
+                  size="sm"
+                  variant="secondary"
+                  className="h-6 text-xs"
+                  onClick={() => {
+                    const wf = WORKFLOWS.find(w => w.id === s.id);
+                    if (!wf) return;
+                    const widgets = wf.widgets(globalSymbol);
+                    const sheetId = createSheetFromWorkflow(wf.title, wf.kind, widgets);
+                    if (sheetId) {
+                      const url = new URL(window.location.href);
+                      url.searchParams.set('sheet', sheetId);
+                      window.history.replaceState({}, '', url.toString());
+                      toast.success(`Created sheet "${wf.title}"`);
+                      addMessage(`Created sheet \"${wf.title}\" for ${globalSymbol}.`, 'agent');
+                      setSuggestions([]);
+                    }
+                  }}
+                >
+                  Create sheet: {s.title}
+                </Button>
+              ))}
             </div>
           )}
         </div>

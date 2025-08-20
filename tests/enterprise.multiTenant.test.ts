@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { multiTenantManager, Tenant, TenantUser, TenantResource, TenantUsage, TenantBilling } from '@/lib/enterprise/multiTenant';
 
 describe('MultiTenantManager', () => {

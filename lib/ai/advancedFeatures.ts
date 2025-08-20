@@ -1,6 +1,7 @@
 import { AdvancedCache } from '@/lib/data/cache';
 
 export interface MarketSentiment {
+  symbol: string;
   score: number; // -1 to 1 (negative to positive)
   confidence: number; // 0 to 1
   sources: string[];
@@ -85,7 +86,7 @@ export class AdvancedAIFeatures {
     sources: string[] = ['news', 'social', 'technical', 'fundamental']
   ): Promise<MarketSentiment> {
     const cacheKey = `sentiment:${symbol}:${sources.join(',')}`;
-    const cached = this.sentimentCache.get(cacheKey);
+    const cached = this.sentimentCache.get<MarketSentiment>(cacheKey);
     if (cached) return cached;
 
     // Simulate sentiment analysis from multiple sources
@@ -104,7 +105,7 @@ export class AdvancedAIFeatures {
     includeRisk: boolean = true
   ): Promise<MarketPrediction[]> {
     const cacheKey = `prediction:${symbol}:${timeframe}:${includeRisk}`;
-    const cached = this.predictionCache.get(cacheKey);
+    const cached = this.predictionCache.get<MarketPrediction[]>(cacheKey);
     if (cached) return cached;
 
     const predictions = await this.performMarketPrediction(symbol, timeframe, includeRisk);
@@ -122,7 +123,7 @@ export class AdvancedAIFeatures {
     minConfidence: number = 0.7
   ): Promise<TechnicalPattern[]> {
     const cacheKey = `patterns:${symbol}:${timeframe}:${minConfidence}`;
-    const cached = this.patternCache.get(cacheKey);
+    const cached = this.patternCache.get<TechnicalPattern[]>(cacheKey);
     if (cached) return cached;
 
     const patterns = await this.performPatternDetection(symbol, timeframe, minConfidence);
@@ -141,7 +142,7 @@ export class AdvancedAIFeatures {
     timeframe: string = '1d'
   ): Promise<RiskAssessment> {
     const cacheKey = `risk:${symbol}:${strategy}:${positionSize}:${timeframe}`;
-    const cached = this.riskCache.get(cacheKey);
+    const cached = this.riskCache.get<RiskAssessment>(cacheKey);
     if (cached) return cached;
 
     const riskAssessment = await this.performRiskAssessment(symbol, strategy, positionSize, timeframe);
@@ -186,6 +187,7 @@ export class AdvancedAIFeatures {
     const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
     
     return {
+      symbol,
       score: avgScore,
       confidence: this.calculateConfidence(scores),
       sources,
@@ -270,10 +272,10 @@ export class AdvancedAIFeatures {
   }
 
   private async performRiskAssessment(
-    symbol: string, 
-    strategy: string, 
-    positionSize: number, 
-    timeframe: string
+    _symbol: string, 
+    _strategy: string, 
+    _positionSize: number, 
+    _timeframe: string
   ): Promise<RiskAssessment> {
     // Simulate risk assessment
     const volatilityRisk = Math.random() * 0.8 + 0.2;
@@ -299,22 +301,22 @@ export class AdvancedAIFeatures {
     };
   }
 
-  private analyzeNewsSentiment(symbol: string): number {
+  private analyzeNewsSentiment(_symbol: string): number {
     // Simulate news sentiment analysis
     return (Math.random() - 0.5) * 2;
   }
 
-  private analyzeSocialSentiment(symbol: string): number {
+  private analyzeSocialSentiment(_symbol: string): number {
     // Simulate social media sentiment analysis
     return (Math.random() - 0.5) * 2;
   }
 
-  private analyzeTechnicalSentiment(symbol: string): number {
+  private analyzeTechnicalSentiment(_symbol: string): number {
     // Simulate technical analysis sentiment
     return (Math.random() - 0.5) * 2;
   }
 
-  private analyzeFundamentalSentiment(symbol: string): number {
+  private analyzeFundamentalSentiment(_symbol: string): number {
     // Simulate fundamental analysis sentiment
     return (Math.random() - 0.5) * 2;
   }
@@ -333,7 +335,11 @@ export class AdvancedAIFeatures {
   }
 
   private getTotalPredictions(): number {
-    // Get total number of predictions made
+    // Count total prediction cache entries as a proxy for total predictions generated
+    // Use keys to compute how many prediction entries exist
+    const keys = this.predictionCache.keys().filter(k => k.startsWith('prediction:'));
+    if (keys.length > 0) return keys.length;
+    // Fallback to hits if available
     return this.predictionCache.getStats().totalHits;
   }
 

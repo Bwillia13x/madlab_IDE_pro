@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Layout, RotateCcw, Play, Palette, FileText, MessageSquare, Grid3X3, Filter } from 'lucide-react';
+import { Search, Layout, RotateCcw, Play, Palette, FileText, MessageSquare, Grid3X3, Filter, PlusCircle, Store, Settings2 } from 'lucide-react';
 import {
   CommandDialog,
   CommandEmpty,
@@ -11,6 +11,9 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { useWorkspaceStore } from '@/lib/store';
+import { useTheme } from 'next-themes';
+import { saveActiveSheetLayout, restoreActiveSheetLayout, resetActiveSheetLayout } from '@/lib/ui/layoutPersistence';
+import { toast } from 'sonner';
 
 interface CommandAction {
   id: string;
@@ -23,13 +26,8 @@ interface CommandAction {
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
-  const { 
-    sheets, 
-    setActiveSheet, 
-    setTheme, 
-    theme,
-    addMessage 
-  } = useWorkspaceStore();
+  const { sheets, activeSheetId, setActiveSheet, setTheme, theme, addMessage, addSheet, setGlobalSymbol, applyGlobalSymbolToAllWidgets, saveTemplate, getTemplates, createSheetFromTemplate } = useWorkspaceStore();
+  const { setTheme: setNextTheme } = useTheme();
 
   // Toggle command palette with Cmd/Ctrl+K
   useEffect(() => {
@@ -45,23 +43,23 @@ export function CommandPalette() {
   }, []);
 
   const handleSaveLayout = () => {
-    // TODO: Implement layout save
-    console.log('Save layout');
-    addMessage('Layout saved successfully', 'agent');
+    const ok = saveActiveSheetLayout();
+    addMessage(ok ? 'Layout saved successfully' : 'No active sheet to save', 'agent');
+    toast[ok ? 'success' : 'error'](ok ? 'Layout saved' : 'No active sheet');
     setOpen(false);
   };
 
   const handleRestoreLayout = () => {
-    // TODO: Implement layout restore
-    console.log('Restore layout');
-    addMessage('Layout restored', 'agent');
+    const ok = restoreActiveSheetLayout();
+    addMessage(ok ? 'Layout restored' : 'No saved layout found', 'agent');
+    toast[ok ? 'success' : 'warning'](ok ? 'Layout restored' : 'No saved layout');
     setOpen(false);
   };
 
   const handleResetLayout = () => {
-    // TODO: Implement layout reset
-    console.log('Reset layout');
-    addMessage('Layout reset to defaults', 'agent');
+    const ok = resetActiveSheetLayout();
+    addMessage(ok ? 'Layout reset to defaults' : 'Unable to reset layout', 'agent');
+    toast[ok ? 'success' : 'error'](ok ? 'Layout reset' : 'Reset failed');
     setOpen(false);
   };
 
@@ -74,8 +72,67 @@ export function CommandPalette() {
   const handleToggleTheme = () => {
     const newTheme = theme === 'malibu-sunrise' ? 'malibu-sunset' : 'malibu-sunrise';
     setTheme(newTheme);
-    document.body.className = document.body.className.replace(/malibu-\w+/g, '');
-    document.body.classList.add(newTheme);
+    setNextTheme(newTheme);
+    setOpen(false);
+  };
+
+  const handleNewSheet = () => {
+    addSheet('blank', 'New Sheet');
+    setOpen(false);
+  };
+
+  const handleOpenMarketplace = () => {
+    window.dispatchEvent(new Event('madlab:open-marketplace'));
+    setOpen(false);
+  };
+
+  const handleOpenWidgetGallery = () => {
+    window.dispatchEvent(new Event('madlab:open-widget-gallery'));
+    setOpen(false);
+  };
+
+  const handleOpenSettings = () => {
+    window.dispatchEvent(new Event('madlab:open-settings'));
+    setOpen(false);
+  };
+
+  const handleSetSymbol = () => {
+    const sym = window.prompt('Set global symbol (e.g., AAPL):') || '';
+    if (!sym) return;
+    setGlobalSymbol(sym);
+    applyGlobalSymbolToAllWidgets(undefined, { onlyEmpty: true });
+    addMessage(`Global symbol set to ${sym.toUpperCase()}`, 'agent');
+    toast.success(`Symbol set to ${sym.toUpperCase()}`);
+    setOpen(false);
+  };
+
+  // Templates: save current sheet and create from saved templates
+  const handleSaveTemplate = () => {
+    const currentSheet = sheets.find(s => s.id === activeSheetId);
+    if (!currentSheet) {
+      toast.error('No active sheet to save');
+      setOpen(false);
+      return;
+    }
+    const name = window.prompt('Template name (default: current sheet title):') || '';
+    const templateName = name.trim() || currentSheet.title || 'My Template';
+    const ok = saveTemplate(templateName, currentSheet.id);
+    toast[ok ? 'success' : 'error'](ok ? 'Template saved' : 'Failed to save template');
+    setOpen(false);
+  };
+
+  const handleCreateFromTemplate = (name: string) => {
+    const ok = createSheetFromTemplate(name);
+    toast[ok ? 'success' : 'error'](ok ? `Created sheet from "${name}"` : 'Template not found');
+    // Deep-link to newly active sheet (store switches active on create)
+    if (ok) {
+      const newId = useWorkspaceStore.getState().activeSheetId;
+      if (newId) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('sheet', newId);
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
     setOpen(false);
   };
 
@@ -121,6 +178,20 @@ export function CommandPalette() {
     
     // Actions
     {
+      id: 'new-sheet',
+      name: 'New sheet',
+      icon: PlusCircle,
+      group: 'Actions',
+      action: handleNewSheet,
+    },
+    {
+      id: 'open-marketplace',
+      name: 'Open Marketplace',
+      icon: Store,
+      group: 'Actions',
+      action: handleOpenMarketplace,
+    },
+    {
       id: 'run-tests',
       name: 'Run Tests ▶︎',
       shortcut: '',
@@ -135,6 +206,13 @@ export function CommandPalette() {
       icon: Palette,
       group: 'Appearance',
       action: handleToggleTheme,
+    },
+    {
+      id: 'set-symbol',
+      name: 'Set global symbol',
+      icon: Search,
+      group: 'Appearance',
+      action: handleSetSymbol,
     },
     {
       id: 'focus-agent',
@@ -153,10 +231,7 @@ export function CommandPalette() {
       shortcut: '',
       icon: Grid3X3,
       group: 'Navigation',
-      action: () => {
-        window.location.href = '/widgets';
-        setOpen(false);
-      },
+      action: handleOpenWidgetGallery,
     },
     {
       id: 'open-screener',
@@ -170,6 +245,13 @@ export function CommandPalette() {
       },
     },
     {
+      id: 'open-settings',
+      name: 'Open Settings',
+      icon: Settings2,
+      group: 'Navigation',
+      action: handleOpenSettings,
+    },
+    {
       id: 'open-options-chain',
       name: 'Open Options Chain',
       shortcut: '',
@@ -180,7 +262,33 @@ export function CommandPalette() {
         setOpen(false);
       },
     },
+    // Templates
+    {
+      id: 'save-template',
+      name: 'Save current sheet as template',
+      shortcut: '',
+      icon: FileText,
+      group: 'Templates',
+      action: handleSaveTemplate,
+    },
   ];
+
+  // Dynamically add commands for saved templates
+  try {
+    const templates = getTemplates();
+    templates.forEach(t => {
+      commands.push({
+        id: `new-from-template-${t.name}`,
+        name: `New from template: ${t.name}`,
+        shortcut: '',
+        icon: FileText,
+        group: 'Templates',
+        action: () => handleCreateFromTemplate(t.name),
+      });
+    });
+  } catch {
+    // ignore
+  }
 
   const groupedCommands = commands.reduce((acc, command) => {
     if (!acc[command.group]) {

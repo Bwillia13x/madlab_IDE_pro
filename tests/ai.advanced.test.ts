@@ -17,7 +17,7 @@ describe('AdvancedAIFeatures', () => {
       const sentiment = await advancedAI.analyzeMarketSentiment('AAPL', ['news', 'social', 'technical']);
       
       expect(sentiment).toBeDefined();
-      expect(sentiment.symbol).toBeUndefined(); // This should be added to the sentiment object
+      expect(sentiment.symbol).toBe('AAPL');
       expect(sentiment.score).toBeGreaterThanOrEqual(-1);
       expect(sentiment.score).toBeLessThanOrEqual(1);
       expect(sentiment.confidence).toBeGreaterThan(0);
@@ -296,7 +296,7 @@ describe('AdvancedAIFeatures', () => {
       // Test with empty string
       const sentiment = await advancedAI.analyzeMarketSentiment('', ['news']);
       expect(sentiment).toBeDefined();
-      expect(sentiment.symbol).toBeUndefined();
+      expect(sentiment.symbol).toBe('');
       
       // Test with very long symbol
       const longSymbol = 'A'.repeat(1000);

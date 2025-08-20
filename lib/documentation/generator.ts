@@ -43,11 +43,24 @@ interface APIParameter {
   example: string;
 }
 
+interface APISchema {
+  type: string;
+  properties?: Record<string, unknown>;
+  required?: string[];
+  [key: string]: unknown;
+}
+
+interface APIExample {
+  request?: unknown;
+  response?: unknown;
+  [key: string]: unknown;
+}
+
 interface APIResponse {
   code: number;
   description: string;
-  schema: any;
-  example: any;
+  schema: APISchema;
+  example: APIExample;
 }
 
 export class DocumentationGenerator extends EventEmitter {
@@ -485,7 +498,28 @@ export class DocumentationGenerator extends EventEmitter {
   /**
    * Build search index
    */
-  private buildSearchIndex(): any {
+  private buildSearchIndex(): {
+    sections: Array<{
+      id: string;
+      title: string;
+      category: string;
+      difficulty: string;
+      tags: string[];
+      content: string;
+    }>;
+    examples: Array<{
+      id: string;
+      title: string;
+      language: string;
+      description: string;
+    }>;
+    apis: Array<{
+      endpoint: string;
+      method: string;
+      description: string;
+    }>;
+    lastUpdated: string;
+  } {
     const index: {
       sections: Array<{
         id: string;

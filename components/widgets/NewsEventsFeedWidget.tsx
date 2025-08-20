@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, TrendingUp, TrendingDown, Minus, ExternalLink } from 'lucide-react';
 import type { Widget } from '@/lib/store';
+import { useWorkspaceStore } from '@/lib/store';
 
 interface NewsEventsFeedWidgetProps {
   widget: Widget;
@@ -148,6 +149,11 @@ export function NewsEventsFeedWidget({ widget: _widget }: Readonly<NewsEventsFee
   const [activeTab, setActiveTab] = useState('news');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSentiment, setSelectedSentiment] = useState('all');
+  const globalSymbol = useWorkspaceStore((s) => s.globalSymbol);
+  const dataProvider = useWorkspaceStore((s) => s.dataProvider);
+  const [liveNews, setLiveNews] = useState<NewsItem[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const getSentimentIcon = (sentiment: string) => {
     switch (sentiment) {
@@ -196,10 +202,53 @@ export function NewsEventsFeedWidget({ widget: _widget }: Readonly<NewsEventsFee
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const filteredNews = MOCK_NEWS.filter(item => {
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      if (dataProvider !== 'alpha-vantage') {
+        setLiveNews(null);
+        setError(null);
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const resp = await fetch(`/api/news?symbol=${encodeURIComponent(globalSymbol)}&limit=20`);
+        const json = await resp.json();
+        if (!cancelled) {
+          const items = Array.isArray(json?.items) ? json.items : [];
+          const mapped: NewsItem[] = items.map((n: any, idx: number) => ({
+            id: String(idx),
+            title: n.title || 'News',
+            summary: n.summary || '',
+            source: n.source || 'alpha-vantage',
+            timestamp: new Date(n.timestamp || Date.now()),
+            sentiment: (n.sentiment || 'neutral') as NewsItem['sentiment'],
+            category: 'market',
+            symbols: n.symbols || [],
+            impact: 'medium',
+          }));
+          setLiveNews(mapped);
+        }
+      } catch (e) {
+        if (!cancelled) setError('Failed to load news');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [dataProvider, globalSymbol]);
+
+  const baseNews = liveNews && liveNews.length > 0 ? liveNews : MOCK_NEWS;
+  const filteredNews = baseNews.filter(item => {
     if (selectedCategory !== 'all' && item.category !== selectedCategory) return false;
     if (selectedSentiment !== 'all' && item.sentiment !== selectedSentiment) return false;
     return true;
+  }).sort((a, b) => {
+    const aHas = a.symbols?.includes(globalSymbol) ? 1 : 0;
+    const bHas = b.symbols?.includes(globalSymbol) ? 1 : 0;
+    return bHas - aHas;
   });
 
   const upcomingEvents = MOCK_EVENTS.filter(event => event.status === 'upcoming');
@@ -245,7 +294,7 @@ export function NewsEventsFeedWidget({ widget: _widget }: Readonly<NewsEventsFee
         {/* Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="news">Market News</TabsTrigger>
+            <TabsTrigger value="news">Market News {loading ? '…' : ''}</TabsTrigger>
             <TabsTrigger value="events">Events Calendar</TabsTrigger>
           </TabsList>
 

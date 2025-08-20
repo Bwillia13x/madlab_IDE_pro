@@ -349,7 +349,7 @@ export function PortfolioAllocationCharts({ widget, sheetId: _sheetId, onTitleCh
       .attr('fill', (d, i) => d3.schemeCategory10[i % 10])
       .attr('stroke', 'white')
       .attr('stroke-width', 1)
-      .on('mouseover', function(_event, d) {
+      .on('mouseover', function(_event, _d) {
         d3.select(this)
           .attr('stroke-width', 3)
           .attr('stroke', '#000');
@@ -376,16 +376,17 @@ export function PortfolioAllocationCharts({ widget, sheetId: _sheetId, onTitleCh
   }, [portfolioStats]);
 
   const renderTreemapChart = useCallback((g: d3.Selection<SVGGElement, unknown, null, undefined>, width: number, height: number) => {
-    const treemap = d3.treemap<PortfolioAsset>()
+    const treemap = d3.treemap<any>()
       .size([width, height])
       .padding(1)
       .round(true);
 
-    const root = d3.hierarchy({ children: portfolioStats.assetsWithAllocation } as any)
+    const root = d3
+      .hierarchy<any>({ children: portfolioStats.assetsWithAllocation })
       .sum((d: any) => d.allocation || 0)
       .sort((a, b) => (b.value || 0) - (a.value || 0));
 
-    const nodes = treemap(root as any);
+    const nodes = treemap(root);
 
     const cell = g.selectAll('.cell')
       .data(nodes.leaves())

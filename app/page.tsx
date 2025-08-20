@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { TitleBar } from '@/components/chrome/TitleBar';
 import { ActivityBar } from '@/components/chrome/ActivityBar';
 import { Explorer } from '@/components/chrome/Explorer';
@@ -15,22 +15,53 @@ import { MarketplacePanel } from '@/components/panels/MarketplacePanel';
 import { CommandPalette } from '@/components/CommandPalette';
 import { DemoBanner } from '@/components/DemoBanner';
 import { WidgetGallery } from '@/components/widgets/WidgetGallery';
+import { GlobalToolbar } from '@/components/chrome/GlobalToolbar';
+import { useWorkspaceStore } from '@/lib/store';
 
 export default function HomePage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [marketplaceOpen, setMarketplaceOpen] = useState(false);
   const [widgetGalleryOpen, setWidgetGalleryOpen] = useState(false);
+  const { sheets, setActiveSheet } = useWorkspaceStore();
 
   // Listen to open-marketplace command from activity bar
   React.useEffect(() => {
-    const onOpen = () => setMarketplaceOpen(true);
-    window.addEventListener('madlab:open-marketplace', onOpen);
-    return () => window.removeEventListener('madlab:open-marketplace', onOpen);
+    const onOpenMarketplace = () => setMarketplaceOpen(true);
+    const onOpenWidgetGallery = () => setWidgetGalleryOpen(true);
+    const onOpenSettings = () => setSettingsOpen(true);
+    window.addEventListener('madlab:open-marketplace', onOpenMarketplace);
+    window.addEventListener('madlab:open-widget-gallery', onOpenWidgetGallery);
+    window.addEventListener('madlab:open-settings', onOpenSettings);
+    return () => {
+      window.removeEventListener('madlab:open-marketplace', onOpenMarketplace);
+      window.removeEventListener('madlab:open-widget-gallery', onOpenWidgetGallery);
+      window.removeEventListener('madlab:open-settings', onOpenSettings);
+    };
   }, []);
+
+  // Deep-link: focus sheet from URL param ?sheet=ID
+  useEffect(() => {
+    const applyFromUrl = () => {
+      try {
+        const url = new URL(window.location.href);
+        const sheetId = url.searchParams.get('sheet');
+        if (sheetId && sheets.some(s => s.id === sheetId)) {
+          setActiveSheet(sheetId);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    applyFromUrl();
+    const onPop = () => applyFromUrl();
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [sheets, setActiveSheet]);
 
   return (
     <DataProvider>
       <TitleBar />
+      <GlobalToolbar />
       <div className="flex-1 min-h-0 flex">
         <ActivityBar 
           onSettingsToggle={() => setSettingsOpen(true)}

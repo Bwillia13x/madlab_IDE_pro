@@ -3,6 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { Widget } from '@/lib/store';
+import { useWorkspaceStore } from '@/lib/store';
+import { useKpis } from '@/lib/data/hooks';
 
 interface MarketOverviewWidgetProps {
   widget: Widget;
@@ -53,6 +55,8 @@ const MARKET_BREADTH = {
 };
 
 export function MarketOverviewWidget({ widget: _widget }: Readonly<MarketOverviewWidgetProps>) {
+  const globalSymbol = useWorkspaceStore((s) => s.globalSymbol);
+  const { data: kpi } = useKpis(globalSymbol);
   const getChangeIcon = (change: number) => {
     if (Math.abs(change) < 0.01) return <Minus className="w-3 h-3 text-muted-foreground" />;
     return change > 0 ? 
@@ -82,6 +86,24 @@ export function MarketOverviewWidget({ widget: _widget }: Readonly<MarketOvervie
         <div>
           <h4 className="text-xs font-medium text-muted-foreground mb-2">Major Indices</h4>
           <div className="grid grid-cols-2 gap-2">
+            {/* Global symbol snapshot */}
+            {globalSymbol && (
+              <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                <div>
+                  <div className="text-xs font-medium">{globalSymbol}</div>
+                  <div className="text-xs text-muted-foreground">Watch</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs font-medium">{kpi ? `$${kpi.price.toFixed(2)}` : '—'}</div>
+                  {kpi && (
+                    <div className={`text-xs flex items-center gap-1 ${getChangeColor(kpi.changePercent)}`}>
+                      {getChangeIcon(kpi.changePercent)}
+                      {kpi.change > 0 ? '+' : ''}{kpi.change.toFixed(2)} ({kpi.changePercent.toFixed(2)}%)
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             {MAJOR_INDICES.map((index) => (
               <div key={index.symbol} className="flex items-center justify-between p-2 bg-muted/30 rounded">
                 <div>
@@ -181,5 +203,4 @@ export function MarketOverviewWidget({ widget: _widget }: Readonly<MarketOvervie
     </Card>
   );
 }
-
 

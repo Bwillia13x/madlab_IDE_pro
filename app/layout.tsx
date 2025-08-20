@@ -2,9 +2,11 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/components/theme-provider';
+import { ThemeSync } from '@/components/ThemeSync';
 import { DataProvider } from '@/components/providers/DataProvider';
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
 import dynamic from 'next/dynamic';
+import { Toaster } from 'sonner';
 
 const PerformanceMonitor = dynamic(() => import('@/components/PerformanceMonitor'), { ssr: false });
 
@@ -93,9 +95,11 @@ export default function RootLayout({
           <DataProvider>
             {children}
           </DataProvider>
+          <ThemeSync />
         </ThemeProvider>
         <ServiceWorkerRegistration />
         <PerformanceMonitor />
+        <Toaster richColors closeButton position="bottom-right" />
       </body>
     </html>
   );

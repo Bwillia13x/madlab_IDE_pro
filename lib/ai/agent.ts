@@ -13,7 +13,7 @@ export interface AIAgentConfig {
 export interface AIResponse {
   query: ParsedQuery;
   response: string;
-  data?: any;
+  data?: FetchedData;
   suggestions?: string[];
   confidence: number;
   timestamp: Date;
@@ -28,6 +28,18 @@ export interface MarketInsight {
   recommendation?: string;
   timestamp: Date;
 }
+
+type FetchedData =
+  | PricePoint[]
+  | { type: 'comparison'; data: PricePoint[][]; symbols: string[] }
+  | KpiData
+  | FinancialData
+  | { type: 'news'; message: string }
+  | { type: 'analysis'; data: PricePoint[][]; symbols: string[] }
+  | { prices: PricePoint[]; kpis: KpiData }
+  | { error: string }
+  | Record<string, unknown>
+  | null;
 
 export class AIAgent {
   private config: AIAgentConfig;
@@ -105,7 +117,7 @@ export class AIAgent {
     }
   }
 
-  private async fetchData(parsedQuery: ParsedQuery): Promise<any> {
+  private async fetchData(parsedQuery: ParsedQuery): Promise<FetchedData> {
     const provider = getProvider();
     
     try {
@@ -159,30 +171,30 @@ export class AIAgent {
     }
   }
 
-  private async calculateTechnicalIndicator(parsedQuery: ParsedQuery): Promise<any> {
+  private async calculateTechnicalIndicator(parsedQuery: ParsedQuery): Promise<Record<string, unknown>> {
     const provider = getProvider();
     const prices = await provider.getPrices(parsedQuery.symbol, '6M');
     
     switch (parsedQuery.metric) {
       case 'moving_average':
-        const period = parsedQuery.filters?.period || 20;
-        return this.calculateMovingAverage(prices, period);
+        const period = parsedQuery.filters?.period as number || 20;
+        return this.calculateMovingAverage(prices, period) as Record<string, unknown>;
         
       case 'rsi':
-        return this.calculateRSI(prices);
+        return this.calculateRSI(prices) as Record<string, unknown>;
         
       case 'macd':
-        return this.calculateMACD(prices);
+        return this.calculateMACD(prices) as Record<string, unknown>;
         
       case 'bollinger_bands':
-        return this.calculateBollingerBands(prices);
+        return this.calculateBollingerBands(prices) as Record<string, unknown>;
         
       default:
         return { message: `Technical indicator ${parsedQuery.metric} not implemented` };
     }
   }
 
-  private calculateMovingAverage(prices: PricePoint[], period: number): any {
+  private calculateMovingAverage(prices: PricePoint[], period: number): unknown {
     if (prices.length < period) {
       return { error: 'Insufficient data for moving average calculation' };
     }
@@ -200,7 +212,7 @@ export class AIAgent {
     };
   }
 
-  private calculateRSI(prices: PricePoint[], period: number = 14): any {
+  private calculateRSI(prices: PricePoint[], period: number = 14): unknown {
     if (prices.length < period + 1) {
       return { error: 'Insufficient data for RSI calculation' };
     }
@@ -229,7 +241,7 @@ export class AIAgent {
     };
   }
 
-  private calculateMACD(prices: PricePoint[]): any {
+  private calculateMACD(prices: PricePoint[]): unknown {
     if (prices.length < 26) {
       return { error: 'Insufficient data for MACD calculation' };
     }
@@ -248,7 +260,7 @@ export class AIAgent {
     };
   }
 
-  private calculateBollingerBands(prices: PricePoint[], period: number = 20): any {
+  private calculateBollingerBands(prices: PricePoint[], period: number = 20): unknown {
     if (prices.length < period) {
       return { error: 'Insufficient data for Bollinger Bands calculation' };
     }
@@ -283,7 +295,7 @@ export class AIAgent {
     return ema;
   }
 
-  private async generateResponse(parsedQuery: ParsedQuery, data: any, originalQuery: string): Promise<string> {
+  private async generateResponse(parsedQuery: ParsedQuery, data: FetchedData, originalQuery: string): Promise<string> {
     const prompt = this.buildPrompt(parsedQuery, data, originalQuery);
     
     try {
@@ -295,7 +307,7 @@ export class AIAgent {
     }
   }
 
-  private buildPrompt(parsedQuery: ParsedQuery, data: any, originalQuery: string): string {
+  private buildPrompt(parsedQuery: ParsedQuery, data: FetchedData, originalQuery: string): string {
     const context = this.context.slice(-3).join('\n');
     
     const prompt = `You are a financial analysis AI assistant. Analyze the following query and data to provide a helpful, accurate response.
@@ -346,24 +358,24 @@ Response:`;
     return result.choices[0]?.message?.content || 'No response from AI model';
   }
 
-  private generateFallbackResponse(parsedQuery: ParsedQuery, data: any): string {
+  private generateFallbackResponse(parsedQuery: ParsedQuery, data: FetchedData): string {
     switch (parsedQuery.type) {
       case 'price':
         if (Array.isArray(data)) {
           const latest = data[0];
-          return `The latest price for ${parsedQuery.symbol} is $${latest.close.toFixed(2)} as of ${latest.date.toLocaleDateString()}.`;
+          return `The latest price for ${parsedQuery.symbol} is ${latest.close.toFixed(2)} as of ${latest.date.toLocaleDateString()}.`;
         }
         break;
         
       case 'kpi':
-        if (data && data.price) {
-          return `The current price of ${parsedQuery.symbol} is $${data.price.toFixed(2)} with a ${data.changePercent > 0 ? 'gain' : 'loss'} of ${Math.abs(data.changePercent).toFixed(2)}%.`;
+        if (data && 'price' in data) {
+          return `The current price of ${parsedQuery.symbol} is ${(data as KpiData).price.toFixed(2)} with a ${(data as KpiData).changePercent > 0 ? 'gain' : 'loss'} of ${Math.abs((data as KpiData).changePercent).toFixed(2)}%.`;
         }
         break;
         
       case 'technical':
-        if (data && data.value !== undefined) {
-          return `The ${parsedQuery.metric} for ${parsedQuery.symbol} is ${data.value.toFixed(2)}.`;
+        if (data && 'value' in data) {
+          return `The ${parsedQuery.metric} for ${parsedQuery.symbol} is ${(data as { value: number }).value.toFixed(2)}.`;
         }
         break;
     }
@@ -375,7 +387,7 @@ Response:`;
     return ['price', 'technical', 'analysis'].includes(parsedQuery.type);
   }
 
-  private async generateInsight(parsedQuery: ParsedQuery, data: any): Promise<MarketInsight | null> {
+  private async generateInsight(parsedQuery: ParsedQuery, data: FetchedData): Promise<MarketInsight | null> {
     try {
       // Enhanced insight generation with multiple analysis types
       const insights = await Promise.all([
@@ -427,7 +439,7 @@ Provide a brief insight with confidence level (0-100).`;
   }
 
   // Advanced insight detection methods
-  private async detectUnusualVolume(symbol: string, data: any): Promise<MarketInsight | null> {
+  private async detectUnusualVolume(symbol: string, data: FetchedData): Promise<MarketInsight | null> {
     try {
       if (!Array.isArray(data) || data.length < 20) return null;
 
@@ -454,21 +466,18 @@ Provide a brief insight with confidence level (0-100).`;
     }
   }
 
-  private async identifyTrendReversals(symbol: string, data: any): Promise<MarketInsight | null> {
+  private async identifyTrendReversals(symbol: string, data: FetchedData): Promise<MarketInsight | null> {
     try {
       if (!Array.isArray(data) || data.length < 50) return null;
 
-      const prices = data.map(point => point.close || point.price || 0);
-      const volumes = data.map(point => point.volume || 0);
+      const prices = data.map(point => point.close || 0);
 
       // Simple trend reversal detection using price action and volume
       const shortTerm = prices.slice(0, 5);
       const mediumTerm = prices.slice(0, 20);
-      const longTerm = prices.slice(0, 50);
 
       const shortTrend = this.calculateTrend(shortTerm);
       const mediumTrend = this.calculateTrend(mediumTerm);
-      const longTrend = this.calculateTrend(longTerm);
 
       // Detect potential reversal when trends diverge
       if (shortTrend !== mediumTrend && Math.abs(shortTrend - mediumTrend) > 0.1) {
@@ -492,11 +501,11 @@ Provide a brief insight with confidence level (0-100).`;
     }
   }
 
-  private async analyzeVolatilitySpikes(symbol: string, data: any): Promise<MarketInsight | null> {
+  private async analyzeVolatilitySpikes(symbol: string, data: FetchedData): Promise<MarketInsight | null> {
     try {
       if (!Array.isArray(data) || data.length < 20) return null;
 
-      const prices = data.map(point => point.close || point.price || 0);
+      const prices = data.map(point => point.close || 0);
       const returns = [];
 
       for (let i = 1; i < prices.length; i++) {
@@ -525,11 +534,11 @@ Provide a brief insight with confidence level (0-100).`;
     }
   }
 
-  private async detectMarketAnomalies(symbol: string, data: any): Promise<MarketInsight | null> {
+  private async detectMarketAnomalies(symbol: string, data: FetchedData): Promise<MarketInsight | null> {
     try {
       if (!Array.isArray(data) || data.length < 30) return null;
 
-      const prices = data.map(point => point.close || point.price || 0);
+      const prices = data.map(point => point.close || 0);
       const volumes = data.map(point => point.volume || 0);
 
       // Detect price gaps (overnight moves)
@@ -599,7 +608,7 @@ Provide a brief insight with confidence level (0-100).`;
     }
   }
 
-  private calculateConfidence(parsedQuery: ParsedQuery, data: any): number {
+  private calculateConfidence(parsedQuery: ParsedQuery, data: FetchedData): number {
     let confidence = 80; // Base confidence
     
     // Reduce confidence for complex queries
@@ -610,7 +619,7 @@ Provide a brief insight with confidence level (0-100).`;
     if (!data || (Array.isArray(data) && data.length === 0)) confidence -= 20;
     
     // Increase confidence for simple, well-supported queries
-    if (parsedQuery.type === 'kpi' && data && data.price) confidence += 10;
+    if (parsedQuery.type === 'kpi' && data && 'price' in data) confidence += 10;
     
     return Math.max(0, Math.min(100, confidence));
   }

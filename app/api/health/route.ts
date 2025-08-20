@@ -19,7 +19,7 @@ export async function GET(_request: NextRequest) {
     const monitorStats = productionMonitor.getStats();
 
     // Calculate overall health score
-    const healthScore = calculateHealthScore(systemStatus, cacheStats, monitorStats);
+    const healthScore = calculateHealthScore(systemStatus, cacheStats);
 
     const healthData = {
       status: 'healthy',
@@ -79,10 +79,64 @@ export async function GET(_request: NextRequest) {
   }
 }
 
+interface CacheStat {
+  size: number;
+  maxSize: number;
+  hitRate: number;
+  totalHits: number;
+  totalMisses: number;
+  averageTTL: number;
+  memoryUsage: number;
+  maxMemoryUsage: number;
+  compressionRatio: number;
+  averageEntrySize: number;
+  priorityDistribution: Record<string, number>;
+  performanceMetrics?: {
+    totalRequests: number;
+    averageResponseTime: number;
+    evictionCount: number;
+    compressionCount: number;
+    uptime: number;
+    requestsPerSecond: number;
+  };
+}
+
+interface CacheStats {
+  globalData: CacheStat;
+  price: CacheStat;
+  financial: CacheStat;
+  kpi: CacheStat;
+}
+
+interface HealthCheck {
+  name: string;
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  responseTime: number;
+  lastCheck: number;
+  error?: string;
+  details?: Record<string, unknown>;
+}
+
+interface PerformanceAlert {
+  id: string;
+  type: 'warning' | 'error' | 'critical';
+  category: 'cpu' | 'memory' | 'network' | 'disk' | 'application';
+  message: string;
+  value: number;
+  threshold: number;
+  timestamp: number;
+  resolved: boolean;
+  severity: 'low' | 'medium' | 'high';
+}
+
+interface SystemStatus {
+  alerts: PerformanceAlert[];
+  health: HealthCheck[];
+}
+
 function calculateHealthScore(
-  systemStatus: any,
-  cacheStats: any,
-  monitorStats: any
+  systemStatus: SystemStatus,
+  cacheStats: CacheStats,
 ): number {
   let score = 100;
 
@@ -90,18 +144,18 @@ function calculateHealthScore(
   score -= systemStatus.alerts.length * 10;
 
   // Deduct points for unhealthy health checks
-  const unhealthyChecks = systemStatus.health.filter((h: any) => h.status === 'unhealthy').length;
+  const unhealthyChecks = systemStatus.health.filter((h: HealthCheck) => h.status === 'unhealthy').length;
   score -= unhealthyChecks * 15;
 
   // Deduct points for low cache hit rates
-  Object.values(cacheStats).forEach((cache: any) => {
+  Object.values(cacheStats).forEach((cache: CacheStat) => {
     if (cache.hitRate < 0.5) {
       score -= 10;
     }
   });
 
   // Deduct points for high memory usage
-  Object.values(cacheStats).forEach((cache: any) => {
+  Object.values(cacheStats).forEach((cache: CacheStat) => {
     const memoryUsagePercent = (cache.memoryUsage / cache.maxMemoryUsage) * 100;
     if (memoryUsagePercent > 90) {
       score -= 10;

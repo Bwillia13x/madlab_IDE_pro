@@ -34,10 +34,6 @@ function seeded(symbol: string, suffix = '') {
   return mulberry32(seed);
 }
 
-function clamp(v: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, v));
-}
-
 function generatePrices(symbol: string, range: PriceRange): PricePoint[] {
   const r = seeded(symbol, ':' + range);
   const pointsByRange: Record<PriceRange, number> = {
@@ -169,7 +165,7 @@ export const mockAdapter: Provider = {
     return true;
   },
 
-  async getLastUpdate(symbol: string): Promise<Date | null> {
+  async getLastUpdate(_symbol: string): Promise<Date | null> {
     // Random time within last minute
     return new Date(Date.now() - Math.random() * 60000);
   },

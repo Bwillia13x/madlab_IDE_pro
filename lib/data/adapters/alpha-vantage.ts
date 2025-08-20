@@ -57,7 +57,7 @@ export class AlphaVantageAdapter implements Provider {
     this.baseUrl = config.baseUrl || 'https://www.alphavantage.co/query';
   }
 
-  private async makeRequest(params: Record<string, string>): Promise<any> {
+  private async makeRequest(params: Record<string, string>): Promise<Record<string, unknown>> {
     // Rate limiting
     const now = Date.now();
     const timeSinceLastRequest = now - this.lastRequestTime;
@@ -76,15 +76,15 @@ export class AlphaVantageAdapter implements Provider {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
-      const data = await response.json();
+      const data = (await response.json()) as Record<string, unknown>;
       
       // Check for API error messages
       if (data['Error Message']) {
-        throw new Error(data['Error Message']);
+        throw new Error(String(data['Error Message']));
       }
       
       if (data['Note']) {
-        throw new Error(`Rate limit exceeded: ${data['Note']}`);
+        throw new Error(`Rate limit exceeded: ${String(data['Note'])}`);
       }
 
       this.lastRequestTime = Date.now();
@@ -103,7 +103,7 @@ export class AlphaVantageAdapter implements Provider {
       apikey: this.apiKey,
     };
 
-    const data = await this.makeRequest(params) as AlphaVantageTimeSeries;
+    const data = (await this.makeRequest(params)) as unknown as AlphaVantageTimeSeries;
     
     if (!data['Time Series (Daily)']) {
       throw new Error('No time series data received');
@@ -189,7 +189,7 @@ export class AlphaVantageAdapter implements Provider {
       apikey: this.apiKey,
     };
 
-    const data = await this.makeRequest(params) as AlphaVantageIncomeStatement;
+    const data = (await this.makeRequest(params)) as unknown as AlphaVantageIncomeStatement;
     
     if (!data.annualReports || data.annualReports.length === 0) {
       throw new Error('No financial data received');
@@ -228,18 +228,18 @@ export class AlphaVantageAdapter implements Provider {
       const data = await this.makeRequest(params);
       
       return {
-        name: data.Name,
-        marketCap: data.MarketCapitalization ? parseFloat(data.MarketCapitalization) : undefined,
-        peRatio: data.PERatio ? parseFloat(data.PERatio) : undefined,
-        eps: data.EPS ? parseFloat(data.EPS) : undefined,
-        dividend: data.DividendYield ? parseFloat(data.DividendYield) : undefined,
-        divYield: data.DividendYield ? parseFloat(data.DividendYield) : undefined,
-        beta: data.Beta ? parseFloat(data.Beta) : undefined,
-        fiftyTwoWeekHigh: data['52WeekHigh'] ? parseFloat(data['52WeekHigh']) : undefined,
-        fiftyTwoWeekLow: data['52WeekLow'] ? parseFloat(data['52WeekLow']) : undefined,
+        name: data['Name'] as string | undefined,
+        marketCap: data['MarketCapitalization'] ? parseFloat(String(data['MarketCapitalization'])) : undefined,
+        peRatio: data['PERatio'] ? parseFloat(String(data['PERatio'])) : undefined,
+        eps: data['EPS'] ? parseFloat(String(data['EPS'])) : undefined,
+        dividend: data['DividendYield'] ? parseFloat(String(data['DividendYield'])) : undefined,
+        divYield: data['DividendYield'] ? parseFloat(String(data['DividendYield'])) : undefined,
+        beta: data['Beta'] ? parseFloat(String(data['Beta'])) : undefined,
+        fiftyTwoWeekHigh: data['52WeekHigh'] ? parseFloat(String(data['52WeekHigh'])) : undefined,
+        fiftyTwoWeekLow: data['52WeekLow'] ? parseFloat(String(data['52WeekLow'])) : undefined,
       };
-    } catch (error) {
-      console.warn(`Failed to get company overview for ${symbol}:`, error);
+    } catch {
+      console.warn(`Failed to get company overview for ${symbol}`);
       return {};
     }
   }
@@ -263,7 +263,7 @@ export class AlphaVantageAdapter implements Provider {
       const response = await fetch(`${this.baseUrl}/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=${this.apiKey}`);
       const data = await response.json();
       return !data['Error Message'] && !data['Note'];
-    } catch (error) {
+    } catch {
       return false;
     }
   }

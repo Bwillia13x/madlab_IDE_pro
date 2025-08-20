@@ -8,11 +8,28 @@ interface IBKRConfig {
   autoConnect?: boolean;
 }
 
+interface IBKRComboLeg {
+  conId: number;
+  ratio: number;
+  action: string;
+  exchange: string;
+  openClose: number;
+  shortSaleSlot: number;
+  designatedLocation: string;
+  exemptCode: number;
+}
+
+interface IBKRDeltaNeutralContract {
+  conId: number;
+  delta: number;
+  price: number;
+}
+
 interface IBKRContract {
   conId: number;
   symbol: string;
   secType: string;
-  lastTradeDateOrContractMonth: string;
+  lastTradingDay: string;
   strike: number;
   right: string;
   multiplier: string;
@@ -21,20 +38,11 @@ interface IBKRContract {
   localSymbol: string;
   primaryExch: string;
   tradingClass: string;
-  includeExpired: boolean;
   secIdType: string;
   secId: string;
   comboLegsDescrip: string;
-  comboLegs: any[];
-  deltaNeutralContract: any;
-}
-
-interface IBKRTickData {
-  tickerId: number;
-  field: number;
-  price: number;
-  size: number;
-  timestamp: number;
+  comboLegs: IBKRComboLeg[];
+  deltaNeutralContract: IBKRDeltaNeutralContract | null;
 }
 
 interface IBKRHistoricalData {
@@ -48,6 +56,119 @@ interface IBKRHistoricalData {
   hasGaps: boolean;
 }
 
+interface IBKRMarketData {
+  symbol: string;
+  lastPrice: number;
+  bid: number;
+  ask: number;
+  volume: number;
+  timestamp: number;
+}
+
+interface IBKRAccountData {
+  accountId: string;
+  netLiquidation: number;
+  totalCashValue: number;
+  settledCash: number;
+  accruedCash: number;
+  buyingPower: number;
+  equityWithLoanValue: number;
+  previousDayEquityWithLoanValue: number;
+  grossPositionValue: number;
+  regTMargin: number;
+  initialMargin: number;
+  maintenanceMargin: number;
+  availableFunds: number;
+  excessLiquidity: number;
+  cushion: number;
+  fullInitMarginReq: number;
+  fullMaintMarginReq: number;
+  currency: string;
+}
+
+interface IBKRPosition {
+  symbol: string;
+  conId: number;
+  position: number;
+  marketValue: number;
+  marketPrice: number;
+  averageCost: number;
+  unrealizedPnL: number;
+  realizedPnL: number;
+  accountName: string;
+}
+
+interface IBKROrder {
+  orderId: number;
+  symbol: string;
+  action: string;
+  orderType: string;
+  totalQuantity: number;
+  lmtPrice: number;
+  auxPrice: number;
+  tif: string;
+  status: string;
+  filledQuantity: number;
+  remainingQuantity: number;
+  avgFillPrice: number;
+  lastFillPrice: number;
+  whyHeld: string;
+  mktCapPrice: number;
+}
+
+interface IBKRRequest {
+  method: string;
+  path: string;
+  body?: Record<string, unknown>;
+  params?: Record<string, string | number>;
+}
+
+interface IBKRResponse {
+  success: boolean;
+  data?: Record<string, unknown>;
+  error?: string;
+  requestId?: number;
+}
+
+interface IBKRHistoricalDataResponse {
+  symbol: string;
+  data: IBKRHistoricalData[];
+  requestId: number;
+}
+
+interface IBKRMarketDataResponse {
+  symbol: string;
+  data: IBKRMarketData;
+  requestId: number;
+}
+
+interface IBKRAccountDataResponse {
+  accountId: string;
+  data: IBKRAccountData;
+  requestId: number;
+}
+
+interface IBKRPositionsResponse {
+  positions: IBKRPosition[];
+  requestId: number;
+}
+
+interface IBKROrdersResponse {
+  orders: IBKROrder[];
+  requestId: number;
+}
+
+interface IBKROrderRequest {
+  symbol: string;
+  action: 'BUY' | 'SELL';
+  orderType: 'MKT' | 'LMT' | 'STP' | 'STP LMT';
+  totalQuantity: number;
+  lmtPrice?: number;
+  auxPrice?: number;
+  tif: 'DAY' | 'GTC' | 'IOC' | 'FOK';
+  account: string;
+}
+
 export class InteractiveBrokersRealAdapter implements Provider {
   name = 'Interactive Brokers (Real)';
   private config: IBKRConfig;
@@ -56,10 +177,10 @@ export class InteractiveBrokersRealAdapter implements Provider {
   private requestId = 1;
   private pendingRequests = new Map<number, { resolve: Function; reject: Function; timeout: NodeJS.Timeout }>();
   private subscriptions = new Map<number, { symbol: string; type: string }>();
-  private marketData = new Map<string, any>();
-  private accountData: any = null;
-  private positions: any[] = [];
-  private orders: any[] = [];
+  private marketData = new Map<string, IBKRMarketData>();
+  private accountData: IBKRAccountData | null = null;
+  private positions: IBKRPosition[] = [];
+  private orders: IBKROrder[] = [];
 
   constructor(config: IBKRConfig) {
     this.config = {
@@ -134,111 +255,114 @@ export class InteractiveBrokersRealAdapter implements Provider {
   /**
    * Send request to TWS
    */
-  private async sendRequest(request: any): Promise<any> {
+  private async sendRequest(request: IBKRRequest): Promise<IBKRResponse> {
+    if (!this.connected || !this.socket) {
+      throw new Error('Not connected to IBKR');
+    }
+
+    const requestId = this.requestId++;
+    const fullRequest = { ...request, requestId };
+
     return new Promise((resolve, reject) => {
-      const id = this.requestId++;
-      
       const timeout = setTimeout(() => {
-        this.pendingRequests.delete(id);
+        this.pendingRequests.delete(requestId);
         reject(new Error('Request timeout'));
       }, this.config.timeout);
 
-      this.pendingRequests.set(id, { resolve, reject, timeout });
-
-      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-        this.socket.send(JSON.stringify({
-          id,
-          ...request
-        }));
-      } else {
-        clearTimeout(timeout);
-        reject(new Error('WebSocket not connected'));
-      }
+      this.pendingRequests.set(requestId, { resolve, reject, timeout });
+      this.socket!.send(JSON.stringify(fullRequest));
     });
   }
 
   /**
    * Handle incoming messages from TWS
    */
-  private handleMessage(message: any): void {
-    const { id, type, data, error } = message;
+  private handleMessage(message: IBKRResponse): void {
+    if (message.requestId && this.pendingRequests.has(message.requestId)) {
+      const { resolve, reject, timeout } = this.pendingRequests.get(message.requestId)!;
+      clearTimeout(timeout);
+      this.pendingRequests.delete(message.requestId);
 
-    if (error) {
-      const pending = this.pendingRequests.get(id);
-      if (pending) {
-        clearTimeout(pending.timeout);
-        this.pendingRequests.delete(id);
-        pending.reject(new Error(error));
+      if (message.success) {
+        resolve(message.data as Record<string, unknown>);
+      } else {
+        reject(new Error(message.error || 'Unknown error'));
       }
-      return;
+    } else {
+      // Handle unsolicited messages
+      this.handleUnsolicited(message);
     }
-
-    switch (type) {
-      case 'historicalData':
-        this.handleHistoricalData(data);
-        break;
-      case 'marketData':
-        this.handleMarketData(data);
-        break;
-      case 'accountData':
-        this.handleAccountData(data);
-        break;
-      case 'positions':
-        this.handlePositions(data);
-        break;
-      case 'orders':
-        this.handleOrders(data);
-        break;
-      default:
-        // Handle response to pending request
-        const pending = this.pendingRequests.get(id);
-        if (pending) {
-          clearTimeout(pending.timeout);
-          this.pendingRequests.delete(id);
-          pending.resolve(data);
-        }
+  }
+  /**
+   * Handle unsolicited messages (market data updates, account updates, etc.)
+   */
+  private handleUnsolicited(message: IBKRResponse): void {
+    try {
+      if (!message || !message.data) return;
+      const data = message.data as Record<string, unknown> & { type?: string };
+      switch (data.type) {
+        case 'historical-data':
+          this.handleHistoricalData(data as unknown as IBKRHistoricalDataResponse);
+          break;
+        case 'market-data':
+          this.handleMarketData(data as unknown as IBKRMarketDataResponse);
+          break;
+        case 'account-data':
+          this.handleAccountData(data as unknown as IBKRAccountDataResponse);
+          break;
+        case 'positions':
+          this.handlePositions(data as unknown as IBKRPositionsResponse);
+          break;
+        case 'orders':
+          this.handleOrders(data as unknown as IBKROrdersResponse);
+          break;
+        default:
+          // ignore unknown unsolicited types
+          break;
+      }
+    } catch {
+      // ignore parsing errors
     }
   }
 
   /**
    * Handle historical data response
    */
-  private handleHistoricalData(data: any): void {
-    // Store historical data for later retrieval
-    this.marketData.set(data.symbol, data);
+  private handleHistoricalData(data: IBKRHistoricalDataResponse): void {
+    // Process historical data
+    console.log('Received historical data for', data.symbol);
   }
 
   /**
    * Handle real-time market data
    */
-  private handleMarketData(data: any): void {
-    // Update real-time market data
-    this.marketData.set(data.symbol, {
-      ...this.marketData.get(data.symbol),
-      ...data,
-      timestamp: Date.now()
-    });
+  private handleMarketData(data: IBKRMarketDataResponse): void {
+    // Update market data cache
+    this.marketData.set(data.symbol, data.data);
   }
 
   /**
    * Handle account data response
    */
-  private handleAccountData(data: any): void {
-    this.accountData = data;
+  private handleAccountData(data: IBKRAccountDataResponse): void {
+    // Update account data
+    this.accountData = data.data;
   }
 
   /**
    * Handle positions response
    */
-  private handlePositions(data: any): void {
-    this.positions = data;
+  private handlePositions(data: IBKRPositionsResponse): void {
+    // Update positions
+    this.positions = data.positions;
   }
 
   /**
    * Handle orders response
    */
-  private handleOrders(data: any): void {
-    this.orders = data;
+  private handleOrders(data: IBKROrdersResponse): void {
+    // Update orders
+    this.orders = data.orders;
   }
 
   /**
@@ -252,7 +376,7 @@ export class InteractiveBrokersRealAdapter implements Provider {
     this.connected = false;
     
     // Clear pending requests
-    this.pendingRequests.forEach((pending, id) => {
+    this.pendingRequests.forEach((pending, _id) => {
       clearTimeout(pending.timeout);
       pending.reject(new Error('Disconnected'));
     });
@@ -295,7 +419,7 @@ export class InteractiveBrokersRealAdapter implements Provider {
       const response = await this.sendRequest(request);
       
       if (response && response.data) {
-        return response.data.map((bar: IBKRHistoricalData) => ({
+        return (response.data as unknown as IBKRHistoricalData[]).map((bar: IBKRHistoricalData) => ({
           date: new Date(bar.date),
           open: bar.open,
           high: bar.high,
@@ -336,22 +460,22 @@ export class InteractiveBrokersRealAdapter implements Provider {
       const response = await this.sendRequest(request);
       
       if (response && response.data) {
-        const data = response.data;
+        const data = response.data as Record<string, number>;
         return {
           symbol,
           name: symbol,
-          price: data.last || 0,
-          change: (data.last || 0) - (data.close || 0),
-          changePercent: data.close ? ((data.last - data.close) / data.close) * 100 : 0,
-          volume: data.volume || 0,
-          marketCap: data.marketCap || 0,
-          peRatio: data.peRatio,
-          eps: data.eps,
-          dividend: data.dividend,
-          divYield: data.divYield,
-          beta: data.beta,
-          fiftyTwoWeekHigh: data.fiftyTwoWeekHigh,
-          fiftyTwoWeekLow: data.fiftyTwoWeekLow,
+          price: Number(data.last || 0),
+          change: Number((data.last || 0)) - Number(data.close || 0),
+          changePercent: data.close ? ((Number(data.last) - Number(data.close)) / Number(data.close)) * 100 : 0,
+          volume: Number(data.volume || 0),
+          marketCap: Number(data.marketCap || 0),
+          peRatio: (data as Record<string, number> & { peRatio?: number }).peRatio,
+          eps: (data as Record<string, number> & { eps?: number }).eps,
+          dividend: (data as Record<string, number> & { dividend?: number }).dividend,
+          divYield: (data as Record<string, number> & { divYield?: number }).divYield,
+          beta: (data as Record<string, number> & { beta?: number }).beta,
+          fiftyTwoWeekHigh: (data as Record<string, number> & { fiftyTwoWeekHigh?: number }).fiftyTwoWeekHigh,
+          fiftyTwoWeekLow: (data as Record<string, number> & { fiftyTwoWeekLow?: number }).fiftyTwoWeekLow,
           timestamp: new Date()
         };
       }
@@ -386,29 +510,29 @@ export class InteractiveBrokersRealAdapter implements Provider {
       const response = await this.sendRequest(request);
       
       if (response && response.data) {
-        const data = response.data;
+        const data = response.data as Record<string, number>;
         return {
           symbol,
-          revenue: data.revenue || 0,
-          netIncome: data.netIncome || 0,
-          totalAssets: data.totalAssets,
-          totalLiabilities: data.totalLiabilities,
-          cash: data.cash,
-          debt: data.debt,
-          equity: data.equity,
-          eps: data.eps,
-          peRatio: data.peRatio,
-          pbRatio: data.pbRatio,
-          roe: data.roe,
-          roa: data.roa,
-          debtToEquity: data.debtToEquity,
-          currentRatio: data.currentRatio,
-          quickRatio: data.quickRatio,
-          grossMargin: data.grossMargin,
-          operatingMargin: data.operatingMargin,
-          netMargin: data.netMargin,
-          cashFlow: data.cashFlow || 0,
-          fcf: data.fcf || 0,
+          revenue: Number(data.revenue || 0),
+          netIncome: Number(data.netIncome || 0),
+          totalAssets: Number(data.totalAssets),
+          totalLiabilities: Number(data.totalLiabilities),
+          cash: Number(data.cash),
+          debt: Number(data.debt),
+          equity: Number(data.equity),
+          eps: (data as Record<string, number> & { eps?: number }).eps,
+          peRatio: (data as Record<string, number> & { peRatio?: number }).peRatio,
+          pbRatio: (data as Record<string, number> & { pbRatio?: number }).pbRatio,
+          roe: (data as Record<string, number> & { roe?: number }).roe,
+          roa: (data as Record<string, number> & { roa?: number }).roa,
+          debtToEquity: (data as Record<string, number> & { debtToEquity?: number }).debtToEquity,
+          currentRatio: (data as Record<string, number> & { currentRatio?: number }).currentRatio,
+          quickRatio: (data as Record<string, number> & { quickRatio?: number }).quickRatio,
+          grossMargin: (data as Record<string, number> & { grossMargin?: number }).grossMargin,
+          operatingMargin: (data as Record<string, number> & { operatingMargin?: number }).operatingMargin,
+          netMargin: (data as Record<string, number> & { netMargin?: number }).netMargin,
+          cashFlow: Number(data.cashFlow || 0),
+          fcf: Number(data.fcf || 0),
           timestamp: new Date()
         };
       }
@@ -431,7 +555,7 @@ export class InteractiveBrokersRealAdapter implements Provider {
       
       const marketData = this.marketData.get(symbol);
       return marketData?.timestamp ? new Date(marketData.timestamp) : null;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -449,7 +573,7 @@ export class InteractiveBrokersRealAdapter implements Provider {
     const response = await this.sendRequest(request);
     
     if (response && response.data) {
-      return response.data;
+      return response.data as unknown as IBKRContract;
     }
 
     throw new Error(`Contract not found for symbol: ${symbol}`);
@@ -512,7 +636,7 @@ export class InteractiveBrokersRealAdapter implements Provider {
   /**
    * Get account information
    */
-  async getAccount(): Promise<any> {
+  async getAccount(): Promise<IBKRAccountData | null> {
     if (!this.connected) {
       return null;
     }
@@ -524,9 +648,8 @@ export class InteractiveBrokersRealAdapter implements Provider {
       };
 
       const response = await this.sendRequest(request);
-      return response?.data || null;
-    } catch (error) {
-      console.error('Error getting account from IBKR:', error);
+      return (response?.data as unknown as IBKRAccountData) || null;
+    } catch {
       return null;
     }
   }
@@ -534,7 +657,7 @@ export class InteractiveBrokersRealAdapter implements Provider {
   /**
    * Get positions
    */
-  async getPositions(): Promise<any[]> {
+  async getPositions(): Promise<IBKRPosition[]> {
     if (!this.connected) {
       return [];
     }
@@ -546,9 +669,8 @@ export class InteractiveBrokersRealAdapter implements Provider {
       };
 
       const response = await this.sendRequest(request);
-      return response?.data || [];
-    } catch (error) {
-      console.error('Error getting positions from IBKR:', error);
+      return (response?.data as unknown as IBKRPosition[]) || [];
+    } catch {
       return [];
     }
   }
@@ -556,23 +678,17 @@ export class InteractiveBrokersRealAdapter implements Provider {
   /**
    * Place an order
    */
-  async placeOrder(order: any): Promise<number> {
-    if (!this.connected) {
-      throw new Error('Not connected to IBKR TWS');
-    }
+  async placeOrder(order: IBKROrderRequest): Promise<number> {
+    const response = await this.sendRequest({
+      method: 'POST',
+      path: '/order',
+      body: order as unknown as Record<string, unknown>,
+    });
 
-    try {
-      const request = {
-        method: 'POST',
-        path: '/order',
-        body: order
-      };
-
-      const response = await this.sendRequest(request);
-      return response?.data?.orderId || 0;
-    } catch (error) {
-      console.error('Error placing order with IBKR:', error);
-      throw error;
+    if (response.success && response.data) {
+      return (response.data as { orderId: number }).orderId;
+    } else {
+      throw new Error('Failed to place order');
     }
   }
 
@@ -593,8 +709,8 @@ export class InteractiveBrokersRealAdapter implements Provider {
 
       await this.sendRequest(request);
       return true;
-    } catch (error) {
-      console.error('Error canceling order with IBKR:', error);
+    } catch {
+      console.error('Error canceling order with IBKR');
       return false;
     }
   }
@@ -615,9 +731,10 @@ export class InteractiveBrokersRealAdapter implements Provider {
       };
 
       const response = await this.sendRequest(request);
-      return response?.data?.status || 'Unknown';
-    } catch (error) {
-      console.error('Error getting order status from IBKR:', error);
+      const status = (response?.data as Record<string, unknown> | undefined)?.['status'];
+      return typeof status === 'string' ? status : 'Unknown';
+    } catch {
+      console.error('Error getting order status from IBKR');
       return 'Unknown';
     }
   }
@@ -633,8 +750,8 @@ export class InteractiveBrokersRealAdapter implements Provider {
     setTimeout(async () => {
       try {
         await this.connect();
-      } catch (error) {
-        console.error('Reconnection failed:', error);
+      } catch (_error) {
+        console.error('Reconnection failed:', _error);
         this.reconnect();
       }
     }, 5000);
@@ -685,8 +802,9 @@ export class InteractiveBrokersRealAdapter implements Provider {
         params: {}
       };
       const response = await this.sendRequest(request);
-      return response?.authenticated === true;
-    } catch (error) {
+      const status = (response.data as Record<string, unknown> | undefined)?.['authenticated'];
+      return status === true;
+    } catch {
       return false;
     }
   }

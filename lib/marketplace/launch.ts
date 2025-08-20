@@ -335,7 +335,7 @@ export class MarketplaceLaunch {
    * Get marketplace insights
    */
   async getMarketplaceInsights(): Promise<{
-    trendingTemplates: any[];
+    trendingTemplates: unknown[];
     popularCategories: Array<{ name: string; growth: number }>;
     userEngagement: {
       dailyActiveUsers: number;

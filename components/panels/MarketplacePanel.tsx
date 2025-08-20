@@ -21,28 +21,43 @@ import {
   Eye
 } from 'lucide-react';
 import { MARKETPLACE_TEMPLATES } from '@/lib/marketplace/templates';
-import { useWorkspaceStore } from '@/lib/store';
+import { getSchemaWidget } from '@/lib/widgets/registry';
+import { useWorkspaceStore, type SheetKind } from '@/lib/store';
 import { TemplateUploadDialog } from '@/components/marketplace/TemplateUploadDialog';
 
 interface MarketplacePanelProps {
   onClose?: () => void;
 }
 
-type TemplateCategory = 'all' | 'charting' | 'options' | 'risk' | 'trading' | 'analysis';
+type TemplateCategory = 'all' | SheetKind;
 
 export function MarketplacePanel({ onClose }: MarketplacePanelProps) {
-  const { createSheetFromWorkflow, globalSymbol } = useWorkspaceStore();
+  const { createSheetFromWorkflow, addWidget, setActiveSheet, sheets, globalSymbol, getGlobalTimeframe } = useWorkspaceStore();
   const [installing, setInstalling] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<TemplateCategory>('all');
-  const [sortBy, setSortBy] = useState<'popular' | 'newest' | 'rating'>('popular');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<'popular' | 'newest' | 'rating' | 'downloads' | 'views' | 'a-z'>('popular');
+  const [targetSheetId, setTargetSheetId] = useState<'new' | string>('new');
+
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of MARKETPLACE_TEMPLATES) {
+      (t.tags || []).forEach(tag => set.add(tag));
+    }
+    return Array.from(set).sort((a,b)=>a.localeCompare(b));
+  }, []);
 
   const filteredTemplates = useMemo(() => {
     const filtered = MARKETPLACE_TEMPLATES.filter(template => {
-      const matchesSearch = template.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           template.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const lcQuery = searchQuery.toLowerCase();
+      const matchesSearch =
+        template.title.toLowerCase().includes(lcQuery) ||
+        template.description.toLowerCase().includes(lcQuery) ||
+        (template.tags || []).join(' ').toLowerCase().includes(lcQuery);
       const matchesCategory = selectedCategory === 'all' || template.kind === selectedCategory;
-      return matchesSearch && matchesCategory;
+      const matchesTags = selectedTags.length === 0 || (template.tags || []).some(tag => selectedTags.includes(tag));
+      return matchesSearch && matchesCategory && matchesTags;
     });
 
     // Sort templates
@@ -56,6 +71,15 @@ export function MarketplacePanel({ onClose }: MarketplacePanelProps) {
       case 'rating':
         filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
         break;
+      case 'downloads':
+        filtered.sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
+        break;
+      case 'views':
+        filtered.sort((a, b) => (b.views || 0) - (a.views || 0));
+        break;
+      case 'a-z':
+        filtered.sort((a, b) => a.title.localeCompare(b.title));
+        break;
     }
 
     return filtered;
@@ -65,12 +89,35 @@ export function MarketplacePanel({ onClose }: MarketplacePanelProps) {
     const tpl = MARKETPLACE_TEMPLATES.find((t) => t.id === id);
     if (!tpl) return;
     setInstalling(id);
-    const widgets = tpl.widgets.map((w) => ({
-      ...w,
-      props: { ...(w.props || {}), symbol: globalSymbol },
-    }));
-    createSheetFromWorkflow(tpl.title, tpl.kind, widgets);
+    const widgets = tpl.widgets.map((w) => {
+      const schema = getSchemaWidget(w.type);
+      const supportsSymbol = Boolean(schema?.props?.symbol);
+      const supportsRange = Boolean(schema?.props?.range);
+      const nextProps: Record<string, unknown> = { ...(w.props || {}) };
+      if (supportsSymbol) nextProps.symbol = globalSymbol;
+      if (supportsRange) nextProps.range = getGlobalTimeframe();
+      return { ...w, props: nextProps };
+    });
+    if (targetSheetId === 'new') {
+      const sheetId = createSheetFromWorkflow(tpl.title, tpl.kind, widgets);
+      setInstalling(null);
+      if (sheetId) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('sheet', sheetId);
+        window.history.replaceState({}, '', url.toString());
+      }
+      onClose?.();
+      return;
+    }
+    // Add to existing sheet
+    for (const w of widgets) {
+      addWidget(targetSheetId, w);
+    }
+    setActiveSheet(targetSheetId);
     setInstalling(null);
+    const url = new URL(window.location.href);
+    url.searchParams.set('sheet', targetSheetId);
+    window.history.replaceState({}, '', url.toString());
     onClose?.();
   };
 
@@ -94,14 +141,34 @@ export function MarketplacePanel({ onClose }: MarketplacePanelProps) {
     }
   };
 
-  const categories: { value: TemplateCategory; label: string; icon: React.ReactNode }[] = [
-    { value: 'all', label: 'All', icon: <BarChart3 className="w-4 h-4" /> },
-    { value: 'charting', label: 'Charting', icon: <TrendingUp className="w-4 h-4" /> },
-    { value: 'options', label: 'Options', icon: <Settings className="w-4 h-4" /> },
-    { value: 'risk', label: 'Risk', icon: <BarChart3 className="w-4 h-4" /> },
-    { value: 'trading', label: 'Trading', icon: <TrendingUp className="w-4 h-4" /> },
-    { value: 'analysis', label: 'Analysis', icon: <BarChart3 className="w-4 h-4" /> },
-  ];
+  const shareMarketplace = () => {
+    const url = `${window.location.origin}/marketplace`;
+    if (navigator.share) {
+      navigator.share({ title: 'MAD LAB Marketplace', text: 'Explore templates', url });
+    } else {
+      navigator.clipboard.writeText(url);
+    }
+  };
+  // Build categories dynamically from available template kinds
+  const categories: { value: TemplateCategory; label: string; icon: React.ReactNode }[] = useMemo(() => {
+    const kinds = Array.from(new Set<SheetKind>(MARKETPLACE_TEMPLATES.map(t => t.kind)));
+    const iconFor = (kind: SheetKind) => {
+      switch (kind) {
+        case 'charting': return <TrendingUp className="w-4 h-4" />;
+        case 'options': return <Settings className="w-4 h-4" />;
+        case 'risk': return <BarChart3 className="w-4 h-4" />;
+        case 'portfolio': return <Users className="w-4 h-4" />;
+        case 'valuation': return <BarChart3 className="w-4 h-4" />;
+        case 'screening': return <Search className="w-4 h-4" />;
+        default: return <BarChart3 className="w-4 h-4" />;
+      }
+    };
+    const labelFor = (kind: SheetKind) => kind.charAt(0).toUpperCase() + kind.slice(1);
+    return [
+      { value: 'all', label: 'All', icon: <BarChart3 className="w-4 h-4" /> },
+      ...kinds.map(k => ({ value: k, label: labelFor(k), icon: iconFor(k) })),
+    ];
+  }, []);
 
   return (
     <Card className="w-full h-full">
@@ -112,7 +179,7 @@ export function MarketplacePanel({ onClose }: MarketplacePanelProps) {
             Marketplace
           </CardTitle>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => shareTemplate('all')}>
+            <Button variant="outline" size="sm" onClick={shareMarketplace}>
               <Share2 className="w-4 h-4 mr-1" />
               Share
             </Button>
@@ -147,18 +214,53 @@ export function MarketplacePanel({ onClose }: MarketplacePanelProps) {
             </Tabs>
           </div>
           
+          {/* Tag filters */}
+          {allTags.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {allTags.map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}
+                >
+                  <Badge variant={selectedTags.includes(tag) ? 'default' : 'outline'} className="cursor-pointer text-xs">{tag}</Badge>
+                </button>
+              ))}
+              {selectedTags.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={() => setSelectedTags([])}>Clear tags</Button>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Sort by:</span>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'popular' | 'newest' | 'rating')}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
               className="text-sm border rounded px-2 py-1"
               aria-label="Sort templates by"
             >
               <option value="popular">Most Popular</option>
               <option value="newest">Newest</option>
               <option value="rating">Highest Rated</option>
+              <option value="downloads">Most Downloaded</option>
+              <option value="views">Most Viewed</option>
+              <option value="a-z">A → Z</option>
             </select>
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Target:</span>
+              <select
+                value={targetSheetId}
+                onChange={(e) => setTargetSheetId(e.target.value as 'new' | string)}
+                className="text-sm border rounded px-2 py-1"
+                aria-label="Target sheet"
+              >
+                <option value="new">Create new sheet</option>
+                {sheets.map(s => (
+                  <option key={s.id} value={s.id}>{s.title}</option>
+                ))}
+              </select>
+              <span className="text-xs text-muted-foreground">{filteredTemplates.length} results</span>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -257,5 +359,4 @@ export function MarketplacePanel({ onClose }: MarketplacePanelProps) {
     </Card>
   );
 }
-
 

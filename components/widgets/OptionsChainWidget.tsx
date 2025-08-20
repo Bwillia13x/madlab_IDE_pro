@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import type { Widget } from '@/lib/store';
 import { Search, ExternalLink } from 'lucide-react';
+import { useWorkspaceStore } from '@/lib/store';
 
 interface OptionsChainWidgetProps {
   widget: Widget;
@@ -160,7 +161,9 @@ function generateOptionChain(underlying: UnderlyingData, dte: number, priceShock
 }
 
 const OptionsChainWidget = memo(function OptionsChainWidget({ widget: _widget }: OptionsChainWidgetProps) {
-  const [symbol, setSymbol] = useState('NVDA');
+  const globalSymbol = useWorkspaceStore((s) => s.globalSymbol);
+  const defaultSym = (Object.keys(MOCK_UNDERLYINGS).includes(globalSymbol) ? globalSymbol : 'NVDA') || 'NVDA';
+  const [symbol, setSymbol] = useState(defaultSym);
   const [dte, setDte] = useState(30);
   const [showGreeks, setShowGreeks] = useState(true);
   const [priceShock, setPriceShock] = useState(0);

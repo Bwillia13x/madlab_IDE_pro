@@ -17,5 +17,5 @@ global.console = {
   error: vi.fn(),
 }
 
-// Mock timers for consistent testing
-vi.useFakeTimers()
+// Note: Do not enable fake timers globally.
+// Individual tests should opt-in with vi.useFakeTimers() as needed.

@@ -5,7 +5,7 @@ export interface MLModel {
   name: string;
   type: 'classification' | 'regression' | 'timeseries' | 'reinforcement' | 'ensemble';
   algorithm: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   features: Feature[];
   target: string;
   status: 'training' | 'trained' | 'deployed' | 'failed' | 'archived';
@@ -103,14 +103,14 @@ export interface ModelMetadata {
 
 export interface HyperparameterTuning {
   method: 'grid_search' | 'random_search' | 'bayesian' | 'evolutionary';
-  search_space: Record<string, any>;
-  best_params: Record<string, any>;
+  search_space: Record<string, unknown>;
+  best_params: Record<string, unknown>;
   cv_results: CVResult[];
   optimization_time: number;
 }
 
 export interface CVResult {
-  params: Record<string, any>;
+  params: Record<string, unknown>;
   mean_score: number;
   std_score: number;
   rank: number;
@@ -223,18 +223,18 @@ export interface DataSplit {
   validation_size: number;
   test_size: number;
   split_method: 'random' | 'temporal' | 'stratified' | 'group';
-  split_params: Record<string, any>;
+  split_params: Record<string, unknown>;
 }
 
 export interface PredictionRequest {
   model_id: string;
-  features: Record<string, any>;
+  features: Record<string, unknown>;
   explain: boolean;
   confidence_interval: boolean;
 }
 
 export interface PredictionResponse {
-  prediction: any;
+  prediction: unknown;
   confidence: number;
   explanation?: ModelExplanation;
   confidence_interval?: [number, number];
@@ -433,13 +433,13 @@ export class MLModelTrainingPipeline extends EventEmitter {
     job: TrainingJob,
     model: MLModel,
     dataset: Dataset,
-    config: any
+    config: Record<string, unknown>
   ): Promise<void> {
     try {
       job.status = 'running';
       this.emit('trainingStarted', job);
 
-      const { epochs = 100, batch_size = 32, validation_split = 0.2 } = config;
+      const epochs = (config.epochs as number) || 100;
 
       // Simulate training process
       for (let epoch = 0; epoch < epochs; epoch++) {
@@ -547,7 +547,7 @@ export class MLModelTrainingPipeline extends EventEmitter {
     this.emit('modelTrained', model);
   }
 
-  async deployModel(modelId: string, deploymentConfig: {
+  async deployModel(modelId: string, _deploymentConfig: {
     endpoint_name?: string;
     instance_type?: string;
     min_capacity?: number;
@@ -581,7 +581,7 @@ export class MLModelTrainingPipeline extends EventEmitter {
     const startTime = Date.now();
 
     // Simulate prediction
-    let prediction: any;
+    let prediction: unknown;
     let confidence: number;
 
     switch (model.type) {
@@ -662,7 +662,7 @@ export class MLModelTrainingPipeline extends EventEmitter {
 
   async optimizeHyperparameters(
     modelId: string,
-    searchSpace: Record<string, any>,
+    searchSpace: Record<string, unknown>,
     method: 'grid_search' | 'random_search' | 'bayesian' = 'bayesian',
     maxTrials: number = 50
   ): Promise<HyperparameterTuning> {
@@ -712,14 +712,16 @@ export class MLModelTrainingPipeline extends EventEmitter {
     return hyperparameterTuning;
   }
 
-  private sampleParameters(searchSpace: Record<string, any>, method: string): Record<string, any> {
-    const params: Record<string, any> = {};
+  private sampleParameters(searchSpace: Record<string, unknown>, _method: string): Record<string, unknown> {
+    const params: Record<string, unknown> = {};
     
     for (const [param, values] of Object.entries(searchSpace)) {
       if (Array.isArray(values)) {
         params[param] = values[Math.floor(Math.random() * values.length)];
-      } else if (typeof values === 'object' && 'min' in values && 'max' in values) {
-        params[param] = values.min + Math.random() * (values.max - values.min);
+      } else if (typeof values === 'object' && values !== null && 'min' in values && 'max' in values) {
+        const min = (values as { min: number }).min;
+        const max = (values as { max: number }).max;
+        params[param] = min + Math.random() * (max - min);
       }
     }
     

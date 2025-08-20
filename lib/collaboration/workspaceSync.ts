@@ -1,12 +1,52 @@
-import type { Widget, WorkspaceState as StoreWorkspaceState } from '../store';
+import type { Widget } from '../store';
 import type { Layout } from 'react-grid-layout';
+
+// Define specific types for different workspace changes
+export interface WidgetAddData {
+  widgetId: string;
+  widget: Widget;
+  position: { x: number; y: number };
+}
+
+export interface WidgetRemoveData {
+  widgetId: string;
+}
+
+export interface WidgetMoveData {
+  widgetId: string;
+  from: { x: number; y: number };
+  to: { x: number; y: number };
+}
+
+export interface WidgetResizeData {
+  widgetId: string;
+  from: { w: number; h: number };
+  to: { w: number; h: number };
+}
+
+export interface WidgetConfigData {
+  widgetId: string;
+  config: Record<string, unknown>;
+}
+
+export interface LayoutChangeData {
+  layout: Layout[];
+}
+
+export type WorkspaceChangeData = 
+  | WidgetAddData 
+  | WidgetRemoveData 
+  | WidgetMoveData 
+  | WidgetResizeData 
+  | WidgetConfigData 
+  | LayoutChangeData;
 
 export interface WorkspaceChange {
   id: string;
   type: 'widget_add' | 'widget_remove' | 'widget_move' | 'widget_resize' | 'widget_config' | 'layout_change';
   userId: string;
   timestamp: Date;
-  data: any;
+  data: WorkspaceChangeData;
   metadata?: {
     sessionId: string;
     deviceInfo?: string;
@@ -40,7 +80,7 @@ export interface CollaborationUser {
 
 export interface SyncMessage {
   type: 'state_update' | 'user_join' | 'user_leave' | 'cursor_update' | 'chat_message' | 'error' | 'heartbeat';
-  payload: any;
+  payload: WorkspaceChangeData | CollaborationUser | string | Record<string, unknown>;
   timestamp: Date;
   userId?: string;
   sessionId?: string;
@@ -54,7 +94,7 @@ export class WorkspaceSyncService {
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private state: WorkspaceState | null = null;
   private users = new Map<string, CollaborationUser>();
-  private eventHandlers = new Map<string, (...args: any[]) => void>();
+  private eventHandlers = new Map<string, (...args: unknown[]) => void>();
   private pendingChanges: WorkspaceChange[] = [];
   private isConnected = false;
   private workspaceId: string | null = null;
@@ -172,19 +212,19 @@ export class WorkspaceSyncService {
   private handleMessage(message: SyncMessage): void {
     switch (message.type) {
       case 'state_update':
-        this.handleStateUpdate(message.payload);
+        this.handleStateUpdate(message.payload as WorkspaceChangeData);
         break;
       case 'user_join':
-        this.handleUserJoin(message.payload);
+        this.handleUserJoin(message.payload as CollaborationUser);
         break;
       case 'user_leave':
-        this.handleUserLeave(message.payload);
+        this.handleUserLeave(message.payload as { userId: string });
         break;
       case 'cursor_update':
-        this.handleCursorUpdate(message.payload);
+        this.handleCursorUpdate(message.payload as { userId: string; cursor: { x: number; y: number; widgetId?: string } });
         break;
       case 'chat_message':
-        this.handleChatMessage(message.payload);
+        this.handleChatMessage(message.payload as string);
         break;
       case 'error':
         console.error('Sync service error:', message.payload);
@@ -194,33 +234,73 @@ export class WorkspaceSyncService {
     // Notify event handlers
     const handler = this.eventHandlers.get(message.type);
     if (handler) {
-      handler(message.payload);
+      // Handlers are variadic unknowns; align payload types per event
+      switch (message.type) {
+        case 'state_update':
+          (handler as (state: WorkspaceState) => void)(this.state as WorkspaceState);
+          break;
+        case 'user_join':
+        case 'user_leave':
+          (handler as (users: Map<string, CollaborationUser>) => void)(this.users);
+          break;
+        case 'cursor_update':
+          if (message.userId && (message.payload as any)?.cursor) {
+            (handler as (userId: string, cursor: { x: number; y: number; widgetId?: string }) => void)(
+              message.userId,
+              (message.payload as any).cursor
+            );
+          }
+          break;
+        case 'chat_message':
+          if ((message.payload as any)?.message) {
+            (handler as (message: string) => void)((message.payload as any).message);
+          }
+          break;
+      }
     }
   }
 
-  private handleStateUpdate(payload: any): void {
-    if (payload.workspaceId === this.workspaceId) {
-      this.state = payload.state;
+  private handleStateUpdate(payload: WorkspaceChangeData): void {
+    // Handle state updates based on the change type
+    if (this.state) {
+      switch ((payload as unknown as { type?: string }).type) {
+        case 'layout_change':
+          if ('layout' in payload) {
+            this.state.layout = payload.layout;
+          }
+          break;
+        case 'widget_add':
+          if ('widgetId' in payload && 'widget' in payload) {
+            this.state.widgets.set((payload as WidgetAddData).widgetId, (payload as WidgetAddData).widget);
+          }
+          break;
+        case 'widget_remove':
+          if ('widgetId' in payload) {
+            this.state.widgets.delete((payload as WidgetRemoveData).widgetId);
+          }
+          break;
+        case 'widget_move':
+        case 'widget_resize':
+        case 'widget_config':
+          // These changes are handled by the layout system
+          break;
+      }
       this.notifyStateChange();
     }
   }
 
-  private handleUserJoin(payload: any): void {
-    if (payload.workspaceId === this.workspaceId) {
-      this.users.set(payload.user.id, payload.user);
-      this.notifyUserChange();
-    }
+  private handleUserJoin(payload: CollaborationUser): void {
+    this.users.set(payload.id, payload);
+    this.notifyUserChange();
   }
 
-  private handleUserLeave(payload: any): void {
-    if (payload.workspaceId === this.workspaceId) {
-      this.users.delete(payload.userId);
-      this.notifyUserChange();
-    }
+  private handleUserLeave(payload: { userId: string }): void {
+    this.users.delete(payload.userId);
+    this.notifyUserChange();
   }
 
-  private handleCursorUpdate(payload: any): void {
-    if (payload.workspaceId === this.workspaceId && payload.userId !== this.userId) {
+  private handleCursorUpdate(payload: { userId: string; cursor: { x: number; y: number; widgetId?: string } }): void {
+    if (payload.userId !== this.userId) {
       const user = this.users.get(payload.userId);
       if (user) {
         user.cursor = payload.cursor;
@@ -229,10 +309,8 @@ export class WorkspaceSyncService {
     }
   }
 
-  private handleChatMessage(payload: any): void {
-    if (payload.workspaceId === this.workspaceId) {
-      this.notifyChatMessage(payload);
-    }
+  private handleChatMessage(payload: string): void {
+    this.notifyChatMessage(payload);
   }
 
   private sendMessage(message: Partial<SyncMessage>): void {
@@ -248,13 +326,14 @@ export class WorkspaceSyncService {
       this.ws.send(JSON.stringify(fullMessage));
     } else {
       // Queue message for later if not connected
-      this.pendingChanges.push({
+      const placeholder: WorkspaceChange = {
         id: `pending_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         type: 'widget_config',
         userId: this.userId || 'unknown',
         timestamp: new Date(),
-        data: message,
-      });
+        data: { widgetId: 'pending', config: {} },
+      };
+      this.pendingChanges.push(placeholder);
     }
   }
 
@@ -289,7 +368,7 @@ export class WorkspaceSyncService {
       type: 'widget_move',
       userId: this.userId || 'unknown',
       timestamp: new Date(),
-      data: { widgetId, x, y },
+      data: { widgetId, from: { x: 0, y: 0 }, to: { x, y } },
     };
 
     this.sendChange(change);
@@ -301,7 +380,7 @@ export class WorkspaceSyncService {
       type: 'widget_resize',
       userId: this.userId || 'unknown',
       timestamp: new Date(),
-      data: { widgetId, width, height },
+      data: { widgetId, from: { w: 0, h: 0 }, to: { w: width, h: height } },
     };
 
     this.sendChange(change);
@@ -313,7 +392,7 @@ export class WorkspaceSyncService {
       type: 'widget_config',
       userId: this.userId || 'unknown',
       timestamp: new Date(),
-      data: { widgetId, config },
+      data: { widgetId, config: config as Record<string, unknown> },
     };
 
     this.sendChange(change);
@@ -325,7 +404,7 @@ export class WorkspaceSyncService {
       type: 'widget_add',
       userId: this.userId || 'unknown',
       timestamp: new Date(),
-      data: { widget },
+      data: { widgetId: widget.id, widget, position: { x: 0, y: 0 } },
     };
 
     this.sendChange(change);
@@ -381,20 +460,20 @@ export class WorkspaceSyncService {
 
   // Event handling
   onStateChange(handler: (state: WorkspaceState) => void): void {
-    this.eventHandlers.set('state_update', handler);
+    this.eventHandlers.set('state_update', handler as unknown as (...args: unknown[]) => void);
   }
 
   onUserChange(handler: (users: Map<string, CollaborationUser>) => void): void {
-    this.eventHandlers.set('user_join', handler);
-    this.eventHandlers.set('user_leave', handler);
+    this.eventHandlers.set('user_join', handler as unknown as (...args: unknown[]) => void);
+    this.eventHandlers.set('user_leave', handler as unknown as (...args: unknown[]) => void);
   }
 
-  onCursorChange(handler: (userId: string, cursor: any) => void): void {
-    this.eventHandlers.set('cursor_update', handler);
+  onCursorChange(handler: (userId: string, cursor: { x: number; y: number; widgetId?: string }) => void): void {
+    this.eventHandlers.set('cursor_update', handler as unknown as (...args: unknown[]) => void);
   }
 
-  onChatMessage(handler: (message: any) => void): void {
-    this.eventHandlers.set('chat_message', handler);
+  onChatMessage(handler: (message: string) => void): void {
+    this.eventHandlers.set('chat_message', handler as unknown as (...args: unknown[]) => void);
   }
 
   // Notification methods
@@ -412,14 +491,14 @@ export class WorkspaceSyncService {
     }
   }
 
-  private notifyCursorChange(userId: string, cursor: any): void {
+  private notifyCursorChange(userId: string, cursor: { x: number; y: number; widgetId?: string }): void {
     const handler = this.eventHandlers.get('cursor_update');
     if (handler) {
       handler(userId, cursor);
     }
   }
 
-  private notifyChatMessage(message: any): void {
+  private notifyChatMessage(message: string): void {
     const handler = this.eventHandlers.get('chat_message');
     if (handler) {
       handler(message);

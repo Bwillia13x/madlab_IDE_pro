@@ -553,8 +553,8 @@ export class PortfolioManager extends EventEmitter {
       
       if (deviation > target.rebalanceThreshold) {
         const targetValue = portfolio.totalValue * (target.targetPercent / 100);
-        const currentValue = portfolio.totalValue * (target.currentPercent / 100);
-        const difference = targetValue - currentValue;
+        // const currentValue = portfolio.totalValue * (target.currentPercent / 100);
+        // const difference = targetValue - currentValue;
         
         // Find positions that match this target
         const relevantPositions = portfolio.positions.filter(pos => {

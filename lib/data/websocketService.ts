@@ -1,5 +1,11 @@
 import { EventEmitter } from 'events';
 
+interface WebSocketConnection extends WebSocket {
+  // keep types aligned with DOM WebSocket
+  protocol: string;
+  extensions: string;
+}
+
 // Enhanced WebSocket service with clustering and connection pooling
 export class WebSocketService extends EventEmitter {
   private connections: Map<string, WebSocket> = new Map();
@@ -88,8 +94,8 @@ export class WebSocketService extends EventEmitter {
       const connection = new WebSocket(endpoint, options.protocols);
       
       // Set WebSocket options
-      if (options.protocols) (connection as any).protocol = options.protocols;
-      if (options.extensions) (connection as any).extensions = options.extensions;
+      if (options.protocols) (connection as WebSocketConnection).protocol = Array.isArray(options.protocols) ? options.protocols[0] : options.protocols;
+      if (options.extensions) (connection as unknown as { extensions: string }).extensions = options.extensions;
       
       return connection;
     } catch (error) {
@@ -160,7 +166,7 @@ export class WebSocketService extends EventEmitter {
   }
 
   // Load balancing for multiple endpoints
-  async sendToCluster(clusterId: string, data: any): Promise<void> {
+  async sendToCluster(clusterId: string, data: unknown): Promise<void> {
     const connection = this.connections.get(clusterId);
     if (!connection || connection.readyState !== WebSocket.OPEN) {
       throw new Error(`No active connection for cluster ${clusterId}`);
@@ -353,7 +359,7 @@ class LoadBalancer {
         lastCheck: Date.now(),
         responseTime
       });
-    } catch (error) {
+    } catch {
       this.endpointHealth.set(endpoint, {
         isHealthy: false,
         lastCheck: Date.now(),
