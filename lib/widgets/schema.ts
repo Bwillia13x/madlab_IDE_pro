@@ -214,6 +214,28 @@ export const defaultWidgetSchemas: WidgetRegistry = {
     props: {},
     runtime: { component: () => null },
   },
+  'market-ticker-hft': {
+    type: 'market-ticker-hft',
+    title: 'Market Ticker (HFT)',
+    description: 'Shows HFT throughput and compression stats with mid price/spread',
+    category: 'analysis',
+    defaultLayout: { w: 6, h: 4, minW: 4, minH: 3 },
+    props: {
+      symbol: { type: 'string', label: 'Symbol', description: 'Ticker symbol', default: 'AAPL' },
+    },
+    runtime: { component: () => null },
+  },
+  'microstructure': {
+    type: 'microstructure',
+    title: 'Order Book & Microstructure',
+    description: 'Displays order book levels and microstructure metrics',
+    category: 'analysis',
+    defaultLayout: { w: 8, h: 6, minW: 6, minH: 4 },
+    props: {
+      symbol: { type: 'string', label: 'Symbol', description: 'Ticker symbol', default: 'AAPL' },
+    },
+    runtime: { component: () => null },
+  },
   'heatmap': {
     type: 'heatmap',
     title: 'Heatmap',
@@ -630,6 +652,24 @@ export const defaultWidgetSchemas: WidgetRegistry = {
     },
     runtime: {
       component: () => null, // Will be replaced by actual component
+    },
+  },
+  'paper-trading-console': {
+    type: 'paper-trading-console',
+    title: 'Paper Trading Console',
+    description: 'Submit mock orders and track executions (simulated OMS)',
+    category: 'utility',
+    defaultLayout: { w: 6, h: 6, minW: 4, minH: 4 },
+    props: {
+      symbol: {
+        type: 'string',
+        label: 'Default Symbol',
+        description: 'Default symbol for new orders',
+        default: 'AAPL',
+      },
+    },
+    runtime: {
+      component: () => null,
     },
   },
   'options-chain': {

@@ -1,6 +1,7 @@
 'use client';
 
-import { Suspense, lazy } from 'react';
+import React, { Suspense, lazy } from 'react';
+import { log } from '@/lib/utils/errorLogger';
 
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -33,6 +34,29 @@ function WidgetSkeleton() {
       <Skeleton className="w-full h-32" />
     </div>
   );
+}
+
+class WidgetErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error?: Error }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error) {
+    log('error', 'Widget failed to render', undefined, error);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs p-3">
+          Failed to load widget.
+        </div>
+      );
+    }
+    return this.props.children as React.ReactElement;
+  }
 }
 
 // Adapter components to convert config/data to expected props
@@ -172,8 +196,10 @@ export function WidgetLoader({ type, config, data }: WidgetComponentProps) {
   }
 
   return (
-    <Suspense fallback={<WidgetSkeleton />}>
-      <WidgetComponent config={config} data={data} />
-    </Suspense>
+    <WidgetErrorBoundary>
+      <Suspense fallback={<WidgetSkeleton />}>
+        <WidgetComponent config={config} data={data} />
+      </Suspense>
+    </WidgetErrorBoundary>
   );
 }

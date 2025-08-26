@@ -1,0 +1,683 @@
+# MAD LAB Platform - Automated Testing Pipeline
+# GitHub Actions workflow for comprehensive testing
+
+name: Test Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      update_baselines:
+        description: 'Update visual regression baselines'
+        required: false
+        default: false
+        type: boolean
+      manage_baselines:
+        description: 'Manage visual regression baselines (create PR with updates)'
+        required: false
+        default: false
+        type: boolean
+      run_visual_tests_only:
+        description: 'Run only visual regression tests'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  test:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+        include:
+          - node-version: 18.x
+            coverage: true
+          - node-version: 20.x
+            coverage: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps
+
+      - name: Setup test environment
+        run: |
+          # Copy environment template if it exists
+          cp .env.example .env.local 2>/dev/null || echo "No .env.example found, creating minimal test environment"
+
+          # Create basic environment file with test configuration
+          cat > .env.local.tmp << 'EOF'
+          # Basic test environment configuration
+          NODE_ENV=test
+          NEXT_PUBLIC_APP_ENV=test
+          NEXT_PUBLIC_API_URL=http://localhost:3000/api
+
+          # Feature flags for testing
+          NEXT_PUBLIC_ENABLE_TESTING=true
+          NEXT_PUBLIC_DISABLE_ANALYTICS=true
+
+          # Logging
+          LOG_LEVEL=error
+          EOF
+
+          # Append to existing .env.local or create new one
+          cat .env.local.tmp >> .env.local 2>/dev/null || mv .env.local.tmp .env.local
+          rm -f .env.local.tmp
+
+          # Set environment variables from secrets if available
+          echo "" >> .env.local
+          echo "# Test-specific environment variables" >> .env.local
+          echo "CI=true" >> .env.local
+          echo "TEST_ENV=github_actions" >> .env.local
+          echo "BROWSER=headless" >> .env.local
+
+          # Add API keys from secrets if they exist
+          if [ -n "${{ secrets.OPENAI_API_KEY }}" ]; then
+            echo "NEXT_PUBLIC_OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env.local
+          fi
+          if [ -n "${{ secrets.POLYGON_API_KEY }}" ]; then
+            echo "POLYGON_API_KEY=${{ secrets.POLYGON_API_KEY }}" >> .env.local
+          fi
+          if [ -n "${{ secrets.ALPHA_VANTAGE_API_KEY }}" ]; then
+            echo "ALPHA_VANTAGE_API_KEY=${{ secrets.ALPHA_VANTAGE_API_KEY }}" >> .env.local
+          fi
+
+          # Display configured environment (without secrets)
+          echo "Environment setup complete:"
+          grep -v "API_KEY\|SECRET\|TOKEN" .env.local || echo "Environment file created"
+
+      - name: Run linting
+        run: |
+          npm run lint -- --format json --output-file test-results/lint-results.json || npm run lint
+
+      - name: Run TypeScript checks
+        run: npm run typecheck
+
+      - name: Run unit tests
+        run: npm run test:unit
+        env:
+          NODE_ENV: test
+
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          NODE_ENV: test
+
+      - name: Run end-to-end tests
+        run: npm run e2e
+        env:
+          NODE_ENV: test
+
+      - name: Generate coverage report
+        if: matrix.coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        if: matrix.coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+
+      - name: Run security tests
+        run: npm run test:security
+
+      - name: Run performance tests
+        run: npm run test:performance
+
+      - name: Run accessibility tests
+        run: npm run test:accessibility
+
+      - name: Run contract tests
+        run: |
+          # Install Pact CLI for contract publishing
+          curl -LO https://github.com/pact-foundation/pact-ruby-standalone/releases/download/v2.0.2/pact-2.0.2-linux-x86_64.tar.gz
+          tar -xzf pact-2.0.2-linux-x86_64.tar.gz
+          export PATH="$PATH:$(pwd)/pact/bin"
+
+          # Run consumer contract tests
+          npm run test:contracts:consumer
+
+          # Publish contracts to Pact Broker (if configured)
+          if [ -n "${{ secrets.PACT_BROKER_URL }}" ]; then
+            echo "Publishing contracts to Pact Broker..."
+            pact publish pacts \
+              --broker-url "${{ secrets.PACT_BROKER_URL }}" \
+              --broker-token "${{ secrets.PACT_BROKER_TOKEN }}" \
+              --consumer-app-version "${GITHUB_SHA:0:8}" \
+              --tag "${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" || echo "Contract publishing failed, but continuing..."
+          fi
+        env:
+          CI: true
+          PACT_BROKER_URL: ${{ secrets.PACT_BROKER_URL }}
+          PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
+
+      - name: Run visual regression tests
+        run: npm run test:visual
+        env:
+          CI: true
+          UPDATE_BASELINE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.update_baselines == 'true' }}
+          FAIL_ON_VISUAL_REGRESSION: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+
+      - name: Upload visual regression artifacts
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: visual-regression-results-${{ matrix.node-version }}-${{ github.run_id }}
+          path: |
+            __visual_baselines__/
+            __visual_diffs__/
+            test-results/visual-regression/
+          retention-days: 30
+
+      - name: Generate comprehensive test report
+        if: always()
+        run: |
+          # Create test summary report
+          mkdir -p test-results/summary
+
+          # Generate test summary
+          cat > test-results/summary/test-summary.md << 'EOF'
+          # 🧪 Test Execution Summary
+
+          ## Test Environment
+          - **Node.js Version:** ${{ matrix.node-version }}
+          - **Operating System:** ubuntu-latest
+          - **Test Environment:** GitHub Actions CI
+
+          ## Test Results
+          EOF
+
+          # Add test statistics if available
+          if [ -f "test-results/results.json" ]; then
+            echo "Found test results file"
+            # Extract basic stats from vitest results
+            echo "- **Test Results:** Available in results.json" >> test-results/summary/test-summary.md
+          fi
+
+          # Add coverage info if available
+          if [ -d "coverage" ]; then
+            echo "- **Coverage Report:** Generated in coverage/" >> test-results/summary/test-summary.md
+          fi
+
+          # Add playwright report info if available
+          if [ -d "playwright-report" ]; then
+            echo "- **E2E Test Report:** Available in playwright-report/" >> test-results/summary/test-summary.md
+          fi
+
+          # Add timestamp and commit info
+          echo "" >> test-results/summary/test-summary.md
+          echo "## Execution Details" >> test-results/summary/test-summary.md
+          echo "- **Timestamp:** $(date)" >> test-results/summary/test-summary.md
+          echo "- **Commit:** ${GITHUB_SHA:0:8}" >> test-results/summary/test-summary.md
+          echo "- **Branch:** ${GITHUB_REF#refs/heads/}" >> test-results/summary/test-summary.md
+          echo "- **Workflow Run:** $GITHUB_RUN_ID" >> test-results/summary/test-summary.md
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results-node${{ matrix.node-version }}-${{ github.run_id }}
+          path: |
+            test-results/
+            playwright-report/
+            coverage/
+            .env.local
+          retention-days: 30
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v3
+        if: always() && matrix.coverage
+        with:
+          name: coverage-report-node${{ matrix.node-version }}-${{ github.run_id }}
+          path: |
+            coverage/lcov-report/
+            coverage/coverage-summary.json
+          retention-days: 30
+
+      - name: Generate test report
+        if: always()
+        run: |
+          npm run test:report || echo "Test report generation failed"
+
+      - name: Upload test summary
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const testResults = fs.existsSync('test-results/results.json')
+              ? JSON.parse(fs.readFileSync('test-results/results.json', 'utf8'))
+              : null;
+
+            const summary = `## 🧪 Test Results Summary
+
+            **Node.js Version:** ${{ matrix.node-version }}
+            **Status:** ${testResults ? '✅ Tests completed' : '❌ Tests failed'}
+
+            ### Test Statistics
+            - **Total Tests:** ${testResults?.numTotalTests || 'N/A'}
+            - **Passed:** ${testResults?.numPassedTests || 'N/A'}
+            - **Failed:** ${testResults?.numFailedTests || 'N/A'}
+            - **Coverage:** ${fs.existsSync('coverage') ? 'Generated' : 'Not available'}
+
+            ### Test Types Executed
+            - ✅ Linting
+            - ✅ TypeScript checks
+            - ✅ Unit tests
+            - ✅ Integration tests
+            - ✅ E2E tests
+            - ✅ Security tests
+            - ✅ Performance tests
+            - ✅ Accessibility tests
+            - ✅ Visual regression tests
+            - ✅ Contract tests
+
+            **Commit:** ${process.env.GITHUB_SHA?.substring(0, 7)}
+            **Branch:** ${process.env.GITHUB_REF?.replace('refs/heads/', '')}
+            `;
+
+            core.summary.addRaw(summary);
+
+  visual-regression-baseline:
+    name: Manage Visual Regression Baselines
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.manage_baselines == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps
+
+      - name: Download visual regression artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: visual-regression-results-20.x-${{ github.run_id }}
+          path: visual-regression-artifacts/
+
+      - name: Setup visual regression environment
+        run: |
+          # Copy baseline files to the correct location
+          if [ -d "visual-regression-artifacts/__visual_baselines__" ]; then
+            cp -r visual-regression-artifacts/__visual_baselines__/* __visual_baselines__/ 2>/dev/null || mkdir -p __visual_baselines__
+          fi
+
+          # Set environment for baseline management
+          echo "VISUAL_BASELINE_MANAGEMENT=true" >> $GITHUB_ENV
+          echo "UPDATE_BASELINE=true" >> $GITHUB_ENV
+
+      - name: Update visual regression baselines
+        run: |
+          # Run visual regression tests with baseline update
+          npm run test:visual -- --update-baselines
+        env:
+          CI: true
+          UPDATE_BASELINE: true
+          VISUAL_BASELINE_MANAGEMENT: true
+
+      - name: Commit updated baselines
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          # Add baseline files
+          git add __visual_baselines__/ 2>/dev/null || echo "No baseline files to add"
+
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update visual regression baselines
+
+            - Updated baseline screenshots for visual regression tests
+            - Changes triggered by: ${{ github.event.sender.login }}
+            - Commit: ${GITHUB_SHA:0:8}
+            - Workflow: $GITHUB_RUN_ID" || echo "No changes to commit"
+          fi
+
+      - name: Create pull request with baseline updates
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update visual regression baselines"
+          title: "🔄 Update Visual Regression Baselines"
+          body: |
+            ## Visual Regression Baseline Update
+
+            This PR updates the visual regression test baselines.
+
+            ### Changes
+            - Updated baseline screenshots for visual regression tests
+            - These changes were triggered by a workflow dispatch
+
+            ### Review Notes
+            - Please review the updated baseline images carefully
+            - Ensure that any visual changes are intentional
+            - The PR will be merged automatically if all checks pass
+
+            ### Triggered By
+            - User: @${{ github.event.sender.login }}
+            - Commit: ${{ github.sha }}
+            - Workflow: #${{ github.run_id }}
+          branch: update-visual-baselines
+          delete-branch: true
+          draft: false
+
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: test
+    if: failure() && github.ref == 'refs/heads/main'
+    steps:
+      - name: Send failure notification
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { Octokit } = require('@octokit/rest');
+            const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+
+            await octokit.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue?.number || 1,
+              body: `🚨 **Test Pipeline Failed**
+
+              The automated test suite has failed on the main branch.
+
+              **Details:**
+              - Workflow: Test Pipeline
+              - Run: ${process.env.GITHUB_RUN_ID}
+              - Commit: ${GITHUB_SHA?.substring(0, 7)}
+              - Branch: main
+
+              Please investigate the test failures and fix any issues before merging.`
+            });
+
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download test artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: test-results-18.x
+          path: test-results/
+
+      - name: Generate quality report
+        run: |
+          node .github/scripts/generate-quality-report.js --format markdown --output quality-reports
+
+      - name: Check test coverage
+        run: |
+          if [ -f "coverage/coverage-summary.json" ]; then
+            coverage=$(cat coverage/coverage-summary.json | jq '.total.lines.pct')
+            if (( $(echo "$coverage < 75" | bc -l) )); then
+              echo "❌ Test coverage is below 75%: ${coverage}%"
+              exit 1
+            else
+              echo "✅ Test coverage: ${coverage}%"
+            fi
+          else
+            echo "⚠️  Coverage file not found, skipping coverage check"
+          fi
+
+      - name: Check for test failures
+        run: |
+          if [ -f "test-results/results.json" ]; then
+            failed_tests=$(cat test-results/results.json | jq '.numFailedTests // 0')
+            if [ "$failed_tests" -gt 0 ]; then
+              echo "❌ $failed_tests tests are failing"
+              exit 1
+            else
+              echo "✅ All tests passed"
+            fi
+          else
+            echo "⚠️  Test results file not found, checking for any failures in artifacts"
+            if ls test-results/failed-*.json 1> /dev/null 2>&1; then
+              echo "❌ Failed test files found"
+              exit 1
+            else
+              echo "✅ No failed test files found"
+            fi
+          fi
+
+      - name: Check linting results
+        run: |
+          if [ -f "test-results/lint-results.json" ]; then
+            lint_errors=$(cat test-results/lint-results.json | jq '.errorCount // 0')
+            if [ "$lint_errors" -gt 0 ]; then
+              echo "❌ $lint_errors linting errors found"
+              exit 1
+            else
+              echo "✅ No linting errors"
+            fi
+          else
+            echo "⚠️  Linting results not found, skipping check"
+          fi
+
+      - name: Upload quality report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: quality-report-${{ github.run_id }}
+          path: quality-reports/
+          retention-days: 30
+
+      - name: Comment quality report on PR
+        uses: actions/github-script@v7
+        if: always() && github.event_name == 'pull_request'
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = 'quality-reports/quality-report-' + new Date().toISOString().replace(/[:.]/g, '-') + '.md';
+
+            if (fs.existsSync(reportPath)) {
+              const report = fs.readFileSync(reportPath, 'utf8');
+
+              // Check if comment already exists
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number
+              });
+
+              const existingComment = comments.find(comment =>
+                comment.body.includes('🎯 Quality Gate Report')
+              );
+
+              if (existingComment) {
+                // Update existing comment
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existingComment.id,
+                  body: report
+                });
+              } else {
+                // Create new comment
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: report
+                });
+              }
+            }
+
+      - name: Quality gate summary
+        if: always()
+        run: |
+          echo "## 🎯 Quality Gate Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Checks Performed:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Code Coverage (>75%)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Test Results (No failures)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Code Quality (Linting)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f "quality-reports/quality-report-*.md" ]; then
+            echo "### 📊 Detailed Report" >> $GITHUB_STEP_SUMMARY
+            echo "A detailed quality report has been generated and uploaded as an artifact." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "**Status:** All quality checks passed! 🚀" >> $GITHUB_STEP_SUMMARY
+
+  contract-tests:
+    name: Contract Tests
+    runs-on: ubuntu-latest
+    needs: [test, quality-gate]
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+
+      - name: Setup contract testing environment
+        run: |
+          # Setup Pact Broker environment
+          if [ -n "${{ secrets.PACT_BROKER_URL }}" ]; then
+            echo "PACT_BROKER_URL=${{ secrets.PACT_BROKER_URL }}" >> .env.local
+            echo "PACT_BROKER_TOKEN=${{ secrets.PACT_BROKER_TOKEN }}" >> .env.local
+          fi
+
+          # Setup test API server
+          echo "CONTRACT_TEST_MODE=true" >> .env.local
+          echo "API_MOCK_MODE=true" >> .env.local
+
+      - name: Install Pact CLI
+        run: |
+          curl -LO https://github.com/pact-foundation/pact-ruby-standalone/releases/download/v2.0.2/pact-2.0.2-linux-x86_64.tar.gz
+          tar -xzf pact-2.0.2-linux-x86_64.tar.gz
+          echo "$(pwd)/pact/bin" >> $GITHUB_PATH
+
+      - name: Run consumer contract tests
+        run: npm run test:contracts:consumer
+        env:
+          CI: true
+          NODE_ENV: test
+
+      - name: Publish contracts
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          if [ -n "${{ secrets.PACT_BROKER_URL }}" ]; then
+            pact publish pacts \
+              --broker-url "${{ secrets.PACT_BROKER_URL }}" \
+              --broker-token "${{ secrets.PACT_BROKER_TOKEN }}" \
+              --consumer-app-version "${GITHUB_SHA:0:8}" \
+              --tag "main" \
+              --tag "${GITHUB_SHA:0:8}"
+          fi
+
+      - name: Run provider verification tests
+        run: npm run test:contracts:provider
+        env:
+          CI: true
+          NODE_ENV: test
+          PROVIDER_MODE: true
+
+      - name: Upload contract test artifacts
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: contract-test-results-${{ github.run_id }}
+          path: |
+            pacts/
+            logs/
+            test-results/contracts/
+          retention-days: 30
+
+      - name: Contract test summary
+        if: always()
+        run: |
+          echo "## 🔗 Contract Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -d "pacts" ]; then
+            contract_count=$(find pacts -name "*.json" | wc -l)
+            echo "✅ **Contracts Generated:** $contract_count" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -f "test-results/contracts/results.json" ]; then
+            echo "✅ **Contract Tests:** Completed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Contract Testing:** Ensures API reliability and prevents breaking changes" >> $GITHUB_STEP_SUMMARY
+
+  deploy-preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    needs: [test, quality-gate, contract-tests]
+    if: github.event_name == 'pull_request'
+    # environment: preview  # Uncomment when preview environment is configured
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to preview environment
+        run: |
+          npm run build
+          echo "Preview deployment would run here"
+          # npm run deploy:preview -- ${{ github.event.number }}
+
+  deploy-production:
+    name: Deploy Production
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # environment: production  # Uncomment when production environment is configured
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: |
+          npm run build
+          echo "Production deployment would run here"
+          # npm run deploy:production

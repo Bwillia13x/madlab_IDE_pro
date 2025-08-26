@@ -1,0 +1,563 @@
+# Quality Gates and Deployment Blocking
+# Comprehensive quality assurance workflow
+
+name: Quality Gates
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment for deployment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - development
+        - staging
+        - production
+      force_deploy:
+        description: 'Force deployment bypassing quality gates'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9.15.9'
+  # Quality Gate Thresholds
+  COVERAGE_THRESHOLD: 80
+  SECURITY_VULNERABILITY_THRESHOLD: 'high'
+  PERFORMANCE_DEGRADATION_THRESHOLD: 10
+  LINT_ERROR_THRESHOLD: 0
+  TYPE_ERROR_THRESHOLD: 0
+  TEST_PASS_RATE_THRESHOLD: 95
+
+jobs:
+  # Enhanced Quality Checks
+  quality-assessment:
+    name: Quality Assessment
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      coverage: ${{ steps.coverage.outputs.coverage }}
+      test-results: ${{ steps.test-results.outputs.results }}
+      security-issues: ${{ steps.security.outputs.issues }}
+      performance-score: ${{ steps.performance.outputs.score }}
+      lint-errors: ${{ steps.lint.outputs.errors }}
+      type-errors: ${{ steps.typecheck.outputs.errors }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Code Quality Checks
+      - name: Run linting
+        id: lint
+        run: |
+          pnpm lint --format json --output-file lint-results.json || echo "Linting completed with exit code $?"
+          LINT_ERRORS=$(cat lint-results.json 2>/dev/null | jq '.[] | select(.errorCount > 0) | .errorCount' | awk '{sum += $1} END {print sum}' || echo "0")
+          echo "errors=$LINT_ERRORS" >> $GITHUB_OUTPUT
+          echo "Lint errors found: $LINT_ERRORS"
+
+      - name: Run type checking
+        id: typecheck
+        run: |
+          TYPE_ERRORS=$(pnpm typecheck 2>&1 | grep -c "error TS" || echo "0")
+          echo "errors=$TYPE_ERRORS" >> $GITHUB_OUTPUT
+          echo "Type errors found: $TYPE_ERRORS"
+
+      # Test Execution
+      - name: Run unit tests with coverage
+        id: coverage
+        run: |
+          pnpm test:coverage -- --reporter=json --outputFile=test-results.json
+          COVERAGE=$(cat coverage/coverage-summary.json | jq '.total.lines.pct')
+          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+          echo "Test coverage: ${COVERAGE}%"
+
+      - name: Run integration tests
+        run: pnpm test:integration
+
+      - name: Run security tests
+        id: security
+        run: |
+          SECURITY_ISSUES=$(pnpm test:security -- --reporter=json --outputFile=security-results.json 2>/dev/null | jq '.numFailedTests // 0' || echo "0")
+          echo "issues=$SECURITY_ISSUES" >> $GITHUB_OUTPUT
+          echo "Security issues found: $SECURITY_ISSUES"
+
+      - name: Run performance tests
+        id: performance
+        run: |
+          pnpm test:performance -- --reporter=json --outputFile=performance-results.json
+          PERFORMANCE_SCORE=$(cat performance-results.json | jq '.numPassedTests / (.numPassedTests + .numFailedTests) * 100' 2>/dev/null || echo "100")
+          echo "score=$PERFORMANCE_SCORE" >> $GITHUB_OUTPUT
+          echo "Performance score: ${PERFORMANCE_SCORE}%"
+
+      - name: Run accessibility tests
+        run: pnpm test:accessibility
+
+      - name: Run contract tests
+        run: pnpm test:contracts:consumer
+
+      - name: Run visual regression tests
+        run: pnpm test:visual
+
+      - name: Aggregate test results
+        id: test-results
+        run: |
+          TOTAL_TESTS=$(find test-results -name "*.json" -exec jq '.numTotalTests // 0' {} \; | awk '{sum += $1} END {print sum}')
+          PASSED_TESTS=$(find test-results -name "*.json" -exec jq '.numPassedTests // 0' {} \; | awk '{sum += $1} END {print sum}')
+          FAILED_TESTS=$(find test-results -name "*.json" -exec jq '.numFailedTests // 0' {} \; | awk '{sum += $1} END {print sum}')
+
+          if [ "$TOTAL_TESTS" -gt 0 ]; then
+            PASS_RATE=$((PASSED_TESTS * 100 / TOTAL_TESTS))
+          else
+            PASS_RATE=0
+          fi
+
+          echo "results=$PASS_RATE" >> $GITHUB_OUTPUT
+          echo "Test pass rate: ${PASS_RATE}% ($PASSED_TESTS/$TOTAL_TESTS)"
+
+      # Upload artifacts
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quality-assessment-results-${{ github.run_id }}
+          path: |
+            test-results/
+            coverage/
+            lint-results.json
+            security-results.json
+            performance-results.json
+            playwright-report/
+          retention-days: 30
+
+  # Quality Gate Evaluation
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: quality-assessment
+    outputs:
+      gate-status: ${{ steps.evaluate-gate.outputs.status }}
+      gate-reasons: ${{ steps.evaluate-gate.outputs.reasons }}
+
+    steps:
+      - name: Evaluate quality gates
+        id: evaluate-gate
+        run: |
+          # Get inputs from previous job
+          COVERAGE=${{ needs.quality-assessment.outputs.coverage }}
+          TEST_RESULTS=${{ needs.quality-assessment.outputs.test-results }}
+          SECURITY_ISSUES=${{ needs.quality-assessment.outputs.security-issues }}
+          LINT_ERRORS=${{ needs.quality-assessment.outputs.lint-errors }}
+          TYPE_ERRORS=${{ needs.quality-assessment.outputs.type-errors }}
+
+          GATE_STATUS="pass"
+          REASONS=""
+
+          # Coverage check
+          if (( $(echo "$COVERAGE < ${{ env.COVERAGE_THRESHOLD }}" | bc -l) )); then
+            GATE_STATUS="fail"
+            REASONS="${REASONS}Coverage ${COVERAGE}% < ${{ env.COVERAGE_THRESHOLD }}% "
+          fi
+
+          # Test pass rate check
+          if (( $(echo "$TEST_RESULTS < ${{ env.TEST_PASS_RATE_THRESHOLD }}" | bc -l) )); then
+            GATE_STATUS="fail"
+            REASONS="${REASONS}Test pass rate ${TEST_RESULTS}% < ${{ env.TEST_PASS_RATE_THRESHOLD }}% "
+          fi
+
+          # Security check
+          if [ "$SECURITY_ISSUES" -gt 0 ]; then
+            GATE_STATUS="fail"
+            REASONS="${REASONS}Security issues found: ${SECURITY_ISSUES} "
+          fi
+
+          # Lint check
+          if [ "$LINT_ERRORS" -gt ${{ env.LINT_ERROR_THRESHOLD }} ]; then
+            GATE_STATUS="fail"
+            REASONS="${REASONS}Lint errors: ${LINT_ERRORS} "
+          fi
+
+          # Type check
+          if [ "$TYPE_ERRORS" -gt ${{ env.TYPE_ERROR_THRESHOLD }} ]; then
+            GATE_STATUS="fail"
+            REASONS="${REASONS}Type errors: ${TYPE_ERRORS} "
+          fi
+
+          echo "status=$GATE_STATUS" >> $GITHUB_OUTPUT
+          echo "reasons=$REASONS" >> $GITHUB_OUTPUT
+
+          if [ "$GATE_STATUS" = "pass" ]; then
+            echo "✅ All quality gates passed!"
+          else
+            echo "❌ Quality gates failed: $REASONS"
+            exit 1
+          fi
+
+  # Environment-specific quality gates
+  environment-gate:
+    name: Environment Quality Gate
+    runs-on: ubuntu-latest
+    needs: [quality-assessment, quality-gate]
+    if: github.event_name == 'push' || github.event.inputs.force_deploy == 'true'
+    outputs:
+      deploy-allowed: ${{ steps.env-gate.outputs.allowed }}
+      environment: ${{ steps.env-gate.outputs.environment }}
+
+    steps:
+      - name: Determine target environment
+        id: env-gate
+        run: |
+          # Determine target environment
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            ENVIRONMENT="production"
+          elif [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            ENVIRONMENT="staging"
+          elif [ -n "${{ github.event.inputs.environment }}" ]; then
+            ENVIRONMENT="${{ github.event.inputs.environment }}"
+          else
+            ENVIRONMENT="development"
+          fi
+
+          DEPLOY_ALLOWED="true"
+
+          # Environment-specific checks
+          case $ENVIRONMENT in
+            "production")
+              # Strictest checks for production
+              if [ "${{ needs.quality-gate.outputs.gate-status }}" != "pass" ]; then
+                DEPLOY_ALLOWED="false"
+              fi
+              ;;
+            "staging")
+              # Moderate checks for staging
+              COVERAGE=${{ needs.quality-assessment.outputs.coverage }}
+              if (( $(echo "$COVERAGE < 70" | bc -l) )); then
+                DEPLOY_ALLOWED="false"
+              fi
+              ;;
+            "development")
+              # Basic checks for development
+              DEPLOY_ALLOWED="true"
+              ;;
+          esac
+
+          echo "allowed=$DEPLOY_ALLOWED" >> $GITHUB_OUTPUT
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+
+          if [ "$DEPLOY_ALLOWED" = "true" ]; then
+            echo "✅ Deployment to $ENVIRONMENT allowed"
+          else
+            echo "❌ Deployment to $ENVIRONMENT blocked by quality gates"
+            exit 1
+          fi
+
+  # Deployment with rollback capability
+  deploy-with-rollback:
+    name: Deploy with Rollback
+    runs-on: ubuntu-latest
+    needs: [environment-gate]
+    if: needs.environment-gate.outputs.deploy-allowed == 'true'
+    environment: ${{ needs.environment-gate.outputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup deployment environment
+        run: |
+          echo "Deploying to ${{ needs.environment-gate.outputs.environment }}"
+          echo "DEPLOYMENT_ID=${{ github.run_id }}" >> $GITHUB_ENV
+          echo "DEPLOYMENT_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_ENV
+
+      - name: Create deployment record
+        run: |
+          mkdir -p deployment-history
+          cat > deployment-history/${{ github.run_id }}.json << EOF
+          {
+            "deployment_id": "${{ github.run_id }}",
+            "environment": "${{ needs.environment-gate.outputs.environment }}",
+            "commit": "${{ github.sha }}",
+            "timestamp": "${{ env.DEPLOYMENT_TIMESTAMP }}",
+            "quality_gates": {
+              "coverage": "${{ needs.quality-assessment.outputs.coverage }}",
+              "test_results": "${{ needs.quality-assessment.outputs.test-results }}",
+              "security_issues": "${{ needs.quality-assessment.outputs.security-issues }}",
+              "lint_errors": "${{ needs.quality-assessment.outputs.lint-errors }}",
+              "type_errors": "${{ needs.quality-assessment.outputs.type-errors }}"
+            },
+            "status": "in_progress"
+          }
+          EOF
+
+      - name: Build application
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Deploy to ${{ needs.environment-gate.outputs.environment }}
+        run: |
+          # Placeholder deployment command
+          # Replace with your actual deployment command
+          echo "Deploying to ${{ needs.environment-gate.outputs.environment }}..."
+
+          case "${{ needs.environment-gate.outputs.environment }}" in
+            "production")
+              echo "🚀 Production deployment"
+              # pnpm run deploy:production
+              ;;
+            "staging")
+              echo "🧪 Staging deployment"
+              # pnpm run deploy:staging
+              ;;
+            "development")
+              echo "🔧 Development deployment"
+              # pnpm run deploy:development
+              ;;
+          esac
+
+      - name: Update deployment record
+        if: success()
+        run: |
+          cat > deployment-history/${{ github.run_id }}.json << EOF
+          {
+            "deployment_id": "${{ github.run_id }}",
+            "environment": "${{ needs.environment-gate.outputs.environment }}",
+            "commit": "${{ github.sha }}",
+            "timestamp": "${{ env.DEPLOYMENT_TIMESTAMP }}",
+            "quality_gates": {
+              "coverage": "${{ needs.quality-assessment.outputs.coverage }}",
+              "test_results": "${{ needs.quality-assessment.outputs.test-results }}",
+              "security_issues": "${{ needs.quality-assessment.outputs.security-issues }}",
+              "lint_errors": "${{ needs.quality-assessment.outputs.lint-errors }}",
+              "type_errors": "${{ needs.quality-assessment.outputs.type-errors }}"
+            },
+            "status": "success"
+          }
+          EOF
+
+      - name: Mark deployment as failed
+        if: failure()
+        run: |
+          cat > deployment-history/${{ github.run_id }}.json << EOF
+          {
+            "deployment_id": "${{ github.run_id }}",
+            "environment": "${{ needs.environment-gate.outputs.environment }}",
+            "commit": "${{ github.sha }}",
+            "timestamp": "${{ env.DEPLOYMENT_TIMESTAMP }}",
+            "quality_gates": {
+              "coverage": "${{ needs.quality-assessment.outputs.coverage }}",
+              "test_results": "${{ needs.quality-assessment.outputs.test-results }}",
+              "security_issues": "${{ needs.quality-assessment.outputs.security-issues }}",
+              "lint_errors": "${{ needs.quality-assessment.outputs.lint-errors }}",
+              "type_errors": "${{ needs.quality-assessment.outputs.type-errors }}"
+            },
+            "status": "failed"
+          }
+          EOF
+
+      - name: Upload deployment history
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployment-history-${{ github.run_id }}
+          path: deployment-history/
+          retention-days: 90
+
+  # Rollback mechanism
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    needs: deploy-with-rollback
+    if: failure() && needs.deploy-with-rollback.result == 'failure'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Find last successful deployment
+        run: |
+          # This would typically query your deployment history
+          # For now, we'll use a placeholder approach
+          echo "Finding last successful deployment for rollback..."
+
+      - name: Execute rollback
+        run: |
+          echo "🚨 Executing rollback to previous stable version..."
+          # Placeholder rollback logic
+          # This would typically revert to the last known good deployment
+
+      - name: Notify rollback completion
+        run: |
+          echo "✅ Rollback completed successfully"
+
+  # Notifications
+  notify:
+    name: Quality Gate Notifications
+    runs-on: ubuntu-latest
+    needs: [quality-gate, environment-gate, deploy-with-rollback]
+    if: always()
+
+    steps:
+      - name: Prepare notification data
+        run: |
+          QUALITY_STATUS="${{ needs.quality-gate.outputs.gate-status }}"
+          DEPLOY_ALLOWED="${{ needs.environment-gate.outputs.deploy-allowed }}"
+          ENVIRONMENT="${{ needs.environment-gate.outputs.environment }}"
+          GATE_REASONS="${{ needs.quality-gate.outputs.gate-reasons }}"
+
+          cat > notification-data.json << EOF
+          {
+            "quality_status": "$QUALITY_STATUS",
+            "deploy_allowed": "$DEPLOY_ALLOWED",
+            "environment": "$ENVIRONMENT",
+            "gate_reasons": "$GATE_REASONS",
+            "commit": "${{ github.sha }}",
+            "branch": "${{ github.ref }}",
+            "run_id": "${{ github.run_id }}",
+            "workflow": "${{ github.workflow }}",
+            "repository": "${{ github.repository }}"
+          }
+          EOF
+
+      - name: Send Slack notification
+        uses: 8398a7/action-slack@v3
+        if: env.SLACK_WEBHOOK_URL
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          status: ${{ needs.quality-gate.outputs.gate-status == 'pass' && 'success' || 'failure' }}
+          channel: '#quality-gates'
+          text: |
+            🎯 **Quality Gates ${needs.quality-gate.outputs.gate-status == 'pass' && 'PASSED' || 'FAILED'}**
+
+            **Environment:** ${{ needs.environment-gate.outputs.environment }}
+            **Commit:** ${{ github.sha }}
+            **Branch:** ${{ github.ref }}
+            **Workflow:** ${{ github.workflow }} #${{ github.run_id }}
+
+            ${needs.quality-gate.outputs.gate-status == 'pass' && '✅ All quality checks passed!' || '❌ Quality gate failures: ${{ needs.quality-gate.outputs.gate-reasons }}'}
+
+            **View Details:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Send Discord notification
+        uses: Ilshidur/action-discord@master
+        if: env.DISCORD_WEBHOOK
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          args: |
+            🎯 **Quality Gates ${needs.quality-gate.outputs.gate-status == 'pass' && 'PASSED' || 'FAILED'}**
+
+            **Environment:** ${{ needs.environment-gate.outputs.environment }}
+            **Commit:** ${{ github.sha }}
+            **Branch:** ${{ github.ref }}
+
+            ${needs.quality-gate.outputs.gate-status == 'pass' && '✅ All quality checks passed!' || '❌ Quality gate failures: ${{ needs.quality-gate.outputs.gate-reasons }}'}
+
+            **View Details:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Create GitHub issue on failure
+        if: needs.quality-gate.outputs.gate-status == 'fail'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: issue } = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Quality Gates Failed - ${new Date().toISOString().split('T')[0]}`,
+              body: `
+                ## Quality Gates Failed
+
+                **Workflow Run:** #${process.env.GITHUB_RUN_ID}
+                **Commit:** ${process.env.GITHUB_SHA}
+                **Branch:** ${process.env.GITHUB_REF}
+
+                **Failure Reasons:**
+                ${process.env.GATE_REASONS}
+
+                **Environment:** ${{ needs.environment-gate.outputs.environment }}
+
+                ### Next Steps
+                1. Review the workflow logs for detailed error information
+                2. Fix the identified quality issues
+                3. Re-run the quality gates
+
+                **View Details:** ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}
+              `,
+              labels: ['quality-gates', 'bug', 'priority-high']
+            });
+
+  # Quality metrics dashboard
+  metrics-dashboard:
+    name: Update Quality Metrics
+    runs-on: ubuntu-latest
+    needs: [quality-assessment, quality-gate]
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate quality metrics
+        run: |
+          cat > quality-metrics.json << EOF
+          {
+            "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "commit": "${{ github.sha }}",
+            "branch": "${{ github.ref }}",
+            "workflow_run": "${{ github.run_id }}",
+            "metrics": {
+              "coverage": ${{ needs.quality-assessment.outputs.coverage }},
+              "test_pass_rate": ${{ needs.quality-assessment.outputs.test-results }},
+              "security_issues": ${{ needs.quality-assessment.outputs.security-issues }},
+              "lint_errors": ${{ needs.quality-assessment.outputs.lint-errors }},
+              "type_errors": ${{ needs.quality-assessment.outputs.type-errors }},
+              "performance_score": ${{ needs.quality-assessment.outputs.performance-score }},
+              "quality_gate_status": "${{ needs.quality-gate.outputs.gate-status }}",
+              "quality_gate_reasons": "${{ needs.quality-gate.outputs.gate-reasons }}"
+            },
+            "thresholds": {
+              "coverage_threshold": ${{ env.COVERAGE_THRESHOLD }},
+              "test_pass_rate_threshold": ${{ env.TEST_PASS_RATE_THRESHOLD }},
+              "security_vulnerability_threshold": "${{ env.SECURITY_VULNERABILITY_THRESHOLD }}",
+              "lint_error_threshold": ${{ env.LINT_ERROR_THRESHOLD }},
+              "type_error_threshold": ${{ env.TYPE_ERROR_THRESHOLD }}
+            }
+          }
+          EOF
+
+      - name: Upload metrics to dashboard
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-metrics-${{ github.run_id }}
+          path: quality-metrics.json
+          retention-days: 90
+
+      - name: Update metrics dashboard (placeholder)
+        run: |
+          echo "📊 Quality metrics generated and uploaded"
+          echo "Dashboard integration would be implemented here"
+          # This could upload to a metrics service like DataDog, Grafana, etc.

@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { highFrequencyHandler } from './highFrequencyHandler';
 
 interface WebSocketConnection extends WebSocket {
   // keep types aligned with DOM WebSocket
@@ -299,11 +300,14 @@ export class WebSocketService extends EventEmitter {
   private setupConnectionHandlers(clusterId: string, connection: WebSocket): void {
     connection.onopen = () => {
       this.emit('connected', { clusterId });
+      // Back-compat event expected by some consumers
+      this.emit('connection', { source: clusterId, status: 'connected' });
       this.updateConnectionHealth(clusterId, true);
     };
 
     connection.onclose = (event) => {
       this.emit('disconnected', { clusterId, code: event.code, reason: event.reason });
+      this.emit('connection', { source: clusterId, status: 'disconnected' });
       this.updateConnectionHealth(clusterId, false);
       
       if (event.code !== 1000) { // Not a normal closure
@@ -313,6 +317,7 @@ export class WebSocketService extends EventEmitter {
 
     connection.onerror = (error) => {
       this.emit('error', { clusterId, error });
+      this.emit('connection', { source: clusterId, status: 'error' });
       this.updateConnectionHealth(clusterId, false);
     };
 
@@ -323,6 +328,30 @@ export class WebSocketService extends EventEmitter {
           this.updateConnectionHealth(clusterId, true);
         } else {
           this.emit('message', { clusterId, data });
+          // Normalize and forward specific event types if present
+          const type = (data.type || data.event || '').toString().toLowerCase();
+          const source = data.source || data.exchange || clusterId;
+          const body = data.data || data;
+          if (type === 'price' || type === 'trade') {
+            const msg = { source, data: body } as any;
+            this.emit(type, msg);
+            // Optional HFT ingestion
+            try {
+              const FEATURE_HFT = String(process.env.NEXT_PUBLIC_FEATURE_HFT || '').toLowerCase() === 'true';
+              if (FEATURE_HFT && body && body.symbol && (body.price !== undefined)) {
+                highFrequencyHandler.addDataPoint({
+                  symbol: body.symbol,
+                  timestamp: body.timestamp || Date.now(),
+                  price: Number(body.price) || 0,
+                  volume: Number(body.volume) || 0,
+                  bid: body.bid !== undefined ? Number(body.bid) : undefined,
+                  ask: body.ask !== undefined ? Number(body.ask) : undefined,
+                  bidSize: body.bidSize !== undefined ? Number(body.bidSize) : undefined,
+                  askSize: body.askSize !== undefined ? Number(body.askSize) : undefined,
+                });
+              }
+            } catch {}
+          }
         }
       } catch (error) {
         this.emit('parseError', { clusterId, error, rawData: event.data });

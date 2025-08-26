@@ -7,18 +7,20 @@ import { MobilePortfolioTracker } from './MobilePortfolioTracker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  BarChart3, 
-  PieChart, 
-  TrendingUp, 
-  Activity, 
+import {
+  BarChart3,
+  PieChart,
+  TrendingUp,
+  Activity,
   Settings,
   Plus,
   Grid3X3,
   List,
-  Search
+  Search,
+  RefreshCw
 } from 'lucide-react';
 import type { Widget } from '@/lib/store';
+import { getSchemaWidget } from '@/lib/widgets/registry';
 
 interface MobileLayoutProps {
   widgets: Widget[];
@@ -45,10 +47,16 @@ export function MobileLayout({
   const [searchQuery, setSearchQuery] = useState('');
   const [showWidgetSelector, setShowWidgetSelector] = useState(false);
   const [notifications, setNotifications] = useState(3);
-  
+  const [isOnline, setIsOnline] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [canRefresh, setCanRefresh] = useState(false);
+
   const layoutRef = useRef<HTMLDivElement>(null);
   const lastScrollY = useRef(0);
   const scrollDirection = useRef<'up' | 'down'>('up');
+  const touchStartY = useRef(0);
+  const isPulling = useRef(false);
 
   // Organize widgets by section
   const sections: MobileSection[] = [
@@ -56,37 +64,40 @@ export function MobileLayout({
       id: 'dashboard',
       title: 'Dashboard',
       icon: TrendingUp,
-      widgets: widgets.filter(w => w.category === 'overview' || w.category === 'portfolio'),
+      widgets: widgets.filter(w => {
+        const cat = (w.category || getSchemaWidget(w.type)?.category) as string | undefined;
+        return cat === 'financial' || cat === 'portfolio';
+      }),
     },
     {
       id: 'charts',
       title: 'Charts',
       icon: BarChart3,
-      widgets: widgets.filter(w => w.category === 'charting'),
+      widgets: widgets.filter(w => (w.category || getSchemaWidget(w.type)?.category) === 'charting'),
     },
     {
       id: 'portfolio',
       title: 'Portfolio',
       icon: PieChart,
-      widgets: widgets.filter(w => w.category === 'portfolio'),
+      widgets: widgets.filter(w => (w.category || getSchemaWidget(w.type)?.category) === 'portfolio'),
     },
     {
       id: 'analytics',
       title: 'Analytics',
       icon: TrendingUp,
-      widgets: widgets.filter(w => w.category === 'analytics'),
+      widgets: widgets.filter(w => (w.category || getSchemaWidget(w.type)?.category) === 'analysis'),
     },
     {
       id: 'news',
       title: 'News',
       icon: Activity,
-      widgets: widgets.filter(w => w.category === 'news'),
+      widgets: widgets.filter(w => w.type === 'news-events-feed'),
     },
     {
       id: 'settings',
       title: 'Settings',
       icon: Settings,
-      widgets: widgets.filter(w => w.category === 'settings'),
+      widgets: widgets.filter(w => (w.category || getSchemaWidget(w.type)?.category) === 'utility'),
     },
   ];
 
@@ -108,6 +119,81 @@ export function MobileLayout({
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Online/Offline detection
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Set initial state
+    setIsOnline(navigator.onLine);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Pull-to-refresh functionality
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (window.scrollY === 0) {
+      touchStartY.current = e.touches[0].clientY;
+      isPulling.current = true;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isPulling.current) return;
+
+    const currentY = e.touches[0].clientY;
+    const distance = currentY - touchStartY.current;
+
+    if (distance > 0) {
+      const dampenedDistance = Math.min(distance * 0.5, 80);
+      setPullDistance(dampenedDistance);
+      setCanRefresh(dampenedDistance > 50);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isPulling.current) return;
+
+    if (canRefresh && pullDistance > 50) {
+      handleRefresh();
+    }
+
+    setPullDistance(0);
+    setCanRefresh(false);
+    isPulling.current = false;
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+
+    try {
+      // Trigger refresh for all widgets
+      if (onWidgetUpdate) {
+        widgets.forEach(widget => {
+          onWidgetUpdate(widget.id, { ...widget });
+        });
+      }
+
+      // Simulate refresh delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Show success feedback
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
+    } catch (error) {
+      console.error('Refresh failed:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Simulate notifications
   useEffect(() => {
@@ -235,7 +321,45 @@ export function MobileLayout({
   const sectionWidgets = currentSection?.widgets || [];
 
   return (
-    <div className="min-h-screen bg-background" ref={layoutRef}>
+    <div
+      className="min-h-screen bg-background"
+      ref={layoutRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Online/Offline Indicator */}
+      {!isOnline && (
+        <div className="sticky top-0 z-40 bg-destructive/10 border-b border-destructive/20 px-4 py-2">
+          <div className="flex items-center justify-center gap-2 text-sm text-destructive">
+            <Activity className="h-4 w-4" />
+            <span>Offline - Limited functionality</span>
+          </div>
+        </div>
+      )}
+
+      {/* Pull to Refresh Indicator */}
+      {pullDistance > 0 && (
+        <div
+          className="absolute top-0 left-0 right-0 z-30 bg-primary/5 border-b border-primary/20"
+          style={{ height: `${pullDistance}px` }}
+        >
+          <div className="flex items-center justify-center h-full">
+            {canRefresh ? (
+              <div className="flex items-center gap-2 text-primary">
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span className="text-sm font-medium">Release to refresh</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <RefreshCw className="h-4 w-4" />
+                <span className="text-sm">Pull to refresh</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Mobile Navigation */}
       <MobileNavigation
         activeSection={activeSection}
@@ -244,7 +368,10 @@ export function MobileLayout({
       />
 
       {/* Main Content */}
-      <div className="pt-16 pb-20">
+      <div className={`pt-16 pb-20 ${pullDistance > 0 ? 'transform' : ''}`} style={{
+        transform: pullDistance > 0 ? `translateY(${pullDistance}px)` : undefined,
+        transition: pullDistance === 0 ? 'transform 0.2s ease-out' : undefined
+      }}>
         {/* Section Header with Actions */}
         <div className="sticky top-16 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
           <div className="px-4 py-3">

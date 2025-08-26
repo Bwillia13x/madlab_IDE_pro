@@ -6,7 +6,6 @@ import * as crypto from 'crypto';
 import * as https from 'https';
 
 // Storage for workspace state persistence
-let globalStorageUri: vscode.Uri;
 const WORKSPACE_STORAGE_KEY = 'madlab-workspace-data';
 const SETTINGS_STORAGE_KEY = 'madlab-settings';
 
@@ -75,9 +74,6 @@ export function activate(context: vscode.ExtensionContext) {
       }
     })
   );
-  
-  // Initialize global storage
-  globalStorageUri = context.globalStorageUri;
 
   const disposable = vscode.commands.registerCommand('madlab.openWorkbench', async () => {
     const ws = vscode.workspace.workspaceFolders?.[0]?.uri;
@@ -147,9 +143,9 @@ async function handleWebviewMessage(
   workspaceRoot?: vscode.Uri
 ) {
   // Extract request ID for response correlation
-  const requestId = (msg.payload as any)?._requestId;
+  const requestId = (msg.payload as { _requestId?: number })?._requestId;
 
-  const sendResponse = (type: string, payload: any) => {
+  const sendResponse = (type: string, payload: Record<string, unknown>) => {
     const responsePayload = requestId ? { ...payload, _requestId: requestId } : payload;
     panel.webview.postMessage({ type, payload: responsePayload });
   };
@@ -405,7 +401,7 @@ async function saveWorkspaceData(context: vscode.ExtensionContext, data: any): P
   }
 }
 
-async function mockAgentResponse(message: string, history: any[]): Promise<string> {
+async function mockAgentResponse(message: string, _history: any[]): Promise<string> {
   // Simple mock response - in production this would integrate with actual AI
   const responses = [
     'I can help you with workspace management and data analysis.',
@@ -689,7 +685,7 @@ function calculateWinRate(trades: any[]): string {
   return totalPairs > 0 ? ((wins / totalPairs) * 100).toFixed(1) + '%' : '0%';
 }
 
-function calculateAvgTradeReturn(trades: any[], initialCapital: number): string {
+function calculateAvgTradeReturn(trades: any[], _initialCapital: number): string {
   if (trades.length === 0) return '0%';
   
   let totalReturn = 0;

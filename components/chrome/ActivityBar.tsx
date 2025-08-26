@@ -1,14 +1,17 @@
 'use client';
 
-import { 
-  Search, 
-  GitBranch, 
-  Play, 
-  Package, 
-  Settings, 
+import {
+  Search,
+  GitBranch,
+  Play,
+  Package,
+  Settings,
   MessageSquare,
   Folder,
-  Grid3X3
+  Grid3X3,
+  Smartphone,
+  Users,
+  Activity,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -34,9 +37,19 @@ export function ActivityBar({ onSettingsToggle, onWidgetGalleryToggle }: Activit
     const ev = new CustomEvent('madlab:open-marketplace');
     window.dispatchEvent(ev);
   };
+  const FEATURE_COLLAB =
+    String(process.env.NEXT_PUBLIC_FEATURE_COLLAB || '').toLowerCase() === 'true';
+  const openTelemetry = () => {
+    try {
+      window.dispatchEvent(new Event('madlab:open-telemetry'));
+    } catch {}
+  };
 
   return (
-    <div className="w-12 bg-[#2c2c2c] border-r border-[#2d2d30] flex flex-col" data-testid="activity-bar">
+    <div
+      className="w-12 bg-[#2c2c2c] border-r border-[#2d2d30] flex flex-col"
+      data-testid="activity-bar"
+    >
       <TooltipProvider>
         <div className="flex flex-col">
           {ACTIVITY_ITEMS.map((item) => (
@@ -46,8 +59,8 @@ export function ActivityBar({ onSettingsToggle, onWidgetGalleryToggle }: Activit
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    "w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-[#2a2d2e]",
-                    item.active && "border-l-[#007acc] bg-[#37373d]"
+                    'w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-[#2a2d2e]',
+                    item.active && 'border-l-[#007acc] bg-[#37373d]'
                   )}
                   aria-label={item.label}
                   onClick={() => {
@@ -66,7 +79,67 @@ export function ActivityBar({ onSettingsToggle, onWidgetGalleryToggle }: Activit
         </div>
 
         {/* Bottom section */}
-        <div className="flex flex-col mt-auto">
+        <div className="flex flex-col mt-auto pb-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-[#2a2d2e]"
+                onClick={openTelemetry}
+                aria-label="Telemetry"
+              >
+                <Activity className="h-5 w-5 text-[#cccccc]" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>Telemetry</p>
+            </TooltipContent>
+          </Tooltip>
+
+          {FEATURE_COLLAB && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-[#2a2d2e]"
+                  onClick={() => {
+                    try {
+                      window.location.href = '/collaboration';
+                    } catch {}
+                  }}
+                  aria-label="Collaboration"
+                >
+                  <Users className="h-5 w-5 text-[#cccccc]" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Collaboration</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-12 h-12 p-0 rounded-none border-l-2 border-transparent hover:bg-[#2a2d2e]"
+                onClick={() => {
+                  try {
+                    window.open('/mobile', '_blank');
+                  } catch {}
+                }}
+                aria-label="Open Mobile View"
+              >
+                <Smartphone className="h-5 w-5 text-[#cccccc]" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>Open Mobile View</p>
+            </TooltipContent>
+          </Tooltip>
+
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { Play, RotateCcw, Download, Zap } from 'lucide-react';
+import { Play, RotateCcw, Download, Zap, AlertCircle } from 'lucide-react';
 import type { Widget } from '@/lib/store';
+import { fetchAlphaVantageDailyAdjusted, runMovingAverageCrossover } from '@/lib/data/historical';
+import { getProvider, getProviderCapabilities } from '@/lib/data/providers';
+import { toast } from 'sonner';
 
 interface BacktestingFrameworkWidgetProps {
   widget: Widget;
@@ -86,9 +89,18 @@ export function BacktestingFrameworkWidget({ widget: _widget, onTitleChange: _on
   const [isRunning, setIsRunning] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [customParameters, setCustomParameters] = useState<Record<string, number>>({});
+  const [result, setResult] = useState<BacktestResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const cacheRef = useRef<Map<string, { at: number; result: BacktestResult }>>(new Map());
+  // Autorun params from widget props, if provided by agent directive
+  const widgetProps = (_widget as unknown as { props?: Record<string, unknown> })?.props || {};
+  const autorunSymbol = (widgetProps.symbol as string | undefined) || undefined;
+  const autorunShort = typeof widgetProps.shortMA === 'number' ? (widgetProps.shortMA as number) : undefined;
+  const autorunLong = typeof widgetProps.longMA === 'number' ? (widgetProps.longMA as number) : undefined;
+  const shouldAutorun = widgetProps.autorun === true;
 
   const currentStrategy = MOCK_STRATEGIES.find(s => s.id === selectedStrategy);
-  const results = MOCK_BACKTEST_RESULT;
+  const defaultResults = MOCK_BACKTEST_RESULT;
 
   const formatPercentage = (value: number) => {
     return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
@@ -115,9 +127,69 @@ export function BacktestingFrameworkWidget({ widget: _widget, onTitleChange: _on
     }
   };
 
-  const runBacktest = () => {
+  const symbols = useMemo(() => currentStrategy?.symbols ?? ['SPY'], [currentStrategy]);
+
+  const runBacktest = async () => {
     setIsRunning(true);
-    setTimeout(() => setIsRunning(false), 2000);
+    setError(null);
+    setResult(null);
+    try {
+      const providerName = getProvider().name;
+      const caps = getProviderCapabilities(providerName);
+      if (providerName === 'mock') {
+        setError('Historical data not available on Mock provider. Switch to Alpha Vantage to run backtests.');
+        toast.info('Historical data not available on Mock provider.');
+        return;
+      }
+      if (!caps.historical) {
+        setError('Current provider does not support historical data.');
+        return;
+      }
+
+      // Only support single-symbol backtest for now
+      const symbol = symbols[0];
+      const shortMA = Number(
+        autorunShort ?? customParameters.shortMA ?? currentStrategy?.parameters.shortMA ?? 20
+      );
+      const longMA = Number(
+        autorunLong ?? customParameters.longMA ?? currentStrategy?.parameters.longMA ?? 50
+      );
+      
+      const cacheKey = `${providerName}:${symbol}:${shortMA}:${longMA}`;
+      const now = Date.now();
+      const cached = cacheRef.current.get(cacheKey);
+      if (cached && now - cached.at < 2 * 60 * 1000) {
+        setResult(cached.result);
+        toast.info('Loaded cached backtest (2m cache)');
+        return;
+      }
+      
+      const series = await fetchAlphaVantageDailyAdjusted(symbol);
+      const metrics = runMovingAverageCrossover(series, { shortWindow: shortMA, longWindow: longMA });
+
+      const computed: BacktestResult = {
+        totalReturn: metrics.totalReturn,
+        annualizedReturn: metrics.annualizedReturn,
+        sharpeRatio: metrics.sharpeRatio,
+        maxDrawdown: metrics.maxDrawdown,
+        volatility: metrics.volatility,
+        winRate: 0,
+        profitFactor: 0,
+        trades: 0,
+        equity: metrics.equity,
+        drawdown: metrics.drawdown,
+        dates: metrics.dates,
+      };
+      cacheRef.current.set(cacheKey, { at: now, result: computed });
+      setResult(computed);
+      toast.success('Backtest complete');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Backtest failed';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setIsRunning(false);
+    }
   };
 
   const resetBacktest = () => {
@@ -130,6 +202,8 @@ export function BacktestingFrameworkWidget({ widget: _widget, onTitleChange: _on
       setCustomParameters(prev => ({ ...prev, [key]: numValue }));
     }
   };
+
+  const results = result ?? defaultResults;
 
   return (
     <Card className="h-full">
@@ -181,6 +255,13 @@ export function BacktestingFrameworkWidget({ widget: _widget, onTitleChange: _on
               Reset
             </Button>
           </div>
+
+          {error && (
+            <div className="p-2 text-xs rounded bg-amber-50 border border-amber-200 text-amber-800 flex items-center gap-2">
+              <AlertCircle className="w-3 h-3" />
+              {error}
+            </div>
+          )}
 
           {currentStrategy && (
             <div className="p-3 bg-muted/30 rounded text-xs">

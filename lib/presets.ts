@@ -71,9 +71,14 @@ export const SHEET_PRESETS: Record<SheetKind, {
         layout: { i: '', x: 8, y: 0, w: 4, h: 6 }
       },
       {
+        type: 'paper-trading-console',
+        title: 'Paper Trading',
+        layout: { i: '', x: 0, y: 6, w: 4, h: 6 }
+      },
+      {
         type: 'options-dashboard',
         title: 'Options Dashboard',
-        layout: { i: '', x: 0, y: 6, w: 12, h: 6 }
+        layout: { i: '', x: 4, y: 6, w: 8, h: 6 }
       }
     ]
   },

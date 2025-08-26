@@ -1,6 +1,7 @@
 import { queryParser, type ParsedQuery } from './queryParser';
 import { getProvider } from '../data/providers';
 import type { PricePoint, KpiData, FinancialData } from '../data/provider.types';
+import { actionRouter, type ActionRequest, type ActionResponse } from './actionRouter';
 
 export interface AIAgentConfig {
   model: string;
@@ -57,9 +58,28 @@ export class AIAgent {
     };
   }
 
-  async processQuery(query: string): Promise<AIResponse> {
+  async processQuery(query: string, actionContext?: ActionRequest['context']): Promise<AIResponse> {
     try {
-      // Parse the natural language query
+      // First, try to parse and execute as an action
+      const actionResponse = await actionRouter.parseAndExecute(query, actionContext);
+      
+      if (actionResponse.success) {
+        // If action was successful, return the action result
+        return {
+          query: {
+            type: 'analysis',
+            symbol: '',
+            rawQuery: query,
+          },
+          response: actionResponse.message,
+          data: actionResponse.data as FetchedData | undefined,
+          confidence: 95, // High confidence for successful actions
+          timestamp: new Date(),
+          suggestions: this.generateActionSuggestions(),
+        };
+      }
+
+      // If no action was executed, proceed with normal query processing
       const parsedQuery = queryParser.parse(query);
       
       if (!parsedQuery) {
@@ -645,6 +665,16 @@ Provide a brief insight with confidence level (0-100).`;
     return suggestions.slice(0, 2);
   }
 
+  private generateActionSuggestions(): string[] {
+    return [
+      "Try 'add a candlestick-chart widget' to add a new chart",
+      "Say 'switch to portfolio preset' to change the layout",
+      "Use 'set global symbol AAPL' to analyze Apple stock",
+      "Ask 'create new charting sheet' for a fresh workspace",
+      "Say 'explain candlestick-chart' to learn about widgets"
+    ];
+  }
+
   // Public methods for managing insights and context
   getInsights(): MarketInsight[] {
     return [...this.insights];
@@ -671,5 +701,5 @@ Provide a brief insight with confidence level (0-100).`;
 // Export singleton instance
 export const aiAgent = new AIAgent({
   model: 'gpt-4',
-  apiKey: process.env.OPENAI_API_KEY || 'demo',
+  apiKey: process.env.OPENAI_API_KEY || 'demo-key',
 });

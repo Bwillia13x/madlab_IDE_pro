@@ -1,0 +1,477 @@
+# Page snapshot
+
+```yaml
+- status: "Demo mode: synthetic data"
+- status: "Demo mode: synthetic data"
+- text: MAD LAB — Workbench Workbench ▸ Valuation Workbench
+- img
+- textbox "Search files / commands"
+- text: ⌘K
+- button "Save":
+  - img
+  - text: Save
+- button "Restore"
+- button "Reset":
+  - img
+  - text: Reset
+- button "Export":
+  - img
+  - text: Export
+- button "Import":
+  - img
+  - text: Import
+- button "Lint"
+- button "Format"
+- button "Run Tests":
+  - img
+  - text: Run Tests
+- combobox: Malibu — Sunrise
+- text: Symbol
+- textbox "AAPL"
+- button "Apply to widgets"
+- text: Timeframe
+- combobox: 6M
+- button "1D"
+- button "1M"
+- button "3M"
+- button "6M"
+- button "1Y"
+- button "Open Mobile"
+- button "Explorer":
+  - img
+- button "Search":
+  - img
+- button "Source Control":
+  - img
+- button "Run and Debug":
+  - img
+- button "Extensions":
+  - img
+- button "Open Mobile View":
+  - img
+- button "Widget Gallery":
+  - img
+- button "Agent Chat":
+  - img
+- button "Settings":
+  - img
+- text: EXPLORER
+- button "Data":
+  - img
+  - img
+  - text: Data
+- button "market_data.csv":
+  - img
+  - text: market_data.csv
+- button "portfolio.json":
+  - img
+  - text: portfolio.json
+- button "earnings":
+  - img
+  - img
+  - text: earnings
+- button "indices":
+  - img
+  - img
+  - text: indices
+- button "Models":
+  - img
+  - img
+  - text: Models
+- button "dcf_model.py":
+  - img
+  - text: dcf_model.py
+- button "monte_carlo.ipynb":
+  - img
+  - text: monte_carlo.ipynb
+- button "risk_models":
+  - img
+  - img
+  - text: risk_models
+- text: Valuation Workbench
+- button:
+  - img
+- text: Charting & Graphing
+- button:
+  - img
+- text: Stock Screening
+- button:
+  - img
+- text: Portfolio Management
+- button:
+  - img
+- text: Risk Analysis
+- button:
+  - img
+- text: Options Wizard
+- button:
+  - img
+- text: Blank
+- button:
+  - img
+- button "Open Preset Picker":
+  - img
+- button "Select widget KPI":
+  - img
+  - text: KPI Sym
+  - textbox "ACME"
+  - button "Use Global":
+    - img
+    - text: Use Global
+  - button:
+    - img
+  - button "More horizontal"
+  - button:
+    - img
+  - heading "KPI — Revenue (TTM)" [level=4]
+  - button "Refresh":
+    - img
+    - text: Refresh
+  - text: $131.1M +6.2%
+  - img
+  - heading "KPI — EBIT Margin" [level=4]
+  - text: 17.8% +120 bps
+  - img
+- button "Select widget DCF (Basic)":
+  - img
+  - text: DCF (Basic) Sym
+  - textbox "ACME"
+  - button "Use Global":
+    - img
+    - text: Use Global
+  - button:
+    - img
+  - button "More horizontal"
+  - button:
+    - img
+  - heading "DCF (Basic) — live" [level=4]
+  - text: FCF₁ ($M)
+  - spinbutton: "260"
+  - text: WACC %
+  - spinbutton: "8"
+  - text: g (LT) %
+  - spinbutton: "2"
+  - text: Net Debt ($M)
+  - spinbutton: "1120"
+  - text: Shares (M)
+  - spinbutton: "310"
+  - table:
+    - rowgroup:
+      - row "Enterprise Value $4.33B Equity Value $3.21B":
+        - cell "Enterprise Value"
+        - cell "$4.33B"
+        - cell "Equity Value"
+        - cell "$3.21B"
+      - row "— Implied Price $10.37":
+        - cell "—"
+        - cell "Implied Price"
+        - cell "$10.37"
+  - text: "Sensitivity quick‑test:"
+  - button "WACC +50 bps"
+  - button "g −50 bps"
+- button "Select widget Financials Summary":
+  - img
+  - text: Financials Summary Sym
+  - textbox "ACME"
+  - button "Use Global":
+    - img
+    - text: Use Global
+  - button:
+    - img
+  - button "More horizontal"
+  - button:
+    - img
+  - heading "Financials — AAPL" [level=3]
+  - button "Refresh":
+    - img
+  - img
+  - text: Revenue (TTM) $63.30M
+  - img
+  - text: Net Income (TTM) $8.13M
+  - img
+  - text: Operating Cash Flow $33.72M
+  - img
+  - text: Free Cash Flow $11.52M Mock data — for demo purposes only
+- button "Select widget Peer Multiples":
+  - img
+  - text: Peer Multiples Sym
+  - textbox "ACME"
+  - button "Use Global":
+    - img
+    - text: Use Global
+  - button:
+    - img
+  - button "More horizontal"
+  - button:
+    - img
+- button "Select widget Peers (KPIs)":
+  - img
+  - text: Peers (KPIs) Sym
+  - textbox "ACME"
+  - button "Use Global":
+    - img
+    - text: Use Global
+  - button:
+    - img
+  - button "More horizontal"
+  - button:
+    - img
+  - heading "Peer Comparison" [level=3]
+  - table:
+    - rowgroup:
+      - row "Symbol Price Change Volume Market Cap":
+        - cell "Symbol"
+        - cell "Price"
+        - cell "Change"
+        - cell "Volume"
+        - cell "Market Cap"
+    - rowgroup:
+      - row "AAPL $131.13 4.17 (3.18%) 4,846,552 $53.5B":
+        - cell "AAPL"
+        - cell "$131.13"
+        - cell "4.17 (3.18%)"
+        - cell "4,846,552"
+        - cell "$53.5B"
+      - row "MSFT $88.43 4.96 (5.61%) 5,539,154 $8.9B":
+        - cell "MSFT"
+        - cell "$88.43"
+        - cell "4.96 (5.61%)"
+        - cell "5,539,154"
+        - cell "$8.9B"
+      - row "NVDA $84.87 -3.85 (-4.54%) 4,842,806 $21.2B":
+        - cell "NVDA"
+        - cell "$84.87"
+        - cell "-3.85 (-4.54%)"
+        - cell "4,842,806"
+        - cell "$21.2B"
+- button "Select widget Quarterly Financials":
+  - img
+  - text: Quarterly Financials Sym
+  - textbox "ACME"
+  - button "Use Global":
+    - img
+    - text: Use Global
+  - button:
+    - img
+  - button "More horizontal"
+  - button:
+    - img
+  - heading "Quarterly Financials — AAPL" [level=3]
+  - table:
+    - rowgroup:
+      - row "Quarter Revenue Net Income FCF":
+        - cell "Quarter"
+        - cell "Revenue"
+        - cell "Net Income"
+        - cell "FCF"
+    - rowgroup:
+      - row "2025 Q3 $16.09M $2.15M $3.05M":
+        - cell "2025 Q3"
+        - cell "$16.09M"
+        - cell "$2.15M"
+        - cell "$3.05M"
+      - row "2025 Q2 $16.52M $2.11M $2.84M":
+        - cell "2025 Q2"
+        - cell "$16.52M"
+        - cell "$2.11M"
+        - cell "$2.84M"
+      - row "2025 Q1 $16.08M $2.01M $2.88M":
+        - cell "2025 Q1"
+        - cell "$16.08M"
+        - cell "$2.01M"
+        - cell "$2.88M"
+      - row "2024 Q4 $16.36M $2.02M $2.74M":
+        - cell "2024 Q4"
+        - cell "$16.36M"
+        - cell "$2.02M"
+        - cell "$2.74M"
+      - row "2024 Q3 $16.06M $1.92M $2.90M":
+        - cell "2024 Q3"
+        - cell "$16.06M"
+        - cell "$1.92M"
+        - cell "$2.90M"
+      - row "2024 Q2 $15.18M $1.93M $2.97M":
+        - cell "2024 Q2"
+        - cell "$15.18M"
+        - cell "$1.93M"
+        - cell "$2.97M"
+      - row "2024 Q1 $15.27M $2.04M $2.66M":
+        - cell "2024 Q1"
+        - cell "$15.27M"
+        - cell "$2.04M"
+        - cell "$2.66M"
+      - row "2023 Q4 $15.90M $1.94M $2.75M":
+        - cell "2023 Q4"
+        - cell "$15.90M"
+        - cell "$1.94M"
+        - cell "$2.75M"
+  - text: Mock series derived from base financials
+- button "Select widget Income Statement Breakdown":
+  - img
+  - text: Income Statement Breakdown Sym
+  - textbox "ACME"
+  - button "Use Global":
+    - img
+    - text: Use Global
+  - button:
+    - img
+  - button "More horizontal"
+  - button:
+    - img
+  - heading "Income Statement Breakdown — AAPL" [level=3]
+  - img: 2025 Q3 2025 Q2 2025 Q1 2024 Q4 $0 $15.0M $30.0M $45.0M $60.0M
+  - list:
+    - listitem:
+      - img
+      - text: Revenue
+    - listitem:
+      - img
+      - text: COGS
+    - listitem:
+      - img
+      - text: Gross Profit
+    - listitem:
+      - img
+      - text: OpEx
+    - listitem:
+      - img
+      - text: Op Income
+    - listitem:
+      - img
+      - text: Net Income
+  - text: "Mock breakdown: COGS 65%, OpEx 15%, derived from quarterly data"
+- button "Select widget KPI Mini-Grid":
+  - img
+  - text: KPI Mini-Grid Sym
+  - textbox "ACME"
+  - button "Use Global":
+    - img
+    - text: Use Global
+  - button:
+    - img
+  - button "More horizontal"
+  - button:
+    - img
+  - heading "KPI Mini-Grid — AAPL" [level=3]
+  - text: Revenue $15.8M
+  - img
+  - text: "QoQ: -2.5%"
+  - img
+  - text: "YoY: -1.6% Net Income $2.1M"
+  - img
+  - text: "QoQ: +2.0%"
+  - img
+  - text: "YoY: +6.4% Free Cash Flow $3.0M"
+  - img
+  - text: "QoQ: +7.5%"
+  - img
+  - text: "YoY: +11.6% 2025 Q3 vs 2025 Q2 (QoQ), 2025 Q3 vs 2024 Q4 (YoY)"
+- button "Select widget Sensitivity (WACC x g)":
+  - img
+  - text: Sensitivity (WACC x g) Sym
+  - textbox "ACME"
+  - button "Use Global":
+    - img
+    - text: Use Global
+  - button:
+    - img
+  - button "More horizontal"
+  - button:
+    - img
+  - text: 2% 2.5% 3% 3.5% 4% 8% 156 143 129 116 103 9% 175 160 146 131 117 10% 193 178 162 147 131 11% 212 195 179 162 145 12% 231 213 195 177 159 WACC vs Growth Rate Sensitivity
+- tablist:
+  - tab "Output" [selected]
+  - tab "Orders & Fills"
+  - tab "Problems (2)"
+  - tab "Terminal"
+  - tab "Insights":
+    - img
+    - text: Insights
+- button:
+  - img
+- button:
+  - img
+- tabpanel: "[10:34:21] INFO Portfolio loaded successfully [10:34:22] INFO Calculating risk metrics... [10:34:23] WARN Missing data for 2 securities [10:34:24] INFO VaR calculation completed [10:34:25] ERROR Failed to connect to data provider"
+- text: AGENT CHAT
+- button "Advanced":
+  - img
+  - text: Advanced
+- button "Metrics":
+  - img
+  - text: Metrics
+- button:
+  - img
+- img
+- text: Welcome to MAD LAB! I'm your AI assistant for financial analysis. How can I help you today?
+- button "Voice input (browser only)":
+  - img
+- textbox "Ask me about your analysis..."
+- button "Send message" [disabled]:
+  - img
+- text: "Try:"
+- button "/add_widget options-chain"
+- button "/provider polygon"
+- button "/symbol AAPL"
+- button "/backtest AAPL 20 50"
+- img
+- text: main
+- img
+- text: Ready
+- img
+- text: mock AAPL • 6M 7 sheets UTF-8 LF TypeScript Ln 1, Col 1
+- dialog:
+  - heading "Data Provider Configuration" [level=3]:
+    - img
+    - text: Data Provider Configuration
+  - text: Select Data Provider
+  - combobox: Mock Data
+  - img
+  - heading "Mock Data" [level=4]
+  - paragraph: Synthetic data for testing and demos
+  - text: No API key required Instant access Deterministic data
+  - button "Cancel"
+  - button "Save Configuration"
+  - button "Switch to Mock"
+  - text: "Current Provider: Mock Data Status: Ready Capabilities Realtime Historical Trading Options Crypto"
+- text: DEMO MODE — mock data only
+- button:
+  - img
+- heading "Performance Monitor" [level=1]
+- paragraph: Real-time monitoring of cache performance and system metrics
+- button "Start Monitoring":
+  - img
+  - text: Start Monitoring
+- button "Reset Metrics":
+  - img
+  - text: Reset Metrics
+- heading "System Overview" [level=3]:
+  - img
+  - text: System Overview
+- paragraph: "Last updated: 9:22:03 PM"
+- text: Total Memory Usage 0 B Average Hit Rate 0.0% Total Requests 0 Avg Response Time 0.00ms
+- tablist:
+  - tab "Overview" [selected]
+  - tab "Detailed Metrics"
+  - tab "Health Status"
+- tabpanel "Overview":
+  - heading "Global Data Cache" [level=3]
+  - text: warning Size:0/2000 Hit Rate:0.0% Memory:0 B TTL:0s Requests:0 Response:0.00ms
+  - heading "Price Cache" [level=3]
+  - text: warning Size:0/1000 Hit Rate:0.0% Memory:0 B TTL:0s Requests:0 Response:0.00ms
+  - heading "Financial Cache" [level=3]
+  - text: warning Size:0/500 Hit Rate:0.0% Memory:0 B TTL:0s Requests:0 Response:0.00ms
+  - heading "KPI Cache" [level=3]
+  - text: warning Size:0/500 Hit Rate:0.0% Memory:0 B TTL:0s Requests:0 Response:0.00ms
+  - heading "Technical Indicators Cache" [level=3]
+  - text: warning Size:0/300 Hit Rate:0.0% Memory:0 B TTL:0s Requests:0 Response:0.00ms
+  - heading "Sentiment Cache" [level=3]
+  - text: warning Size:0/200 Hit Rate:0.0% Memory:0 B TTL:0s Requests:0 Response:0.00ms
+  - heading "News Cache" [level=3]
+  - text: warning Size:0/100 Hit Rate:0.0% Memory:0 B TTL:0s Requests:0 Response:0.00ms
+- region "Notifications alt+T"
+- alert
+- img
+- text: 1 error
+- button "Hide Errors":
+  - img
+```

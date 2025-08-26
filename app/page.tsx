@@ -45,7 +45,7 @@ export default function HomePage() {
       try {
         const url = new URL(window.location.href);
         const sheetId = url.searchParams.get('sheet');
-        if (sheetId && sheets.some(s => s.id === sheetId)) {
+        if (sheetId && sheets.some((s) => s.id === sheetId)) {
           setActiveSheet(sheetId);
         }
       } catch {
@@ -62,13 +62,17 @@ export default function HomePage() {
     <DataProvider>
       <TitleBar />
       <GlobalToolbar />
-      <div className="flex-1 min-h-0 flex">
-        <ActivityBar 
+
+      {/* Enhanced Demo Banner */}
+      <DemoBanner className="px-3 py-2" />
+
+      <div className="flex-1 min-h-0 flex overflow-hidden">
+        <ActivityBar
           onSettingsToggle={() => setSettingsOpen(true)}
           onWidgetGalleryToggle={() => setWidgetGalleryOpen(true)}
         />
         <Explorer />
-        <div className="flex-1 min-w-0 flex flex-col">
+        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           <Editor />
           <BottomPanel />
         </div>
@@ -77,28 +81,34 @@ export default function HomePage() {
       </div>
       <StatusBar />
 
+      {/* Modals */}
       {settingsOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-          <div className="bg-background border rounded-lg shadow-xl p-4 max-w-2xl w-full">
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="bg-background border rounded-lg shadow-xl p-4 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <DataProviderConfig onClose={() => setSettingsOpen(false)} />
           </div>
         </div>
       )}
 
       {marketplaceOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-          <div className="bg-background border rounded-lg shadow-xl p-4 max-w-3xl w-full">
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="bg-background border rounded-lg shadow-xl p-4 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <MarketplacePanel onClose={() => setMarketplaceOpen(false)} />
           </div>
         </div>
       )}
-      
+
+      <WidgetGallery open={widgetGalleryOpen} onOpenChange={setWidgetGalleryOpen} />
+
       <CommandPalette />
-      <DemoBanner />
-      <WidgetGallery 
-        open={widgetGalleryOpen} 
-        onOpenChange={setWidgetGalleryOpen}
-      />
     </DataProvider>
   );
 }

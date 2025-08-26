@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { performComprehensiveHealthCheck } from '@/lib/health/orchestrator';
 import { productionMonitor } from '@/lib/performance/monitor';
 import { globalDataCache, priceCache, financialCache, kpiCache } from '@/lib/data/cache';
 
 export async function GET(_request: NextRequest) {
   try {
-    // Get system status from production monitor
-    const systemStatus = productionMonitor.getSystemStatus();
+    // Perform comprehensive health check
+    const comprehensiveHealth = await performComprehensiveHealthCheck();
     
-    // Get cache statistics
+    // Get legacy cache statistics for backward compatibility
     const cacheStats = {
       globalData: globalDataCache.getStats(),
       price: priceCache.getStats(),
@@ -18,20 +19,18 @@ export async function GET(_request: NextRequest) {
     // Get production monitor statistics
     const monitorStats = productionMonitor.getStats();
 
-    // Calculate overall health score
-    const healthScore = calculateHealthScore(systemStatus, cacheStats);
-
+    // Enhanced health response with comprehensive checks
     const healthData = {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      uptime: systemStatus.uptime,
-      healthScore,
-      system: {
-        status: systemStatus.isRunning ? 'monitoring' : 'stopped',
-        metrics: systemStatus.metrics,
-        alerts: systemStatus.alerts.length,
-        healthChecks: systemStatus.health.length,
-      },
+      status: comprehensiveHealth.status,
+      timestamp: comprehensiveHealth.timestamp,
+      uptime: comprehensiveHealth.uptime,
+      healthScore: comprehensiveHealth.healthScore,
+      
+      // Comprehensive health checks
+      checks: comprehensiveHealth.checks,
+      summary: comprehensiveHealth.summary,
+      
+      // Legacy cache information (for backward compatibility)
       caches: {
         globalData: {
           hitRate: cacheStats.globalData.hitRate,
@@ -54,6 +53,8 @@ export async function GET(_request: NextRequest) {
           memoryUsage: cacheStats.kpi.memoryUsage,
         },
       },
+      
+      // Legacy monitoring information (for backward compatibility)
       monitoring: {
         totalAlerts: monitorStats.totalAlerts,
         activeAlerts: monitorStats.activeAlerts,
@@ -73,6 +74,8 @@ export async function GET(_request: NextRequest) {
         status: 'unhealthy',
         timestamp: new Date().toISOString(),
         error: error instanceof Error ? error.message : 'Unknown error',
+        checks: null,
+        summary: null,
       },
       { status: 500 }
     );

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { initializeDataProviders } from '@/lib/data/init';
+import { startAggregatorBridge } from '@/lib/data/aggregatorBridge';
 import { useWorkspaceStore } from '@/lib/store';
 import { setDataProvider } from '@/lib/data/providers';
 
@@ -21,6 +22,8 @@ export function DataProvider({ children }: DataProviderProps) {
     const initProviders = async () => {
       try {
         await initializeDataProviders();
+        // Optionally start HFT bridge
+        try { startAggregatorBridge(); } catch {}
         if (mounted) {
           setInitialized(true);
           setIsInitializing(false);

@@ -1,0 +1,250 @@
+{
+  "version": "1.0",
+  "description": "Quality Gates Configuration for MAD LAB Platform",
+  "environments": {
+    "development": {
+      "description": "Development environment with basic quality checks",
+      "enabled": true,
+      "thresholds": {
+        "test_pass_rate": 70,
+        "code_coverage": 60,
+        "security_vulnerabilities": {
+          "max_critical": 0,
+          "max_high": 5,
+          "max_medium": 10
+        },
+        "lint_errors": {
+          "max_warnings": 50,
+          "max_errors": 5
+        },
+        "type_errors": {
+          "max_errors": 10
+        },
+        "performance": {
+          "min_score": 70,
+          "max_regression_percent": 15
+        },
+        "accessibility": {
+          "min_score": 80
+        }
+      },
+      "required_checks": [
+        "linting",
+        "type_checking",
+        "unit_tests",
+        "basic_security_scan"
+      ],
+      "deployment_approval_required": false
+    },
+    "staging": {
+      "description": "Staging environment with full test suite and security scans",
+      "enabled": true,
+      "thresholds": {
+        "test_pass_rate": 85,
+        "code_coverage": 75,
+        "security_vulnerabilities": {
+          "max_critical": 0,
+          "max_high": 2,
+          "max_medium": 5
+        },
+        "lint_errors": {
+          "max_warnings": 20,
+          "max_errors": 0
+        },
+        "type_errors": {
+          "max_errors": 0
+        },
+        "performance": {
+          "min_score": 85,
+          "max_regression_percent": 10
+        },
+        "accessibility": {
+          "min_score": 90
+        },
+        "contract_tests": {
+          "pass_rate": 100
+        },
+        "visual_regression": {
+          "max_differences": 0
+        }
+      },
+      "required_checks": [
+        "linting",
+        "type_checking",
+        "unit_tests",
+        "integration_tests",
+        "e2e_tests",
+        "security_scan",
+        "performance_tests",
+        "accessibility_tests",
+        "contract_tests",
+        "visual_regression_tests"
+      ],
+      "deployment_approval_required": false
+    },
+    "production": {
+      "description": "Production environment with strict quality requirements",
+      "enabled": true,
+      "thresholds": {
+        "test_pass_rate": 95,
+        "code_coverage": 80,
+        "security_vulnerabilities": {
+          "max_critical": 0,
+          "max_high": 0,
+          "max_medium": 2
+        },
+        "lint_errors": {
+          "max_warnings": 10,
+          "max_errors": 0
+        },
+        "type_errors": {
+          "max_errors": 0
+        },
+        "performance": {
+          "min_score": 90,
+          "max_regression_percent": 5
+        },
+        "accessibility": {
+          "min_score": 95
+        },
+        "contract_tests": {
+          "pass_rate": 100
+        },
+        "visual_regression": {
+          "max_differences": 0
+        }
+      },
+      "required_checks": [
+        "linting",
+        "type_checking",
+        "unit_tests",
+        "integration_tests",
+        "e2e_tests",
+        "security_scan",
+        "performance_tests",
+        "accessibility_tests",
+        "contract_tests",
+        "visual_regression_tests",
+        "load_tests"
+      ],
+      "deployment_approval_required": true,
+      "approval_groups": [
+        "platform-team",
+        "qa-team"
+      ],
+      "rollback_enabled": true,
+      "monitoring_required": true
+    }
+  },
+  "global_thresholds": {
+    "timeout_minutes": {
+      "quality_assessment": 20,
+      "deployment": 30,
+      "rollback": 10
+    },
+    "retention_days": {
+      "artifacts": 30,
+      "deployment_history": 90,
+      "metrics": 90
+    }
+  },
+  "notifications": {
+    "slack": {
+      "enabled": true,
+      "channels": {
+        "quality_gates": "#quality-gates",
+        "deployments": "#deployments",
+        "alerts": "#platform-alerts"
+      },
+      "events": [
+        "quality_gate_failed",
+        "deployment_blocked",
+        "rollback_triggered",
+        "threshold_breach"
+      ]
+    },
+    "discord": {
+      "enabled": true,
+      "webhooks": {
+        "quality_gates": "${{ secrets.DISCORD_QUALITY_GATES_WEBHOOK }}",
+        "deployments": "${{ secrets.DISCORD_DEPLOYMENTS_WEBHOOK }}"
+      }
+    },
+    "github": {
+      "enabled": true,
+      "create_issues_on_failure": true,
+      "assign_labels": ["quality-gates", "bug", "priority-high"]
+    },
+    "email": {
+      "enabled": false,
+      "recipients": [
+        "platform-team@company.com",
+        "qa-team@company.com"
+      ]
+    }
+  },
+  "monitoring": {
+    "enabled": true,
+    "metrics": [
+      "test_pass_rate",
+      "code_coverage",
+      "security_vulnerabilities_count",
+      "lint_errors_count",
+      "type_errors_count",
+      "performance_score",
+      "accessibility_score",
+      "deployment_success_rate",
+      "rollback_frequency"
+    ],
+    "alerts": {
+      "enabled": true,
+      "triggers": {
+        "quality_gate_failure_rate": {
+          "threshold": 10,
+          "window": "24h"
+        },
+        "deployment_failure_rate": {
+          "threshold": 5,
+          "window": "24h"
+        },
+        "rollback_frequency": {
+          "threshold": 3,
+          "window": "24h"
+        }
+      }
+    }
+  },
+  "rollback": {
+    "enabled": true,
+    "strategies": {
+      "automatic": {
+        "enabled": false,
+        "triggers": [
+          "deployment_failure",
+          "post_deployment_alerts"
+        ]
+      },
+      "manual": {
+        "enabled": true,
+        "approval_required": true
+      }
+    },
+    "history_retention_days": 90,
+    "max_rollback_attempts": 3
+  },
+  "reporting": {
+    "enabled": true,
+    "formats": ["json", "markdown", "html"],
+    "destinations": {
+      "artifact": true,
+      "comment": true,
+      "dashboard": false,
+      "external_service": false
+    },
+    "schedule": {
+      "daily_summary": "0 8 * * 1-5",
+      "weekly_report": "0 9 * * 1",
+      "monthly_report": "0 10 1 * *"
+    }
+  }
+}

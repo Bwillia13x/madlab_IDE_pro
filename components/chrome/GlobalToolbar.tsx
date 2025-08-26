@@ -64,6 +64,19 @@ export function GlobalToolbar() {
           ))}
         </div>
       </div>
+
+      <div className="ml-auto flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 px-2"
+          onClick={() => {
+            try { window.open('/mobile', '_blank'); } catch {}
+          }}
+        >
+          Open Mobile
+        </Button>
+      </div>
     </div>
   );
 }

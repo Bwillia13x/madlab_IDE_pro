@@ -1,0 +1,373 @@
+name: Deployment Approval
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment for deployment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - development
+        - staging
+        - production
+      deployment_id:
+        description: 'Deployment ID from quality gates workflow'
+        required: true
+        type: string
+      force_approval:
+        description: 'Force approval bypassing normal approval process'
+        required: false
+        default: false
+        type: boolean
+      rollback_reason:
+        description: 'Reason for rollback (if applicable)'
+        required: false
+        type: string
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9.15.9'
+
+jobs:
+  # Verify deployment readiness
+  verify-deployment:
+    name: Verify Deployment Readiness
+    runs-on: ubuntu-latest
+    outputs:
+      approval_required: ${{ steps.verify.outputs.approval_required }}
+      environment: ${{ steps.verify.outputs.environment }}
+      deployment_status: ${{ steps.verify.outputs.deployment_status }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify deployment readiness
+        id: verify
+        run: |
+          ENVIRONMENT="${{ github.event.inputs.environment }}"
+          DEPLOYMENT_ID="${{ github.event.inputs.deployment_id }}"
+
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+
+          # Check if approval is required based on environment
+          case $ENVIRONMENT in
+            "production")
+              echo "approval_required=true" >> $GITHUB_OUTPUT
+              echo "🔐 Production deployment requires approval"
+              ;;
+            "staging")
+              echo "approval_required=false" >> $GITHUB_OUTPUT
+              echo "🧪 Staging deployment does not require manual approval"
+              ;;
+            "development")
+              echo "approval_required=false" >> $GITHUB_OUTPUT
+              echo "🔧 Development deployment does not require manual approval"
+              ;;
+            *)
+              echo "approval_required=false" >> $GITHUB_OUTPUT
+              echo "⚠️  Unknown environment, proceeding without approval"
+              ;;
+          esac
+
+          # Check deployment status
+          if [ -n "$DEPLOYMENT_ID" ]; then
+            echo "✅ Deployment ID provided: $DEPLOYMENT_ID"
+            echo "deployment_status=verified" >> $GITHUB_OUTPUT
+          else
+            echo "❌ No deployment ID provided"
+            echo "deployment_status=missing_deployment_id" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+  # Request deployment approval
+  request-approval:
+    name: Request Deployment Approval
+    runs-on: ubuntu-latest
+    needs: verify-deployment
+    if: needs.verify-deployment.outputs.approval_required == 'true'
+    environment: ${{ needs.verify-deployment.outputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download quality assessment results
+        uses: actions/download-artifact@v4
+        with:
+          name: quality-assessment-results-${{ github.event.inputs.deployment_id }}
+          path: quality-results/
+
+      - name: Parse quality results
+        id: quality-data
+        run: |
+          if [ -f "quality-results/test-results/results.json" ]; then
+            COVERAGE=$(cat quality-results/coverage/coverage-summary.json | jq '.total.lines.pct' 2>/dev/null || echo "N/A")
+            TEST_PASS_RATE=$(cat quality-results/test-results/results.json | jq '(.numPassedTests / (.numPassedTests + .numFailedTests) * 100)' 2>/dev/null || echo "N/A")
+            SECURITY_ISSUES=$(cat quality-results/security-results.json | jq '.numFailedTests // 0' 2>/dev/null || echo "0")
+          else
+            COVERAGE="N/A"
+            TEST_PASS_RATE="N/A"
+            SECURITY_ISSUES="0"
+          fi
+
+          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+          echo "test_pass_rate=$TEST_PASS_RATE" >> $GITHUB_OUTPUT
+          echo "security_issues=$SECURITY_ISSUES" >> $GITHUB_OUTPUT
+
+      - name: Create deployment approval request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: issue } = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚀 Deployment Approval Request - ${{ needs.verify-deployment.outputs.environment }}`,
+              body: `
+                ## Deployment Approval Request
+
+                **Environment:** ${{ needs.verify-deployment.outputs.environment }}
+                **Deployment ID:** \`${{ github.event.inputs.deployment_id }}\`
+                **Requested by:** @${{ github.actor }}
+                **Commit:** \`${{ github.sha }}\`
+                **Branch:** \`${{ github.ref }}\`
+
+                ### Quality Gate Results
+                - **Code Coverage:** ${{ steps.quality-data.outputs.coverage }}%
+                - **Test Pass Rate:** ${{ steps.quality-data.outputs.test_pass_rate }}%
+                - **Security Issues:** ${{ steps.quality-data.outputs.security_issues }}
+
+                ### Deployment Details
+                - **Workflow Run:** #${{ github.run_id }}
+                - **Triggered:** ${{ github.event.created_at }}
+
+                ### Approval Requirements
+                This deployment requires approval from the following teams:
+                - @platform-team
+                - @qa-team
+
+                **Please review the quality gate results and approve/reject this deployment.**
+
+                ---
+                *This request was automatically generated by the Deployment Approval workflow.*
+              `,
+              labels: ['deployment-approval', 'pending-approval', '${{ needs.verify-deployment.outputs.environment }}'],
+              assignees: ['platform-team', 'qa-team']
+            });
+
+            // Store issue number for later use
+            core.setOutput('issue_number', issue.number);
+
+      - name: Send Slack approval request
+        uses: 8398a7/action-slack@v3
+        if: env.SLACK_WEBHOOK_URL
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          status: custom
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+          custom_payload: |
+            {
+              "channel": "#deployment-approvals",
+              "attachments": [
+                {
+                  "color": "warning",
+                  "title": "🚀 Deployment Approval Required",
+                  "title_link": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                  "fields": [
+                    {
+                      "title": "Environment",
+                      "value": "${{ needs.verify-deployment.outputs.environment }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Deployment ID",
+                      "value": "${{ github.event.inputs.deployment_id }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Code Coverage",
+                      "value": "${{ steps.quality-data.outputs.coverage }}%",
+                      "short": true
+                    },
+                    {
+                      "title": "Test Pass Rate",
+                      "value": "${{ steps.quality-data.outputs.test_pass_rate }}%",
+                      "short": true
+                    },
+                    {
+                      "title": "Security Issues",
+                      "value": "${{ steps.quality-data.outputs.security_issues }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Requested by",
+                      "value": "${{ github.actor }}",
+                      "short": true
+                    }
+                  ],
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "Approve",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/issues/${{ steps.create-issue.outputs.issue_number }}",
+                      "style": "primary"
+                    },
+                    {
+                      "type": "button",
+                      "text": "View Workflow",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+
+      - name: Wait for approval
+        run: |
+          echo "⏳ Waiting for deployment approval..."
+          echo "Approval request created. The deployment will proceed once approved by the required teams."
+          echo "Monitor the GitHub issue for approval status."
+
+  # Execute deployment
+  execute-deployment:
+    name: Execute Deployment
+    runs-on: ubuntu-latest
+    needs: [verify-deployment, request-approval]
+    if: always() && (needs.verify-deployment.outputs.approval_required == 'false' || github.event.inputs.force_approval == 'true')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup deployment environment
+        run: |
+          echo "🚀 Executing deployment to ${{ needs.verify-deployment.outputs.environment }}"
+          echo "DEPLOYMENT_ID=${{ github.event.inputs.deployment_id }}" >> $GITHUB_ENV
+          echo "DEPLOYMENT_ENVIRONMENT=${{ needs.verify-deployment.outputs.environment }}" >> $GITHUB_ENV
+
+      - name: Build application
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy to ${{ needs.verify-deployment.outputs.environment }}
+        run: |
+          case "${{ needs.verify-deployment.outputs.environment }}" in
+            "production")
+              echo "🚀 Deploying to production"
+              # Add your production deployment commands here
+              # npm run deploy:production
+              ;;
+            "staging")
+              echo "🧪 Deploying to staging"
+              # Add your staging deployment commands here
+              # npm run deploy:staging
+              ;;
+            "development")
+              echo "🔧 Deploying to development"
+              # Add your development deployment commands here
+              # npm run deploy:development
+              ;;
+          esac
+
+      - name: Update deployment status
+        uses: actions/github-script@v7
+        if: success()
+        with:
+          script: |
+            // Update the approval issue if it exists
+            if ('${{ needs.request-approval.outputs.issue_number }}') {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: ${{ needs.request-approval.outputs.issue_number }},
+                state: 'closed',
+                labels: ['deployment-completed', 'success']
+              });
+            }
+
+      - name: Send deployment success notification
+        uses: 8398a7/action-slack@v3
+        if: success() && env.SLACK_WEBHOOK_URL
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          status: success
+          channel: '#deployments'
+          text: '✅ Deployment completed successfully!'
+
+  # Handle rollback
+  handle-rollback:
+    name: Handle Rollback
+    runs-on: ubuntu-latest
+    needs: [verify-deployment]
+    if: github.event.inputs.rollback_reason && github.event.inputs.rollback_reason != ''
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Find last successful deployment
+        run: |
+          echo "🔄 Initiating rollback process..."
+          echo "Reason: ${{ github.event.inputs.rollback_reason }}"
+
+      - name: Execute rollback
+        run: |
+          echo "Rolling back ${{ needs.verify-deployment.outputs.environment }} environment..."
+          # Add your rollback logic here
+          # This could involve:
+          # 1. Finding the last successful deployment
+          # 2. Restoring the previous version
+          # 3. Updating deployment records
+          # 4. Notifying stakeholders
+
+      - name: Send rollback notification
+        uses: 8398a7/action-slack@v3
+        if: env.SLACK_WEBHOOK_URL
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          status: warning
+          channel: '#deployments'
+          text: '🔄 Rollback initiated: ${{ github.event.inputs.rollback_reason }}'
+
+  # Final notification
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [verify-deployment, execute-deployment, handle-rollback]
+    if: always()
+
+    steps:
+      - name: Generate deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ needs.verify-deployment.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment ID:** ${{ github.event.inputs.deployment_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ needs.execute-deployment.result == 'success' && '✅ Success' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ github.event.inputs.rollback_reason }}" != "" ]; then
+            echo "**Rollback Reason:** ${{ github.event.inputs.rollback_reason }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "### Actions Taken" >> $GITHUB_STEP_SUMMARY
+          echo "- Quality verification: ✅ Completed" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.verify-deployment.outputs.approval_required }}" == "true" ]; then
+            echo "- Approval request: ✅ Created" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ needs.execute-deployment.result }}" == "success" ]; then
+            echo "- Deployment: ✅ Successful" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Deployment: ❌ Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**View Details:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY

@@ -1,30 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Plus, Trash2, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import type { Widget } from '@/lib/store';
 import { usePeerKpis } from '@/lib/data/hooks';
+import { usePositionsLedger } from '@/lib/trading/positions';
+import { useWorkspaceStore } from '@/lib/store';
 
 interface PortfolioPerformanceWidgetProps {
   widget: Widget;
   sheetId: string;
-}
-
-interface PortfolioHolding {
-  symbol: string;
-  shares: number;
-  avgPrice: number;
-  currentPrice: number;
-  sector: string;
-  addedAt: Date;
-  notes?: string;
 }
 
 interface PerformanceData {
@@ -33,12 +24,12 @@ interface PerformanceData {
   change: number;
 }
 
-const MOCK_SECTOR_DATA = {
-  'Technology': { color: '#3b82f6', weight: 0.45 },
-  'Healthcare': { color: '#10b981', weight: 0.20 },
-  'Financial Services': { color: '#f59e0b', weight: 0.15 },
-  'Consumer Cyclical': { color: '#ef4444', weight: 0.10 },
-  'Energy': { color: '#8b5cf6', weight: 0.10 },
+const SECTOR_COLORS: Record<string, string> = {
+  'Technology': '#3b82f6',
+  'Healthcare': '#10b981',
+  'Financial Services': '#f59e0b',
+  'Consumer Cyclical': '#ef4444',
+  'Energy': '#8b5cf6',
 };
 
 const MOCK_PERFORMANCE_DATA: PerformanceData[] = [
@@ -53,111 +44,59 @@ const MOCK_PERFORMANCE_DATA: PerformanceData[] = [
 ];
 
 export function PortfolioPerformanceWidget({ widget: _widget }: Readonly<PortfolioPerformanceWidgetProps>) {
-  const [holdings, setHoldings] = useState<PortfolioHolding[]>([]);
-  const [newSymbol, setNewSymbol] = useState('');
-  const [newShares, setNewShares] = useState('');
-  const [newAvgPrice, setNewAvgPrice] = useState('');
-  const [newSector, setNewSector] = useState('');
-  const [newNotes, setNewNotes] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const { cash, positions, hydrateFromStore, markSymbol } = usePositionsLedger();
 
-  // Load portfolio from localStorage on mount
+  // Hydrate from persisted store on mount
   useEffect(() => {
-    const saved = localStorage.getItem('madlab_portfolio');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setHoldings(parsed.map((item: PortfolioHolding) => ({
-          ...item,
-          addedAt: new Date(item.addedAt)
-        })));
-      } catch (e) {
-        console.error('Failed to load portfolio:', e);
-      }
-    } else {
-      // Seed with sample portfolio
-      const samplePortfolio: PortfolioHolding[] = [
-        { symbol: 'AAPL', shares: 100, avgPrice: 150.00, currentPrice: 175.43, sector: 'Technology', addedAt: new Date(), notes: 'Core position' },
-        { symbol: 'MSFT', shares: 50, avgPrice: 300.00, currentPrice: 338.11, sector: 'Technology', addedAt: new Date(), notes: 'Cloud leader' },
-        { symbol: 'NVDA', shares: 25, avgPrice: 400.00, currentPrice: 485.09, sector: 'Technology', addedAt: new Date(), notes: 'AI momentum' },
-        { symbol: 'JPM', shares: 75, avgPrice: 140.00, currentPrice: 145.67, sector: 'Financial Services', addedAt: new Date(), notes: 'Banking exposure' },
-        { symbol: 'XOM', shares: 60, avgPrice: 80.00, currentPrice: 82.34, sector: 'Energy', addedAt: new Date(), notes: 'Energy hedge' },
-      ];
-      setHoldings(samplePortfolio);
-      localStorage.setItem('madlab_portfolio', JSON.stringify(samplePortfolio));
-    }
+    hydrateFromStore();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Save portfolio to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('madlab_portfolio', JSON.stringify(holdings));
-  }, [holdings]);
-
-  const addHolding = () => {
-    const symbol = newSymbol.trim().toUpperCase();
-    const shares = parseFloat(newShares);
-    const avgPrice = parseFloat(newAvgPrice);
-    const sector = newSector.trim();
-
-    if (!symbol || isNaN(shares) || isNaN(avgPrice) || !sector) return;
-
-    if (holdings.some(h => h.symbol === symbol)) {
-      // Already exists
-      return;
-    }
-
-    const newHolding: PortfolioHolding = {
-      symbol,
-      shares,
-      avgPrice,
-      currentPrice: avgPrice, // Start with avg price, will be updated by mock data
-      sector,
-      addedAt: new Date(),
-      notes: newNotes.trim() || undefined
-    };
-
-    setHoldings(prev => [...prev, newHolding]);
-    setNewSymbol('');
-    setNewShares('');
-    setNewAvgPrice('');
-    setNewSector('');
-    setNewNotes('');
-  };
-
-  const removeHolding = (symbol: string) => {
-    setHoldings(prev => prev.filter(h => h.symbol !== symbol));
-  };
-
-  const symbols = holdings.map((h) => h.symbol);
+  const symbols = useMemo(() => Object.keys(positions), [positions]);
   const { data: kpisMap } = usePeerKpis(symbols);
 
-  const currentPriceFor = (symbol: string, fallback: number) => {
-    const k = kpisMap?.[symbol];
-    return k ? k.price : fallback;
-  };
+  // Update marks based on KPI price
+  useEffect(() => {
+    if (!kpisMap) return;
+    for (const sym of Object.keys(kpisMap)) {
+      const px = kpisMap[sym]?.price;
+      if (typeof px === 'number' && !Number.isNaN(px)) {
+        markSymbol(sym, px);
+      }
+    }
+  }, [kpisMap, markSymbol]);
 
-  const calculatePortfolioMetrics = () => {
-    if (holdings.length === 0) return null;
+  const metrics = useMemo(() => {
+    const positionList = Object.values(positions);
+    const totalMarketValue = positionList.reduce((sum, p) => sum + p.marketValue, 0);
+    const totalValue = totalMarketValue + cash;
+    const dayPnl = positionList.reduce((sum, p) => {
+      const k = kpisMap?.[p.symbol];
+      if (!k) return sum;
+      const changePerShare = k.change ?? 0;
+      return sum + changePerShare * p.quantity;
+    }, 0);
+    const priorValue = totalValue - dayPnl;
+    const dayPct = priorValue !== 0 ? (dayPnl / priorValue) * 100 : 0;
 
-    const totalCost = holdings.reduce((sum, h) => sum + (h.shares * h.avgPrice), 0);
-    const totalValue = holdings.reduce((sum, h) => sum + (h.shares * currentPriceFor(h.symbol, h.currentPrice)), 0);
-    const totalGainLoss = totalValue - totalCost;
-    const totalGainLossPercent = (totalGainLoss / totalCost) * 100;
-
-    const sectorAllocation = holdings.reduce((acc, h) => {
-      const value = h.shares * currentPriceFor(h.symbol, h.currentPrice);
-      acc[h.sector] = (acc[h.sector] || 0) + value;
-      return acc;
-    }, {} as Record<string, number>);
+    // Sector allocation (best effort; if sector unknown, bucket as Other)
+    const sectorAllocation: Record<string, number> = {};
+    for (const p of positionList) {
+      const sector = inferSector(p.symbol);
+      sectorAllocation[sector] = (sectorAllocation[sector] || 0) + Math.abs(p.marketValue);
+    }
 
     return {
-      totalCost,
+      cash,
+      totalMarketValue,
       totalValue,
-      totalGainLoss,
-      totalGainLossPercent,
-      sectorAllocation
+      dayPnl,
+      dayPct,
+      sectorAllocation,
+      positions: positionList,
     };
-  };
+  }, [positions, cash, kpisMap]);
 
   const formatCurrency = (value: number) => {
     if (value >= 1e12) return `$${(value / 1e12).toFixed(1)}T`;
@@ -177,14 +116,11 @@ export function PortfolioPerformanceWidget({ widget: _widget }: Readonly<Portfol
     return change >= 0 ? 'text-green-600' : 'text-red-600';
   };
 
-  const metrics = calculatePortfolioMetrics();
-
-  // Prepare pie chart data
-  const pieData = metrics ? Object.entries(metrics.sectorAllocation).map(([sector, value]) => ({
+  const pieData = Object.entries(metrics.sectorAllocation).map(([sector, value]) => ({
     name: sector,
     value,
-    color: MOCK_SECTOR_DATA[sector as keyof typeof MOCK_SECTOR_DATA]?.color || '#6b7280'
-  })) : [];
+    color: SECTOR_COLORS[sector] || '#6b7280'
+  }));
 
   return (
     <Card className="h-full">
@@ -192,45 +128,10 @@ export function PortfolioPerformanceWidget({ widget: _widget }: Readonly<Portfol
         <CardTitle className="text-sm flex items-center gap-2">
           <DollarSign className="w-4 h-4" />
           Portfolio Performance
-          <Badge variant="secondary" className="ml-auto">{holdings.length} holdings</Badge>
+          <Badge variant="secondary" className="ml-auto">{metrics.positions.length} positions</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Add new holding */}
-        <div className="grid grid-cols-5 gap-2">
-          <Input
-            placeholder="Symbol"
-            value={newSymbol}
-            onChange={(e) => setNewSymbol(e.target.value)}
-            className="h-8 text-xs"
-          />
-          <Input
-            placeholder="Shares"
-            type="number"
-            value={newShares}
-            onChange={(e) => setNewShares(e.target.value)}
-            className="h-8 text-xs"
-          />
-          <Input
-            placeholder="Avg Price"
-            type="number"
-            step="0.01"
-            value={newAvgPrice}
-            onChange={(e) => setNewAvgPrice(e.target.value)}
-            className="h-8 text-xs"
-          />
-          <Input
-            placeholder="Sector"
-            value={newSector}
-            onChange={(e) => setNewSector(e.target.value)}
-            className="h-8 text-xs"
-          />
-          <Button onClick={addHolding} size="sm" className="h-8 text-xs">
-            <Plus className="w-3 h-3 mr-1" />
-            Add
-          </Button>
-        </div>
-
         {/* Portfolio Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
@@ -240,7 +141,7 @@ export function PortfolioPerformanceWidget({ widget: _widget }: Readonly<Portfol
           </TabsList>
 
           <TabsContent value="overview" className="mt-4 space-y-4">
-            {metrics && (
+            {(
               <>
                 {/* Summary Cards */}
                 <div className="grid grid-cols-3 gap-4">
@@ -249,14 +150,14 @@ export function PortfolioPerformanceWidget({ widget: _widget }: Readonly<Portfol
                     <div className="text-lg font-semibold">{formatCurrency(metrics.totalValue)}</div>
                   </div>
                   <div className="p-3 bg-muted/30 rounded">
-                    <div className="text-xs text-muted-foreground">Total Cost</div>
-                    <div className="text-lg font-semibold">{formatCurrency(metrics.totalCost)}</div>
+                    <div className="text-xs text-muted-foreground">Cash</div>
+                    <div className="text-lg font-semibold">{formatCurrency(metrics.cash)}</div>
                   </div>
                   <div className="p-3 bg-muted/30 rounded">
-                    <div className="text-xs text-muted-foreground">Total P&L</div>
-                    <div className={`text-lg font-semibold ${getChangeColor(metrics.totalGainLoss)}`}>
-                      {getChangeIcon(metrics.totalGainLoss)}
-                      {formatCurrency(metrics.totalGainLoss)} ({metrics.totalGainLossPercent.toFixed(2)}%)
+                    <div className="text-xs text-muted-foreground">Day P&L</div>
+                    <div className={`text-lg font-semibold ${getChangeColor(metrics.dayPnl)}`}>
+                      {getChangeIcon(metrics.dayPnl)}
+                      {formatCurrency(metrics.dayPnl)} ({metrics.dayPct.toFixed(2)}%)
                     </div>
                   </div>
                 </div>
@@ -287,36 +188,32 @@ export function PortfolioPerformanceWidget({ widget: _widget }: Readonly<Portfol
           </TabsContent>
 
           <TabsContent value="holdings" className="mt-4">
-            {holdings.length > 0 ? (
+            {metrics.positions.length > 0 ? (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="text-xs">Symbol</TableHead>
-                      <TableHead className="text-xs">Shares</TableHead>
+                      <TableHead className="text-xs">Quantity</TableHead>
                       <TableHead className="text-xs">Avg Price</TableHead>
-                      <TableHead className="text-xs">Current</TableHead>
+                      <TableHead className="text-xs">Last</TableHead>
                       <TableHead className="text-xs">Market Value</TableHead>
                       <TableHead className="text-xs">P&L</TableHead>
-                      <TableHead className="text-xs">Sector</TableHead>
-                      <TableHead className="text-xs">Actions</TableHead>
+                      <TableHead className="text-xs">Side</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {holdings.map((holding) => {
-                      const currentPrice = currentPriceFor(holding.symbol, holding.currentPrice);
-                      const marketValue = holding.shares * currentPrice;
-                      const costBasis = holding.shares * holding.avgPrice;
-                      const gainLoss = marketValue - costBasis;
-                      const gainLossPercent = (gainLoss / costBasis) * 100;
-
+                    {metrics.positions.map((pos) => {
+                      const gainLoss = pos.unrealizedPnL + pos.realizedPnL;
+                      const costBasis = Math.abs(pos.quantity) * pos.averagePrice;
+                      const gainLossPercent = costBasis !== 0 ? (gainLoss / costBasis) * 100 : 0;
                       return (
-                        <TableRow key={holding.symbol} className="hover:bg-muted/50">
-                          <TableCell className="font-medium text-xs">{holding.symbol}</TableCell>
-                          <TableCell className="text-xs">{holding.shares.toLocaleString()}</TableCell>
-                          <TableCell className="text-xs">${holding.avgPrice.toFixed(2)}</TableCell>
-                          <TableCell className="text-xs">${currentPrice.toFixed(2)}</TableCell>
-                          <TableCell className="text-xs">{formatCurrency(marketValue)}</TableCell>
+                        <TableRow key={pos.symbol} className="hover:bg-muted/50">
+                          <TableCell className="font-medium text-xs">{pos.symbol}</TableCell>
+                          <TableCell className="text-xs">{pos.quantity.toLocaleString()}</TableCell>
+                          <TableCell className="text-xs">${pos.averagePrice.toFixed(2)}</TableCell>
+                          <TableCell className="text-xs">${pos.marketPrice.toFixed(2)}</TableCell>
+                          <TableCell className="text-xs">{formatCurrency(pos.marketValue)}</TableCell>
                           <TableCell className="text-xs">
                             <div className={`flex items-center gap-1 ${getChangeColor(gainLoss)}`}>
                               {getChangeIcon(gainLoss)}
@@ -324,17 +221,7 @@ export function PortfolioPerformanceWidget({ widget: _widget }: Readonly<Portfol
                             </div>
                           </TableCell>
                           <TableCell className="text-xs">
-                            <Badge variant="outline" className="text-xs">{holding.sector}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeHolding(holding.symbol)}
-                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
+                            <Badge variant="outline" className="text-xs">{pos.side.toUpperCase()}</Badge>
                           </TableCell>
                         </TableRow>
                       );
@@ -344,7 +231,7 @@ export function PortfolioPerformanceWidget({ widget: _widget }: Readonly<Portfol
               </div>
             ) : (
               <div className="text-center py-8 text-sm text-muted-foreground">
-                No holdings yet. Add some above to get started.
+                No positions yet. Submit an order in the Paper Trading Console to get started.
               </div>
             )}
           </TabsContent>
@@ -370,4 +257,9 @@ export function PortfolioPerformanceWidget({ widget: _widget }: Readonly<Portfol
       </CardContent>
     </Card>
   );
+}
+
+function inferSector(_symbol: string): string {
+  // Placeholder sector inference; real implementation would query fundamentals
+  return 'Technology';
 }

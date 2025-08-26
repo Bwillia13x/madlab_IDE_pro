@@ -33,17 +33,23 @@ export interface LayoutChangeData {
   layout: Layout[];
 }
 
-export type WorkspaceChangeData = 
-  | WidgetAddData 
-  | WidgetRemoveData 
-  | WidgetMoveData 
-  | WidgetResizeData 
-  | WidgetConfigData 
+export type WorkspaceChangeData =
+  | WidgetAddData
+  | WidgetRemoveData
+  | WidgetMoveData
+  | WidgetResizeData
+  | WidgetConfigData
   | LayoutChangeData;
 
 export interface WorkspaceChange {
   id: string;
-  type: 'widget_add' | 'widget_remove' | 'widget_move' | 'widget_resize' | 'widget_config' | 'layout_change';
+  type:
+    | 'widget_add'
+    | 'widget_remove'
+    | 'widget_move'
+    | 'widget_resize'
+    | 'widget_config'
+    | 'layout_change';
   userId: string;
   timestamp: Date;
   data: WorkspaceChangeData;
@@ -79,7 +85,14 @@ export interface CollaborationUser {
 }
 
 export interface SyncMessage {
-  type: 'state_update' | 'user_join' | 'user_leave' | 'cursor_update' | 'chat_message' | 'error' | 'heartbeat';
+  type:
+    | 'state_update'
+    | 'user_join'
+    | 'user_leave'
+    | 'cursor_update'
+    | 'chat_message'
+    | 'error'
+    | 'heartbeat';
   payload: WorkspaceChangeData | CollaborationUser | string | Record<string, unknown>;
   timestamp: Date;
   userId?: string;
@@ -121,7 +134,7 @@ export class WorkspaceSyncService {
       this.isConnected = true;
       this.startHeartbeat();
       this.flushPendingChanges();
-      
+
       // Notify that we've joined
       this.sendMessage({
         type: 'user_join',
@@ -221,7 +234,9 @@ export class WorkspaceSyncService {
         this.handleUserLeave(message.payload as { userId: string });
         break;
       case 'cursor_update':
-        this.handleCursorUpdate(message.payload as { userId: string; cursor: { x: number; y: number; widgetId?: string } });
+        this.handleCursorUpdate(
+          message.payload as { userId: string; cursor: { x: number; y: number; widgetId?: string } }
+        );
         break;
       case 'chat_message':
         this.handleChatMessage(message.payload as string);
@@ -245,10 +260,12 @@ export class WorkspaceSyncService {
           break;
         case 'cursor_update':
           if (message.userId && (message.payload as any)?.cursor) {
-            (handler as (userId: string, cursor: { x: number; y: number; widgetId?: string }) => void)(
-              message.userId,
-              (message.payload as any).cursor
-            );
+            (
+              handler as (
+                userId: string,
+                cursor: { x: number; y: number; widgetId?: string }
+              ) => void
+            )(message.userId, (message.payload as any).cursor);
           }
           break;
         case 'chat_message':
@@ -271,7 +288,10 @@ export class WorkspaceSyncService {
           break;
         case 'widget_add':
           if ('widgetId' in payload && 'widget' in payload) {
-            this.state.widgets.set((payload as WidgetAddData).widgetId, (payload as WidgetAddData).widget);
+            this.state.widgets.set(
+              (payload as WidgetAddData).widgetId,
+              (payload as WidgetAddData).widget
+            );
           }
           break;
         case 'widget_remove':
@@ -299,7 +319,10 @@ export class WorkspaceSyncService {
     this.notifyUserChange();
   }
 
-  private handleCursorUpdate(payload: { userId: string; cursor: { x: number; y: number; widgetId?: string } }): void {
+  private handleCursorUpdate(payload: {
+    userId: string;
+    cursor: { x: number; y: number; widgetId?: string };
+  }): void {
     if (payload.userId !== this.userId) {
       const user = this.users.get(payload.userId);
       if (user) {
@@ -339,7 +362,7 @@ export class WorkspaceSyncService {
 
   private flushPendingChanges(): void {
     if (this.isConnected && this.pendingChanges.length > 0) {
-      this.pendingChanges.forEach(change => {
+      this.pendingChanges.forEach((change) => {
         this.sendChange(change);
       });
       this.pendingChanges = [];
@@ -468,7 +491,9 @@ export class WorkspaceSyncService {
     this.eventHandlers.set('user_leave', handler as unknown as (...args: unknown[]) => void);
   }
 
-  onCursorChange(handler: (userId: string, cursor: { x: number; y: number; widgetId?: string }) => void): void {
+  onCursorChange(
+    handler: (userId: string, cursor: { x: number; y: number; widgetId?: string }) => void
+  ): void {
     this.eventHandlers.set('cursor_update', handler as unknown as (...args: unknown[]) => void);
   }
 
@@ -491,7 +516,10 @@ export class WorkspaceSyncService {
     }
   }
 
-  private notifyCursorChange(userId: string, cursor: { x: number; y: number; widgetId?: string }): void {
+  private notifyCursorChange(
+    userId: string,
+    cursor: { x: number; y: number; widgetId?: string }
+  ): void {
     const handler = this.eventHandlers.get('cursor_update');
     if (handler) {
       handler(userId, cursor);
@@ -528,7 +556,7 @@ export class WorkspaceSyncService {
       this.ws.close();
       this.ws = null;
     }
-    
+
     this.stopHeartbeat();
     this.isConnected = false;
     this.state = null;
@@ -539,7 +567,40 @@ export class WorkspaceSyncService {
 }
 
 // Export singleton instance
-export const workspaceSync = new WorkspaceSyncService(
-  process.env.WORKSPACE_SYNC_URL || 'ws://localhost:3001',
-  process.env.WORKSPACE_SYNC_API_KEY
-);
+const FEATURE_COLLAB =
+  String(process.env.NEXT_PUBLIC_FEATURE_COLLAB || '').toLowerCase() === 'true';
+const PUBLIC_WS = process.env.NEXT_PUBLIC_SYNC_WS_URL as string | undefined;
+
+class NoopWorkspaceSyncService {
+  async connect(_workspaceId: string, _userId: string): Promise<void> {}
+  disconnect(): void {}
+  getConnectionStatus(): boolean {
+    return false;
+  }
+  on(_event: string, _handler: (...args: unknown[]) => void): void {}
+  off(_event: string, _handler?: (...args: unknown[]) => void): void {}
+  applyLocalChange(_change: WorkspaceChange): void {}
+  updateUserCursor(_pos: { x: number; y: number; widgetId?: string }): void {}
+  sendChatMessage(_text: string): void {}
+  getState(): WorkspaceState | null {
+    return null;
+  }
+  getUsers(): Map<string, CollaborationUser> {
+    return new Map();
+  }
+  onStateChange(_handler: (state: WorkspaceState) => void): void {}
+  onUserChange(_handler: (users: Map<string, CollaborationUser>) => void): void {}
+  onCursorChange(
+    _handler: (userId: string, cursor: { x: number; y: number; widgetId?: string }) => void
+  ): void {}
+  onChatMessage(_handler: (message: string) => void): void {}
+  addWidget(_widget: Widget): void {}
+  updateWidgetConfig(_widgetId: string, _config: Widget): void {}
+  removeWidget(_widgetId: string): void {}
+  updateLayout(_layout: Layout[]): void {}
+}
+
+export const workspaceSync =
+  FEATURE_COLLAB && PUBLIC_WS
+    ? new WorkspaceSyncService(PUBLIC_WS, process.env.NEXT_PUBLIC_SYNC_API_KEY as any)
+    : new NoopWorkspaceSyncService();

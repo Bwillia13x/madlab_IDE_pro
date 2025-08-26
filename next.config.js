@@ -28,12 +28,37 @@ const nextConfig = {
     },
   },
   webpack: (config, { isServer, dev }) => {
+    // Handle OpenTelemetry dynamic imports to prevent critical dependency warnings
+    config.externals = config.externals || [];
+    if (isServer) {
+      config.externals.push({
+        '@opentelemetry/auto-instrumentations-node': '@opentelemetry/auto-instrumentations-node',
+        '@opentelemetry/instrumentation-http': '@opentelemetry/instrumentation-http',
+        '@opentelemetry/instrumentation-pg': '@opentelemetry/instrumentation-pg',
+        '@opentelemetry/instrumentation-redis': '@opentelemetry/instrumentation-redis',
+      });
+    }
+
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
       net: false,
       tls: false,
+      crypto: false,
+      stream: false,
+      url: false,
+      zlib: false,
+      http: false,
+      https: false,
+      assert: false,
+      os: false,
+      path: false,
+      encoding: false,
     };
+
+    // Add ignore warnings for OpenTelemetry dynamic imports
+    config.module.exprContextCritical = false;
+
     if (!dev && !isServer) {
       config.optimization = {
         ...config.optimization,
@@ -89,6 +114,16 @@ const nextConfig = {
       config.output.chunkFilename = 'static/chunks/[name].[contenthash].js';
       config.devtool = 'source-map';
     }
+
+    // Handle OpenTelemetry dynamic imports more gracefully
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@opentelemetry/auto-instrumentations-node': false,
+      '@opentelemetry/instrumentation-http': false,
+      '@opentelemetry/instrumentation-pg': false,
+      '@opentelemetry/instrumentation-redis': false,
+    };
+
     config.module.rules.push({
       test: /\.(woff|woff2|eot|ttf|otf)$/i,
       type: 'asset/resource',

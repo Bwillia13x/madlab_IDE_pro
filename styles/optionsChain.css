@@ -1,0 +1,11 @@
+.options-virtual-outer {
+    position: relative;
+    height: var(--containerHeight, 0px);
+}
+
+.options-virtual-inner {
+    position: absolute;
+    left: 0;
+    right: 0;
+    transform: translateY(var(--offsetY, 0px));
+}

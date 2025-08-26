@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { compose, withAuth, withErrorHandling, withRateLimit, withPerfMetrics } from '@/lib/enterprise/withEnterprise';
 
 type AvNewsItem = {
   title: string;
@@ -14,10 +15,10 @@ type AvNewsItem = {
   }>;
 };
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const symbol = (searchParams.get('symbol') || 'AAPL').toUpperCase().slice(0, 12);
-  const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10) || 20, 50);
+const baseGET = async function GET(req: NextRequest) {
+  const { nextUrl } = req;
+  const symbol = (nextUrl.searchParams.get('symbol') || 'AAPL').toUpperCase().slice(0, 12);
+  const limit = Math.min(parseInt(nextUrl.searchParams.get('limit') || '20', 10) || 20, 50);
 
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY || 'demo';
   const useAlpha = apiKey && apiKey !== 'none';
@@ -55,8 +56,17 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json({ provider: 'alpha-vantage', items });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ provider: 'alpha-vantage', items: [], error: 'exception' }, { status: 500 });
   }
-}
+};
 
+export const GET = compose(
+  baseGET,
+  (h) => withPerfMetrics(h, 'news_get'),
+  (h) => withRateLimit(h, { policyId: 'api_data' }),
+  (h) => withAuth(h, { optional: true }),
+  withErrorHandling,
+);
+
+export const dynamic = 'force-dynamic';

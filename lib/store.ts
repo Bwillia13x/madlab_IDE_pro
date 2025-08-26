@@ -5,6 +5,7 @@ import { SHEET_PRESETS } from './presets';
 import { exportWorkspaceJson } from './io/export';
 import { coerceToWorkspaceState, parseWorkspaceImport } from './io/import';
 import { getSchemaWidget } from './widgets/registry';
+import { workspaceSync } from './collaboration/workspaceSync';
 
 export type SheetKind = 'valuation' | 'charting' | 'screening' | 'portfolio' | 'risk' | 'options' | 'blank';
 
@@ -33,6 +34,19 @@ export interface Message {
   sender: 'user' | 'agent';
 }
 
+// Re-exported for type safety across modules
+export interface PaperPosition {
+  symbol: string;
+  side: 'long' | 'short';
+  quantity: number;
+  averagePrice: number;
+  marketPrice: number;
+  marketValue: number;
+  unrealizedPnL: number;
+  realizedPnL: number;
+  lots: { quantity: number; price: number }[];
+}
+
 export interface WorkspaceState {
   sheets: Sheet[];
   activeSheetId?: string;
@@ -54,12 +68,22 @@ export interface WorkspaceState {
   presetVersion: number;
   // Data provider selection
   dataProvider: string;
+  // Settings panel state
+  settingsOpen: boolean;
   // Global symbol context (Phase 1)
   globalSymbol: string;
   // Global timeframe for price series
   globalTimeframe: import('./data/provider.types').PriceRange;
   // Experience mode (Phase 2)
   experienceMode: 'beginner' | 'expert';
+  // Undo/Redo stacks for layout operations per sheet
+  _undoStack?: Record<string, Layout[][]>;
+  _redoStack?: Record<string, Layout[][]>;
+  // Paper trading (lightweight persisted state)
+  paperTrading: {
+    cash: number;
+    positions: Record<string, PaperPosition>;
+  };
 }
 
 interface WorkspaceActions {
@@ -75,6 +99,9 @@ interface WorkspaceActions {
   removeWidget: (sheetId: string, widgetId: string) => void;
   updateLayout: (sheetId: string, layout: Layout[]) => void;
   duplicateWidget: (sheetId: string, widgetId: string) => void;
+  // Undo/Redo
+  undoLayout: (sheetId: string) => void;
+  redoLayout: (sheetId: string) => void;
 
   // Chat management
   addMessage: (content: string, sender: 'user' | 'agent') => void;
@@ -88,6 +115,7 @@ interface WorkspaceActions {
   toggleBottomPanel: () => void;
   setActiveBottomTab: (tab: string) => void;
   setExplorerWidth: (width: number) => void;
+  setSettingsOpen: (open: boolean) => void;
 
   // Persistence
   persist: () => void;
@@ -133,6 +161,9 @@ interface WorkspaceActions {
   }[];
   saveTemplate: (name: string, sheetId: string) => boolean;
   createSheetFromTemplate: (name: string) => boolean;
+
+  // Paper trading updates (persist minimal state)
+  setPaperTradingState: (state: { cash: number; positions: Record<string, PaperPosition> }) => void;
 }
 
 type WorkspaceStore = WorkspaceState & WorkspaceActions;
@@ -189,9 +220,13 @@ const createInitialState = (): WorkspaceState => {
     schemaVersion: 1,
     presetVersion: 1,
     dataProvider: 'mock',
+    settingsOpen: false,
     globalSymbol: 'AAPL',
     globalTimeframe: '6M',
     experienceMode: 'beginner',
+    _undoStack: {},
+    _redoStack: {},
+    paperTrading: { cash: 100000, positions: {} },
   };
 };
 
@@ -304,6 +339,40 @@ export function migrateState(persisted: unknown, _fromVersion: number): Workspac
 export const useWorkspaceStore = create<WorkspaceStore>()(
   persist<WorkspaceStore>(
     (set, get) => {
+      // Initialize collaboration listeners
+      const initCollaboration = () => {
+        try {
+          // Set up listeners for incoming collaboration changes
+          workspaceSync.onStateChange((state) => {
+            if (state) {
+              // Handle incoming workspace state changes
+              console.log('Received collaborative state update:', state);
+              // Update local state based on incoming changes
+              // This would need more sophisticated conflict resolution in a production system
+            }
+          });
+
+          workspaceSync.onUserChange((users) => {
+            console.log('User list updated:', Array.from(users.values()));
+          });
+
+          workspaceSync.onCursorChange((userId, cursor) => {
+            console.log('Cursor update from user:', userId, cursor);
+          });
+
+          workspaceSync.onChatMessage((message) => {
+            console.log('Chat message received:', message);
+          });
+        } catch (error) {
+          console.warn('Failed to initialize collaboration listeners:', error);
+        }
+      };
+
+      // Initialize collaboration on store creation
+      if (typeof window !== 'undefined') {
+        // Delay initialization to ensure DOM is ready
+        setTimeout(initCollaboration, 100);
+      }
       const initialState = createInitialState();
       return {
         // Initial state
@@ -315,6 +384,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       setInspectorOpen: (open: boolean) => set({ inspectorOpen: open }),
       toggleInspector: () => set((state) => ({ inspectorOpen: !state.inspectorOpen })),
       setExplorerWidth: (width: number) => set({ explorerWidth: Math.max(200, width) }),
+      setSettingsOpen: (open: boolean) => set({ settingsOpen: open }),
 
       // Data Provider
       setDataProvider: async (provider: string) => {
@@ -450,6 +520,13 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
             sheet.id === sheetId ? { ...sheet, widgets: [...sheet.widgets, newWidget] } : sheet
           ),
         }));
+
+        // Broadcast widget addition for collaboration
+        try {
+          workspaceSync.addWidget(newWidget);
+        } catch (error) {
+          console.warn('Failed to broadcast widget addition:', error);
+        }
       },
 
       updateWidget: (sheetId: string, widget: Partial<Widget> & { id: string }) => {
@@ -463,6 +540,18 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
               : sheet
           ),
         }));
+
+        // Broadcast widget update for collaboration
+        try {
+          const state = get();
+          const sheet = state.sheets.find(s => s.id === sheetId);
+          const updatedWidget = sheet?.widgets.find(w => w.id === widget.id);
+          if (updatedWidget) {
+            workspaceSync.updateWidgetConfig(widget.id, updatedWidget);
+          }
+        } catch (error) {
+          console.warn('Failed to broadcast widget update:', error);
+        }
       },
 
       removeWidget: (sheetId: string, widgetId: string) => {
@@ -475,6 +564,13 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           selectedWidgetId:
             state.selectedWidgetId === widgetId ? undefined : state.selectedWidgetId,
         }));
+
+        // Broadcast widget removal for collaboration
+        try {
+          workspaceSync.removeWidget(widgetId);
+        } catch (error) {
+          console.warn('Failed to broadcast widget removal:', error);
+        }
       },
 
       duplicateWidget: (sheetId: string, widgetId: string) => {
@@ -508,19 +604,98 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       },
 
       updateLayout: (sheetId: string, layout: Layout[]) => {
-        set((state) => ({
-          sheets: state.sheets.map((sheet) =>
-            sheet.id === sheetId
-              ? {
-                  ...sheet,
-                  widgets: sheet.widgets.map((widget) => ({
-                    ...widget,
-                    layout: layout.find((l) => l.i === widget.id) || widget.layout,
-                  })),
-                }
-              : sheet
-          ),
-        }));
+        set((state) => {
+          // Push current layout to undo stack
+          const currentSheet = state.sheets.find(s => s.id === sheetId);
+          const currentLayout = currentSheet ? currentSheet.widgets.map(w => ({ ...w.layout, i: w.id })) : [];
+          const undoStack = { ...(state._undoStack || {}) };
+          const redoStack = { ...(state._redoStack || {}) };
+          undoStack[sheetId] = [...(undoStack[sheetId] || []), currentLayout];
+          // Clear redo stack on new action
+          redoStack[sheetId] = [];
+          return {
+            _undoStack: undoStack,
+            _redoStack: redoStack,
+            sheets: state.sheets.map((sheet) =>
+              sheet.id === sheetId
+                ? {
+                    ...sheet,
+                    widgets: sheet.widgets.map((widget) => ({
+                      ...widget,
+                      layout: layout.find((l) => l.i === widget.id) || widget.layout,
+                    })),
+                  }
+                : sheet
+            ),
+          };
+        });
+
+        // Broadcast layout change for collaboration
+        try {
+          workspaceSync.updateLayout(layout);
+        } catch (error) {
+          console.warn('Failed to broadcast layout update:', error);
+        }
+      },
+
+      undoLayout: (sheetId: string) => {
+        set((state) => {
+          const stack = state._undoStack?.[sheetId] || [];
+          if (stack.length === 0) return {} as Partial<WorkspaceState>;
+          const prevLayout = stack[stack.length - 1];
+          const newUndo = { ...(state._undoStack || {}) };
+          newUndo[sheetId] = stack.slice(0, -1);
+          // push current to redo
+          const currentSheet = state.sheets.find(s => s.id === sheetId);
+          const curr = currentSheet ? currentSheet.widgets.map(w => ({ ...w.layout, i: w.id })) : [];
+          const newRedo = { ...(state._redoStack || {}) };
+          newRedo[sheetId] = [...(newRedo[sheetId] || []), curr];
+          return {
+            _undoStack: newUndo,
+            _redoStack: newRedo,
+            sheets: state.sheets.map((sheet) =>
+              sheet.id === sheetId
+                ? {
+                    ...sheet,
+                    widgets: sheet.widgets.map((widget) => ({
+                      ...widget,
+                      layout: (prevLayout.find((l) => l.i === widget.id) as Layout) || widget.layout,
+                    })),
+                  }
+                : sheet
+            ),
+          };
+        });
+      },
+
+      redoLayout: (sheetId: string) => {
+        set((state) => {
+          const stack = state._redoStack?.[sheetId] || [];
+          if (stack.length === 0) return {} as Partial<WorkspaceState>;
+          const nextLayout = stack[stack.length - 1];
+          const newRedo = { ...(state._redoStack || {}) };
+          newRedo[sheetId] = stack.slice(0, -1);
+          // push current to undo
+          const currentSheet = state.sheets.find(s => s.id === sheetId);
+          const curr = currentSheet ? currentSheet.widgets.map(w => ({ ...w.layout, i: w.id })) : [];
+          const newUndo = { ...(state._undoStack || {}) };
+          newUndo[sheetId] = [...(newUndo[sheetId] || []), curr];
+          return {
+            _undoStack: newUndo,
+            _redoStack: newRedo,
+            sheets: state.sheets.map((sheet) =>
+              sheet.id === sheetId
+                ? {
+                    ...sheet,
+                    widgets: sheet.widgets.map((widget) => ({
+                      ...widget,
+                      layout: (nextLayout.find((l) => l.i === widget.id) as Layout) || widget.layout,
+                    })),
+                  }
+                : sheet
+            ),
+          };
+        });
       },
 
       // Chat actions
@@ -647,6 +822,11 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         } catch {
           return false;
         }
+      },
+
+      // Paper trading minimal persistence
+      setPaperTradingState: (state: { cash: number; positions: Record<string, PaperPosition> }) => {
+        set({ paperTrading: { cash: state.cash, positions: state.positions } });
       },
 
       // Import/export helpers

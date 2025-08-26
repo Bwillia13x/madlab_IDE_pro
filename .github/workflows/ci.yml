@@ -43,5 +43,17 @@ jobs:
       - name: Run unit tests
         run: pnpm test
 
-      - name: Run E2E tests
+      - name: Run smoke E2E tests (PR only)
+        if: ${{ github.event_name == 'pull_request' }}
+        run: pnpm exec playwright test tests/e2e/happy-path.spec.ts tests/e2e/provider-fallback.spec.ts
+
+      - name: Run full E2E tests (push only)
+        if: ${{ github.event_name == 'push' }}
         run: pnpm e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: playwright-report/

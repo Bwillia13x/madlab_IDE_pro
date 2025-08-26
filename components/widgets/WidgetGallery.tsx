@@ -273,9 +273,25 @@ export function WidgetGallery({ open, onOpenChange, targetSheet }: WidgetGallery
     onOpenChange(false);
   };
 
+  // Check if we're on mobile
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl h-[80vh] flex flex-col">
+      <DialogContent className={`${
+        isMobile
+          ? 'max-w-full h-[90vh] mx-2'
+          : 'max-w-6xl h-[80vh]'
+      } flex flex-col`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <div className="w-5 h-5 rounded-md bg-gradient-to-r from-primary via-accent to-secondary" />
@@ -285,7 +301,11 @@ export function WidgetGallery({ open, onOpenChange, targetSheet }: WidgetGallery
         </DialogHeader>
 
         {/* Search and filters */}
-        <div className="flex items-center gap-3 p-4 border-b">
+        <div className={`${
+          isMobile
+            ? 'flex flex-col gap-3 p-4 border-b'
+            : 'flex items-center gap-3 p-4 border-b'
+        }`}>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -295,154 +315,343 @@ export function WidgetGallery({ open, onOpenChange, targetSheet }: WidgetGallery
               className="pl-9"
             />
           </div>
-          <Select value={selectedSheet} onValueChange={(value: SheetKind) => setSelectedSheet(value)}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="valuation">Valuation</SelectItem>
-              <SelectItem value="charting">Charting</SelectItem>
-              <SelectItem value="risk">Risk</SelectItem>
-              <SelectItem value="options">Options</SelectItem>
-            </SelectContent>
-          </Select>
+          {!isMobile && (
+            <Select value={selectedSheet} onValueChange={(value: SheetKind) => setSelectedSheet(value)}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="valuation">Valuation</SelectItem>
+                <SelectItem value="charting">Charting</SelectItem>
+                <SelectItem value="risk">Risk</SelectItem>
+                <SelectItem value="options">Options</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
-        <div className="flex gap-4 flex-1 min-h-0">
-          {/* Left: Tags */}
-          <div className="w-48 space-y-3">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              <span className="text-sm font-medium">Tags</span>
-            </div>
-            <div className="space-y-1">
-              {tagsUniverse.map(tag => (
-                <button
-                  key={tag}
-                  onClick={() => setActiveTag(activeTag === tag ? null : tag)}
-                  className={`w-full px-3 py-2 text-left text-sm rounded-md transition-colors ${
-                    activeTag === tag 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'hover:bg-muted'
-                  }`}
+        {/* Mobile sheet selector */}
+        {isMobile && (
+          <div className="px-4 pb-3 border-b">
+            <div className="flex gap-2 overflow-x-auto">
+              {['valuation', 'charting', 'screening', 'portfolio', 'risk', 'options', 'blank'].map((sheet) => (
+                <Button
+                  key={sheet}
+                  variant={selectedSheet === sheet ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedSheet(sheet as SheetKind)}
+                  className="flex-shrink-0 text-xs"
                 >
-                  {tag}
-                </button>
+                  {sheet.charAt(0).toUpperCase() + sheet.slice(1)}
+                </Button>
               ))}
             </div>
           </div>
+        )}
+
+        <div className={`${
+          isMobile
+            ? 'flex flex-col flex-1 min-h-0'
+            : 'flex gap-4 flex-1 min-h-0'
+        }`}>
+          {/* Left: Tags */}
+          {!isMobile && (
+            <div className="w-48 space-y-3">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                <span className="text-sm font-medium">Tags</span>
+              </div>
+              <div className="space-y-1">
+                {tagsUniverse.map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+                    className={`w-full px-3 py-2 text-left text-sm rounded-md transition-colors ${
+                      activeTag === tag
+                        ? 'bg-primary text-primary-foreground'
+                        : 'hover:bg-muted'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Mobile tags */}
+          {isMobile && (
+            <div className="px-4 pb-3 border-b">
+              <div className="flex items-center gap-2 mb-2">
+                <Filter className="h-4 w-4" />
+                <span className="text-sm font-medium">Tags</span>
+              </div>
+              <div className="flex gap-1 overflow-x-auto pb-1">
+                {tagsUniverse.map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+                    className={`px-3 py-1.5 text-xs rounded-full whitespace-nowrap transition-colors ${
+                      activeTag === tag
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted hover:bg-muted/80'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Center: Widget grid */}
           <div className="flex-1 overflow-auto">
-            <div className="grid grid-cols-2 gap-4 p-2">
+            <div className={`${
+              isMobile
+                ? 'grid grid-cols-1 gap-3 p-4'
+                : 'grid grid-cols-2 gap-4 p-2'
+            }`}>
               {filteredWidgets.map(widget => (
                 <div
                   key={widget.id}
-                  className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                    selectedWidget?.id === widget.id 
-                      ? 'ring-2 ring-primary bg-primary/5' 
-                      : 'hover:bg-muted/50'
+                  className={`border rounded-lg cursor-pointer transition-colors ${
+                    isMobile
+                      ? 'p-3 active:scale-95'
+                      : `p-4 ${selectedWidget?.id === widget.id
+                        ? 'ring-2 ring-primary bg-primary/5'
+                        : 'hover:bg-muted/50'}`
                   }`}
-                  onClick={() => selectWidget(widget)}
+                  onClick={() => {
+                    selectWidget(widget);
+                    // On mobile, immediately show preview
+                    if (isMobile && selectedWidget?.id !== widget.id) {
+                      setTimeout(() => {
+                        document.getElementById('mobile-preview')?.scrollIntoView({
+                          behavior: 'smooth'
+                        });
+                      }, 100);
+                    }
+                  }}
+                  onMouseEnter={() => {
+                    if (!isMobile) {
+                      // Opportunistically preload critical widgets
+                      try {
+                        if (widget.id === 'candlestick-chart') {
+                          import('../widgets/CandlestickChart');
+                        } else if (widget.id === 'advanced-chart') {
+                          import('../widgets/AdvancedChart');
+                        } else if (widget.id === 'options-chain') {
+                          import('../widgets/OptionsChainWidget');
+                        }
+                      } catch {}
+                    }
+                  }}
+                  draggable={!isMobile}
+                  onDragStart={(e) => {
+                    if (!isMobile) {
+                      // Package widget payload for drop target
+                      const payload = {
+                        type: widget.id,
+                        title: widget.name,
+                        config: getDefaultConfig(widget.schema),
+                        sheets: widget.sheets,
+                      };
+                      e.dataTransfer.setData('application/x-madlab-widget', JSON.stringify(payload));
+                      e.dataTransfer.effectAllowed = 'copyMove';
+                    }
+                  }}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium">{widget.name}</h4>
-                    <div className="flex gap-1">
-                      {widget.tags.slice(0, 2).map(tag => (
+                  <div className={`${
+                    isMobile
+                      ? 'flex items-start gap-3'
+                      : 'flex items-center justify-between mb-3'
+                  }`}>
+                    <div className="flex-1">
+                      <h4 className={`font-medium ${isMobile ? 'text-base mb-1' : ''}`}>{widget.name}</h4>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{widget.desc}</p>
+                    </div>
+                    {!isMobile && (
+                      <div className="flex gap-1">
+                        {widget.tags.slice(0, 2).map(tag => (
+                          <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {isMobile && (
+                    <div className="flex gap-1 mt-2">
+                      {widget.tags.slice(0, 3).map(tag => (
                         <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
                       ))}
                     </div>
-                  </div>
-                  
-                  <div className="h-16 border border-dashed rounded bg-muted/20 flex items-center justify-center mb-3">
-                    <Package className="h-6 w-6 text-muted-foreground/50" />
-                  </div>
-                  
-                  <p className="text-xs text-muted-foreground">{widget.desc}</p>
+                  )}
+
+                  {!isMobile && (
+                    <div className="h-16 border border-dashed rounded bg-muted/20 flex items-center justify-center mb-3">
+                      <Package className="h-6 w-6 text-muted-foreground/50" />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           </div>
 
           {/* Right: Preview */}
-          <div className="w-80 border-l pl-4 space-y-4">
-            {selectedWidget ? (
-              <>
+          {!isMobile && (
+            <div className="w-80 border-l pl-4 space-y-4">
+              {selectedWidget ? (
+                <>
+                  <div>
+                    <h4 className="font-medium">{selectedWidget.name}</h4>
+                    <p className="text-sm text-muted-foreground">{selectedWidget.desc}</p>
+                  </div>
+
+                  <div className="border border-dashed rounded-lg p-4 bg-muted/20">
+                    <canvas
+                      ref={canvasRef}
+                      width={240}
+                      height={120}
+                      className="w-full h-auto"
+                    />
+                  </div>
+
+                  {selectedWidget.schema && (
+                    <div className="space-y-3">
+                      <h5 className="text-sm font-medium">Configuration</h5>
+                      {Object.entries(selectedWidget.schema).map(([key, prop]: [string, WidgetSchema[keyof WidgetSchema]]) => (
+                        <div key={key} className="space-y-1">
+                          <label className="text-xs text-muted-foreground">{key}</label>
+                          {prop.enum ? (
+                            <Select
+                              value={config[key]?.toString()}
+                              onValueChange={(value) => setConfig(prev => ({ ...prev, [key]: value }))}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {prop.enum.map(option => (
+                                  <SelectItem key={option} value={option}>{option}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : prop.type === 'boolean' ? (
+                            <Select
+                              value={config[key]?.toString()}
+                              onValueChange={(value) => setConfig(prev => ({ ...prev, [key]: value === 'true' }))}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="true">True</SelectItem>
+                                <SelectItem value="false">False</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input
+                              type={prop.type === 'number' ? 'number' : 'text'}
+                              value={config[key]?.toString() || ''}
+                              onChange={(e) => {
+                                const value = prop.type === 'number' ? parseFloat(e.target.value) : e.target.value;
+                                setConfig(prev => ({ ...prev, [key]: value }));
+                              }}
+                              className="h-8"
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <Button onClick={addToWorkbench} className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add to {selectedSheet}
+                  </Button>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <Package className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                  <p className="text-sm text-muted-foreground">Select a widget to preview</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Mobile Preview */}
+          {isMobile && selectedWidget && (
+            <div id="mobile-preview" className="border-t p-4 space-y-4">
+              <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-medium">{selectedWidget.name}</h4>
                   <p className="text-sm text-muted-foreground">{selectedWidget.desc}</p>
                 </div>
-
-                <div className="border border-dashed rounded-lg p-4 bg-muted/20">
-                  <canvas 
-                    ref={canvasRef}
-                    width={240} 
-                    height={120}
-                    className="w-full h-auto"
-                  />
-                </div>
-
-                {selectedWidget.schema && (
-                  <div className="space-y-3">
-                    <h5 className="text-sm font-medium">Configuration</h5>
-                    {Object.entries(selectedWidget.schema).map(([key, prop]: [string, WidgetSchema[keyof WidgetSchema]]) => (
-                      <div key={key} className="space-y-1">
-                        <label className="text-xs text-muted-foreground">{key}</label>
-                        {prop.enum ? (
-                          <Select 
-                            value={config[key]?.toString()} 
-                            onValueChange={(value) => setConfig(prev => ({ ...prev, [key]: value }))}
-                          >
-                            <SelectTrigger className="h-8">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {prop.enum.map(option => (
-                                <SelectItem key={option} value={option}>{option}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : prop.type === 'boolean' ? (
-                          <Select 
-                            value={config[key]?.toString()} 
-                            onValueChange={(value) => setConfig(prev => ({ ...prev, [key]: value === 'true' }))}
-                          >
-                            <SelectTrigger className="h-8">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="true">True</SelectItem>
-                              <SelectItem value="false">False</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Input
-                            type={prop.type === 'number' ? 'number' : 'text'}
-                            value={config[key]?.toString() || ''}
-                            onChange={(e) => {
-                              const value = prop.type === 'number' ? parseFloat(e.target.value) : e.target.value;
-                              setConfig(prev => ({ ...prev, [key]: value }));
-                            }}
-                            className="h-8"
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <Button onClick={addToWorkbench} className="w-full">
+                <Button onClick={addToWorkbench} size="sm">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add to {selectedSheet}
+                  Add
                 </Button>
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <Package className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                <p className="text-sm text-muted-foreground">Select a widget to preview</p>
               </div>
-            )}
-          </div>
+
+              <div className="border border-dashed rounded-lg p-4 bg-muted/20">
+                <canvas
+                  ref={canvasRef}
+                  width={280}
+                  height={140}
+                  className="w-full h-auto"
+                />
+              </div>
+
+              {selectedWidget.schema && (
+                <div className="space-y-3">
+                  <h5 className="text-sm font-medium">Configuration</h5>
+                  {Object.entries(selectedWidget.schema).map(([key, prop]: [string, WidgetSchema[keyof WidgetSchema]]) => (
+                    <div key={key} className="space-y-2">
+                      <label className="text-xs text-muted-foreground">{key}</label>
+                      {prop.enum ? (
+                        <Select
+                          value={config[key]?.toString()}
+                          onValueChange={(value) => setConfig(prev => ({ ...prev, [key]: value }))}
+                        >
+                          <SelectTrigger className="h-10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {prop.enum.map(option => (
+                              <SelectItem key={option} value={option}>{option}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : prop.type === 'boolean' ? (
+                        <Select
+                          value={config[key]?.toString()}
+                          onValueChange={(value) => setConfig(prev => ({ ...prev, [key]: value === 'true' }))}
+                        >
+                          <SelectTrigger className="h-10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="true">True</SelectItem>
+                            <SelectItem value="false">False</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          type={prop.type === 'number' ? 'number' : 'text'}
+                          value={config[key]?.toString() || ''}
+                          onChange={(e) => {
+                            const value = prop.type === 'number' ? parseFloat(e.target.value) : e.target.value;
+                            setConfig(prev => ({ ...prev, [key]: value }));
+                          }}
+                          className="h-10"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

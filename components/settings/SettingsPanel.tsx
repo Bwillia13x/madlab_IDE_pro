@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { X, Database, Palette, Bell, Shield, Globe } from 'lucide-react';
 import { DataProviderConfig } from '@/components/providers/DataProviderConfig';
+import { DataProviderStatus } from '../providers/DataProviderStatus';
 import { useWorkspaceStore } from '@/lib/store';
 
 interface SettingsPanelProps {
@@ -64,7 +65,10 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
           
           <div className="mt-6 h-full">
             <TabsContent value="data" className="h-full">
-              <DataProviderConfig onClose={onClose} />
+              <div className="space-y-4">
+                <DataProviderConfig onClose={onClose} />
+                <DataProviderStatus />
+              </div>
             </TabsContent>
             
             <TabsContent value="appearance" className="h-full">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -24,6 +24,8 @@ import { MARKETPLACE_TEMPLATES } from '@/lib/marketplace/templates';
 import { getSchemaWidget } from '@/lib/widgets/registry';
 import { useWorkspaceStore, type SheetKind } from '@/lib/store';
 import { TemplateUploadDialog } from '@/components/marketplace/TemplateUploadDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { marketplaceLaunch } from '@/lib/marketplace/launchInstance';
 
 interface MarketplacePanelProps {
   onClose?: () => void;
@@ -39,6 +41,29 @@ export function MarketplacePanel({ onClose }: MarketplacePanelProps) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'popular' | 'newest' | 'rating' | 'downloads' | 'views' | 'a-z'>('popular');
   const [targetSheetId, setTargetSheetId] = useState<'new' | string>('new');
+  const [detailsId, setDetailsId] = useState<string | null>(null);
+  const FEATURE_MARKETPLACE_LAUNCH = String(process.env.NEXT_PUBLIC_FEATURE_MARKETPLACE_LAUNCH || '').toLowerCase() === 'true';
+  const [section, setSection] = useState<'templates' | 'creators' | 'campaigns'>('templates');
+  const [creators, setCreators] = useState<any[]>([]);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [metrics, setMetrics] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (!FEATURE_MARKETPLACE_LAUNCH) return;
+    const load = async () => {
+      try {
+        const [cs, cps, m] = await Promise.all([
+          marketplaceLaunch.getAllCreators(),
+          marketplaceLaunch.getAllCampaigns(),
+          marketplaceLaunch.getLaunchMetrics(),
+        ]);
+        setCreators(cs);
+        setCampaigns(cps);
+        setMetrics(m);
+      } catch {}
+    };
+    load();
+  }, [FEATURE_MARKETPLACE_LAUNCH]);
 
   const allTags = useMemo(() => {
     const set = new Set<string>();
@@ -83,7 +108,7 @@ export function MarketplacePanel({ onClose }: MarketplacePanelProps) {
     }
 
     return filtered;
-  }, [searchQuery, selectedCategory, sortBy]);
+  }, [searchQuery, selectedCategory, sortBy, selectedTags]);
 
   const installTemplate = async (id: string) => {
     const tpl = MARKETPLACE_TEMPLATES.find((t) => t.id === id);
@@ -188,8 +213,20 @@ export function MarketplacePanel({ onClose }: MarketplacePanelProps) {
             }} />
           </div>
         </div>
+        {FEATURE_MARKETPLACE_LAUNCH && (
+          <div className="mt-3">
+            <Tabs value={section} onValueChange={(v) => setSection(v as any)}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="templates">Templates</TabsTrigger>
+                <TabsTrigger value="creators">Creators</TabsTrigger>
+                <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        )}
         
-        {/* Search and Filters */}
+        {/* Search and Filters (Templates section) */}
+        {section === 'templates' && (
         <div className="space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -263,9 +300,11 @@ export function MarketplacePanel({ onClose }: MarketplacePanelProps) {
             </div>
           </div>
         </div>
+        )}
       </CardHeader>
       
       <CardContent className="h-full">
+        {section === 'templates' && (
         <ScrollArea className="h-[60vh] pr-2">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredTemplates.map((tpl) => (
@@ -329,6 +368,14 @@ export function MarketplacePanel({ onClose }: MarketplacePanelProps) {
                     <Button 
                       variant="outline" 
                       size="sm" 
+                      onClick={() => setDetailsId(tpl.id)}
+                      className="px-2"
+                    >
+                      Details
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
                       onClick={() => shareTemplate(tpl.id)}
                       className="px-2"
                     >
@@ -355,8 +402,155 @@ export function MarketplacePanel({ onClose }: MarketplacePanelProps) {
             </div>
           )}
         </ScrollArea>
+        )}
+
+        {FEATURE_MARKETPLACE_LAUNCH && section === 'creators' && (
+          <div className="space-y-4">
+            {metrics && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div className="p-3 border rounded">Active Creators: <span className="font-medium">{metrics.activeCreators}</span></div>
+                <div className="p-3 border rounded">Total Templates: <span className="font-medium">{metrics.totalTemplates}</span></div>
+                <div className="p-3 border rounded">Total Downloads: <span className="font-medium">{metrics.totalDownloads}</span></div>
+                <div className="p-3 border rounded">Avg Rating: <span className="font-medium">{metrics.averageRating?.toFixed?.(2) || 0}</span></div>
+              </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {creators.map((c) => (
+                <Card key={c.id}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      {c.name}
+                      {c.isVerified && <Badge variant="secondary">Verified</Badge>}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm space-y-2">
+                    <div className="text-muted-foreground">{c.bio}</div>
+                    <div className="flex gap-4">
+                      <div>Templates: <span className="font-medium">{c.templateCount}</span></div>
+                      <div>Downloads: <span className="font-medium">{c.totalDownloads}</span></div>
+                      <div>Rating: <span className="font-medium">{c.averageRating?.toFixed?.(1) || 0}</span></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {creators.length === 0 && (
+                <div className="text-sm text-muted-foreground">No creators yet.</div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {FEATURE_MARKETPLACE_LAUNCH && section === 'campaigns' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">Manage promotional campaigns. In-memory only.</div>
+              <Button
+                size="sm"
+                onClick={async () => {
+                  const name = window.prompt('Campaign name?') || '';
+                  if (!name) return;
+                  const description = window.prompt('Description?') || '';
+                  const budget = parseFloat(window.prompt('Budget? (number)') || '0') || 0;
+                  try {
+                    await marketplaceLaunch.createCampaign({
+                      name,
+                      description,
+                      startDate: new Date(),
+                      endDate: new Date(Date.now() + 7*24*60*60*1000),
+                      targetAudience: ['all'],
+                      channels: ['in-app'],
+                      budget,
+                    } as any);
+                    const cps = await marketplaceLaunch.getAllCampaigns();
+                    setCampaigns(cps);
+                  } catch {}
+                }}
+              >New Campaign</Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {campaigns.map((cp) => (
+                <Card key={cp.id}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">{cp.name} <Badge variant="secondary">{cp.status}</Badge></CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm space-y-2">
+                    <div className="text-muted-foreground">{cp.description}</div>
+                    <div className="flex gap-4">
+                      <div>Impr: <span className="font-medium">{cp.metrics?.impressions || 0}</span></div>
+                      <div>Clicks: <span className="font-medium">{cp.metrics?.clicks || 0}</span></div>
+                      <div>Conv: <span className="font-medium">{cp.metrics?.conversions || 0}</span></div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={async () => { await marketplaceLaunch.updateCampaignStatus(cp.id, 'active'); setCampaigns(await marketplaceLaunch.getAllCampaigns()); }}>Activate</Button>
+                      <Button variant="outline" size="sm" onClick={async () => { await marketplaceLaunch.updateCampaignStatus(cp.id, 'paused'); setCampaigns(await marketplaceLaunch.getAllCampaigns()); }}>Pause</Button>
+                      <Button variant="outline" size="sm" onClick={async () => { await marketplaceLaunch.updateCampaignStatus(cp.id, 'completed'); setCampaigns(await marketplaceLaunch.getAllCampaigns()); }}>Complete</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {campaigns.length === 0 && (
+                <div className="text-sm text-muted-foreground">No campaigns yet.</div>
+              )}
+            </div>
+          </div>
+        )}
       </CardContent>
+      {/* Template Details Drawer */}
+      {section === 'templates' && (
+      <Dialog open={!!detailsId} onOpenChange={(open) => !open && setDetailsId(null)}>
+        <DialogContent className="max-w-3xl">
+          {detailsId && (() => {
+            const tpl = MARKETPLACE_TEMPLATES.find(t => t.id === detailsId)!;
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    {tpl.title}
+                    <Badge variant="secondary" className="text-xs">{tpl.kind}</Badge>
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3 text-sm">
+                  <p className="text-muted-foreground">{tpl.description}</p>
+                  {tpl.tags && (
+                    <div className="flex flex-wrap gap-1">
+                      {tpl.tags.map(tag => (
+                        <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
+                      ))}
+                    </div>
+                  )}
+                  <div>
+                    <div className="font-medium mb-1">Widgets</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {tpl.widgets.map((w, i) => (
+                        <div key={i} className="p-2 border rounded text-xs flex items-center justify-between">
+                          <span>{w.type}</span>
+                          <Badge variant="secondary">{w.layout.w}x{w.layout.h}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Target:</span>
+                    <select
+                      value={targetSheetId}
+                      onChange={(e) => setTargetSheetId(e.target.value as 'new' | string)}
+                      className="text-sm border rounded px-2 py-1"
+                      aria-label="Target sheet"
+                    >
+                      <option value="new">Create new sheet</option>
+                      {sheets.map(s => (
+                        <option key={s.id} value={s.id}>{s.title}</option>
+                      ))}
+                    </select>
+                    <Button size="sm" onClick={() => installTemplate(detailsId)}>Add to Workspace</Button>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+      )}
     </Card>
   );
 }
-

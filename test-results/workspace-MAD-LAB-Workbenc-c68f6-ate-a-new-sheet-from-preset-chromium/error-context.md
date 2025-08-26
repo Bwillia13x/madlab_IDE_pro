@@ -1,6 +1,117 @@
 # Page snapshot
 
 ```yaml
-- paragraph: Initializing data providers...
-- region "Notifications alt+T"
+- dialog "Unhandled Runtime Error":
+  - navigation:
+    - button "previous" [disabled]:
+      - img "previous"
+    - button "next" [disabled]:
+      - img "next"
+    - text: 1 of 1 unhandled error Next.js (13.5.1) is outdated
+    - link "(learn more)":
+      - /url: https://nextjs.org/docs/messages/version-staleness
+  - button "Close"
+  - heading "Unhandled Runtime Error" [level=1]
+  - paragraph: "Error: Maximum update depth exceeded. This can happen when a component repeatedly calls setState inside componentWillUpdate or componentDidUpdate. React limits the number of nested updates to prevent infinite loops."
+  - heading "Call Stack" [level=2]
+  - heading "throwIfInfiniteUpdateLoopDetected" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (25568:11)
+  - heading "getRootForUpdatedFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (7366:3)
+  - heading "enqueueConcurrentHookUpdate" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (7257:10)
+  - heading "dispatchSetState" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (12147:16)
+  - heading "setRef" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/@radix-ui+react-compose-refs@1.1.2_@types+react@18.2.22_react@18.2.0/node_modules/@radix-ui/react-compose-refs/dist/index.mjs (11:12)
+  - heading "eval" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/@radix-ui+react-compose-refs@1.1.2_@types+react@18.2.22_react@18.2.0/node_modules/@radix-ui/react-compose-refs/dist/index.mjs (20:23)
+  - heading "Array.map" [level=3]
+  - text: <anonymous>
+  - heading "eval" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/@radix-ui+react-compose-refs@1.1.2_@types+react@18.2.22_react@18.2.0/node_modules/@radix-ui/react-compose-refs/dist/index.mjs (19:27)
+  - heading "setRef" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/@radix-ui+react-compose-refs@1.1.2_@types+react@18.2.22_react@18.2.0/node_modules/@radix-ui/react-compose-refs/dist/index.mjs (11:12)
+  - heading "eval" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/@radix-ui+react-compose-refs@1.1.2_@types+react@18.2.22_react@18.2.0/node_modules/@radix-ui/react-compose-refs/dist/index.mjs (20:23)
+  - heading "Array.map" [level=3]
+  - text: <anonymous>
+  - heading "eval" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/@radix-ui+react-compose-refs@1.1.2_@types+react@18.2.22_react@18.2.0/node_modules/@radix-ui/react-compose-refs/dist/index.mjs (19:27)
+  - heading "safelyDetachRef" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (19741:22)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21498:13)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21347:9)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21347:9)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21347:9)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21347:9)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21347:9)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21347:9)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21347:9)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21778:9)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21347:9)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21778:9)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21347:9)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21347:9)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21778:9)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21347:9)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21778:9)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21347:9)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21347:9)
+  - heading "recursivelyTraverseMutationEffects" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21325:7)
+  - heading "commitMutationEffectsOnFiber" [level=3]
+  - text: webpack-internal:/(app-pages-browser)/node_modules/.pnpm/next@13.5.1_@babel+core@7.28.0_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js (21347:9)
 ```

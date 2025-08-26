@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useWorkspaceStore } from '@/lib/store';
 import { Lightbulb } from 'lucide-react';
+import { orderManagementSystem } from '@/lib/trading/orderManagement';
 import { useEffect, useRef, useState } from 'react';
 import { InsightsEngine, type Insight } from '@/lib/insights';
 
@@ -17,23 +18,34 @@ const MOCK_OUTPUT_LOGS = [
 ];
 
 const MOCK_PROBLEMS = [
-  { type: 'error', file: 'dcf_model.py', line: 45, message: 'Division by zero in discount rate calculation' },
-  { type: 'warning', file: 'portfolio.json', line: 12, message: 'Deprecated security identifier format' },
+  {
+    type: 'error',
+    file: 'dcf_model.py',
+    line: 45,
+    message: 'Division by zero in discount rate calculation',
+  },
+  {
+    type: 'warning',
+    file: 'portfolio.json',
+    line: 12,
+    message: 'Deprecated security identifier format',
+  },
 ];
 
 export function BottomPanel() {
-  const { 
-    bottomPanelCollapsed, 
-    bottomPanelHeight, 
-    activeBottomTab, 
-    setActiveBottomTab, 
-    toggleBottomPanel, 
+  const {
+    bottomPanelCollapsed,
+    bottomPanelHeight,
+    activeBottomTab,
+    setActiveBottomTab,
+    toggleBottomPanel,
     globalSymbol,
   } = useWorkspaceStore();
-  
+
   const [isMaximized, setIsMaximized] = useState(false);
   const [insights, setInsights] = useState<Insight[]>([]);
   const engineRef = useRef<InsightsEngine | null>(null);
+  const [ordersVersion, setOrdersVersion] = useState(0);
 
   // Start/stop insights engine when Insights tab is active
   useEffect(() => {
@@ -50,6 +62,25 @@ export function BottomPanel() {
     };
   }, [activeBottomTab, globalSymbol]);
 
+  // Subscribe to OMS events to refresh Orders tab when present
+  useEffect(() => {
+    const bump = () => setOrdersVersion((v) => v + 1);
+    orderManagementSystem.on('orderSubmitted', bump);
+    orderManagementSystem.on('orderRouted', bump);
+    orderManagementSystem.on('orderExecuted', bump);
+    orderManagementSystem.on('orderFinalized', bump);
+    orderManagementSystem.on('orderCanceled', bump);
+    orderManagementSystem.on('orderModified', bump);
+    return () => {
+      orderManagementSystem.off('orderSubmitted', bump);
+      orderManagementSystem.off('orderRouted', bump);
+      orderManagementSystem.off('orderExecuted', bump);
+      orderManagementSystem.off('orderFinalized', bump);
+      orderManagementSystem.off('orderCanceled', bump);
+      orderManagementSystem.off('orderModified', bump);
+    };
+  }, []);
+
   if (bottomPanelCollapsed) {
     return (
       <div className="h-6 bg-[#2d2d30] border-t border-[#2d2d30] flex items-center justify-between px-2">
@@ -60,12 +91,7 @@ export function BottomPanel() {
           <span>•</span>
           <span>Terminal</span>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-4 w-4 p-0"
-          onClick={toggleBottomPanel}
-        >
+        <Button variant="ghost" size="sm" className="h-4 w-4 p-0" onClick={toggleBottomPanel}>
           <Maximize2 className="h-3 w-3 text-[#cccccc]" />
         </Button>
       </div>
@@ -75,8 +101,8 @@ export function BottomPanel() {
   const panelHeight = isMaximized ? '60vh' : `${bottomPanelHeight}px`;
 
   return (
-    <div 
-      className="bg-[#252526] border-t border-[#2d2d30] flex flex-col"
+    <div
+      className="bg-[#252526] border-t border-[#2d2d30] flex flex-col overflow-hidden"
       style={{ height: panelHeight, minHeight: '120px' }}
       data-testid="bottom-panel"
     >
@@ -84,29 +110,36 @@ export function BottomPanel() {
       <div className="h-9 px-3 flex items-center justify-between border-b border-[#2d2d30]">
         <Tabs value={activeBottomTab} onValueChange={setActiveBottomTab} className="flex-1">
           <TabsList className="bg-transparent h-full p-0 gap-0">
-            <TabsTrigger 
-              value="output" 
+            <TabsTrigger
+              value="output"
               className="bg-transparent text-[#cccccc] data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] rounded-none px-3 h-full"
               data-testid="bottom-panel-tab"
             >
               Output
             </TabsTrigger>
-            <TabsTrigger 
-              value="problems" 
+            <TabsTrigger
+              value="orders"
+              className="bg-transparent text-[#cccccc] data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] rounded-none px-3 h-full"
+              data-testid="bottom-panel-tab"
+            >
+              Orders & Fills
+            </TabsTrigger>
+            <TabsTrigger
+              value="problems"
               className="bg-transparent text-[#cccccc] data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] rounded-none px-3 h-full"
               data-testid="bottom-panel-tab"
             >
               Problems ({MOCK_PROBLEMS.length})
             </TabsTrigger>
-            <TabsTrigger 
-              value="terminal" 
+            <TabsTrigger
+              value="terminal"
               className="bg-transparent text-[#cccccc] data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] rounded-none px-3 h-full"
               data-testid="bottom-panel-tab"
             >
               Terminal
             </TabsTrigger>
-            <TabsTrigger 
-              value="insights" 
+            <TabsTrigger
+              value="insights"
               className="bg-transparent text-[#cccccc] data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] rounded-none px-3 h-full flex items-center gap-2"
               title="AI-powered insights"
             >
@@ -128,12 +161,7 @@ export function BottomPanel() {
               <Maximize2 className="h-3 w-3 text-[#cccccc]" />
             )}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0"
-            onClick={toggleBottomPanel}
-          >
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={toggleBottomPanel}>
             <X className="h-3 w-3 text-[#cccccc]" />
           </Button>
         </div>
@@ -147,11 +175,15 @@ export function BottomPanel() {
               {MOCK_OUTPUT_LOGS.map((log, index) => (
                 <div key={index} className="flex items-start gap-2 mb-1">
                   <span className="text-[#969696] flex-shrink-0">[{log.time}]</span>
-                  <span className={`flex-shrink-0 ${
-                    log.level === 'error' ? 'text-red-400' : 
-                    log.level === 'warn' ? 'text-yellow-400' : 
-                    'text-[#cccccc]'
-                  }`}>
+                  <span
+                    className={`flex-shrink-0 ${
+                      log.level === 'error'
+                        ? 'text-red-400'
+                        : log.level === 'warn'
+                          ? 'text-yellow-400'
+                          : 'text-[#cccccc]'
+                    }`}
+                  >
                     {log.level.toUpperCase()}
                   </span>
                   <span className="text-[#cccccc]">{log.message}</span>
@@ -161,17 +193,30 @@ export function BottomPanel() {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="problems" className="flex-1 mt-0">
+        <TabsContent value="orders" className="flex-1 mt-0">
           <ScrollArea className="h-full">
             <div className="p-2">
+              <OrdersTable key={ordersVersion} />
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="problems" className="flex-1 mt-0">
+          <ScrollArea className="h-full">
+            <div className="p-2 overflow-x-auto">
               {MOCK_PROBLEMS.map((problem, index) => (
-                <div key={index} className="flex items-start gap-2 mb-2 p-2 hover:bg-[#2a2d2e] cursor-pointer">
-                  <div className={`w-4 h-4 rounded-full flex-shrink-0 mt-0.5 ${
-                    problem.type === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-                  }`} />
-                  <div className="flex-1">
-                    <div className="text-sm text-[#cccccc]">{problem.message}</div>
-                    <div className="text-xs text-[#969696]">
+                <div
+                  key={index}
+                  className="flex items-start gap-2 mb-2 p-2 hover:bg-[#2a2d2e] cursor-pointer rounded"
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full flex-shrink-0 mt-0.5 ${
+                      problem.type === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+                    }`}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-[#cccccc] break-words">{problem.message}</div>
+                    <div className="text-xs text-[#969696] truncate">
                       {problem.file}:{problem.line}
                     </div>
                   </div>
@@ -197,8 +242,12 @@ export function BottomPanel() {
             <div className="p-3 space-y-3 text-sm">
               {insights.length === 0 ? (
                 <>
-                  <div className="text-[#cccccc]">Insights will appear here as you interact with the workspace.</div>
-                  <div className="text-[#969696]">Try adding widgets or changing the global symbol to trigger insights.</div>
+                  <div className="text-[#cccccc]">
+                    Insights will appear here as you interact with the workspace.
+                  </div>
+                  <div className="text-[#969696]">
+                    Try adding widgets or changing the global symbol to trigger insights.
+                  </div>
                 </>
               ) : (
                 <div className="space-y-2">
@@ -206,7 +255,9 @@ export function BottomPanel() {
                     <div key={ins.id} className="border border-[#2d2d30] rounded p-2 bg-[#1e1e1e]">
                       <div className="text-[#cccccc] font-medium">{ins.title}</div>
                       <div className="text-[#969696]">{ins.message}</div>
-                      <div className="text-[10px] text-[#6f6f6f] mt-1">{ins.symbol} • {ins.timestamp.toLocaleTimeString()}</div>
+                      <div className="text-[10px] text-[#6f6f6f] mt-1">
+                        {ins.symbol} • {ins.timestamp.toLocaleTimeString()}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -215,6 +266,52 @@ export function BottomPanel() {
           </ScrollArea>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function OrdersTable() {
+  const orders = orderManagementSystem.getAllOrders();
+  if (orders.length === 0) {
+    return (
+      <div className="text-xs text-[#969696]">
+        No orders yet. Use the Paper Trading widget to submit an order.
+      </div>
+    );
+  }
+  return (
+    <div className="text-xs">
+      <div className="grid grid-cols-10 gap-2 font-medium text-[#cccccc] mb-2">
+        <div>ID</div>
+        <div>Symbol</div>
+        <div>Side</div>
+        <div>Type</div>
+        <div className="text-right">Qty</div>
+        <div className="text-right">Exec</div>
+        <div className="text-right">AvgPx</div>
+        <div>Status</div>
+        <div className="text-right">Fees</div>
+        <div className="text-right">Comms</div>
+      </div>
+      <div className="space-y-1">
+        {orders.map((o) => (
+          <div
+            key={o.id}
+            className="grid grid-cols-10 gap-2 p-2 bg-[#1e1e1e] border border-[#2d2d30] rounded"
+          >
+            <div className="truncate">{o.id}</div>
+            <div>{o.symbol}</div>
+            <div className="capitalize">{o.side}</div>
+            <div className="capitalize">{o.orderType}</div>
+            <div className="text-right">{o.quantity}</div>
+            <div className="text-right">{o.executedQuantity}</div>
+            <div className="text-right">{o.averageExecutionPrice.toFixed(2)}</div>
+            <div className="capitalize">{o.status.replace('_', ' ')}</div>
+            <div className="text-right">{o.fees.toFixed(2)}</div>
+            <div className="text-right">{o.commissions.toFixed(2)}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

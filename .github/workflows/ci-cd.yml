@@ -77,7 +77,11 @@ jobs:
       - name: Run E2E tests
         run: |
           npx playwright install --with-deps
-          pnpm e2e
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            pnpm exec playwright test tests/e2e/happy-path.spec.ts tests/e2e/provider-fallback.spec.ts
+          else
+            pnpm e2e
+          fi
 
       - name: Upload test results
         uses: actions/upload-artifact@v4

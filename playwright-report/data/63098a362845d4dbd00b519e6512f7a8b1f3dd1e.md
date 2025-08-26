@@ -1,0 +1,117 @@
+# Page snapshot
+
+```yaml
+- status: "Demo mode: synthetic data"
+- button "Dashboard":
+  - img
+  - text: Dashboard
+- button "Charts":
+  - img
+  - text: Charts
+- button "Portfolio":
+  - img
+  - text: Portfolio
+- button "Analytics":
+  - img
+  - text: Analytics
+- button "News":
+  - img
+  - text: News
+- button "Settings":
+  - img
+  - text: Settings
+- button:
+  - img
+- heading "Dashboard" [level=1]
+- text: "3"
+- button:
+  - img
+- heading "Dashboard" [level=1]
+- text: 7 widgets
+- img
+- textbox "Search widgets..."
+- button "Switch to list view":
+  - img
+- button "Add":
+  - img
+  - text: Add
+- button "×"
+- heading "KPI" [level=3]:
+  - img
+  - text: KPI
+- img
+- paragraph: Widget content
+- button "×"
+- heading "DCF (Basic)" [level=3]:
+  - img
+  - text: DCF (Basic)
+- img
+- paragraph: Widget content
+- button "×"
+- heading "Financials Summary" [level=3]:
+  - img
+  - text: Financials Summary
+- img
+- paragraph: Widget content
+- button "×"
+- heading "Peers (KPIs)" [level=3]:
+  - img
+  - text: Peers (KPIs)
+- img
+- paragraph: Widget content
+- button "×"
+- heading "Quarterly Financials" [level=3]:
+  - img
+  - text: Quarterly Financials
+- img
+- paragraph: Widget content
+- button "×"
+- heading "Income Statement Breakdown" [level=3]:
+  - img
+  - text: Income Statement Breakdown
+- img
+- paragraph: Widget content
+- button "×"
+- heading "KPI Mini-Grid" [level=3]:
+  - img
+  - text: KPI Mini-Grid
+- img
+- paragraph: Widget content
+- button:
+  - img
+- text: Pull down to refresh
+- heading "Performance Monitor" [level=1]
+- paragraph: Real-time monitoring of cache performance and system metrics
+- button "Start Monitoring":
+  - img
+  - text: Start Monitoring
+- button "Reset Metrics":
+  - img
+  - text: Reset Metrics
+- heading "System Overview" [level=3]:
+  - img
+  - text: System Overview
+- paragraph: "Last updated: 9:22:43 PM"
+- text: Total Memory Usage 0 B Average Hit Rate 0.0% Total Requests 0 Avg Response Time 0.00ms
+- tablist:
+  - tab "Overview" [selected]
+  - tab "Detailed Metrics"
+  - tab "Health Status"
+- tabpanel "Overview":
+  - heading "Global Data Cache" [level=3]
+  - text: warning Size:0/2000 Hit Rate:0.0% Memory:0 B TTL:0s Requests:0 Response:0.00ms
+  - heading "Price Cache" [level=3]
+  - text: warning Size:0/1000 Hit Rate:0.0% Memory:0 B TTL:0s Requests:0 Response:0.00ms
+  - heading "Financial Cache" [level=3]
+  - text: warning Size:0/500 Hit Rate:0.0% Memory:0 B TTL:0s Requests:0 Response:0.00ms
+  - heading "KPI Cache" [level=3]
+  - text: warning Size:0/500 Hit Rate:0.0% Memory:0 B TTL:0s Requests:0 Response:0.00ms
+  - heading "Technical Indicators Cache" [level=3]
+  - text: warning Size:0/300 Hit Rate:0.0% Memory:0 B TTL:0s Requests:0 Response:0.00ms
+  - heading "Sentiment Cache" [level=3]
+  - text: warning Size:0/200 Hit Rate:0.0% Memory:0 B TTL:0s Requests:0 Response:0.00ms
+  - heading "News Cache" [level=3]
+  - text: warning Size:0/100 Hit Rate:0.0% Memory:0 B TTL:0s Requests:0 Response:0.00ms
+- region "Notifications alt+T"
+- alert
+```

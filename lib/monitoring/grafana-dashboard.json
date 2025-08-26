@@ -1,0 +1,492 @@
+{
+    "dashboard": {
+        "id": null,
+        "title": "MAD LAB Platform - Health & Performance Dashboard",
+        "tags": [
+            "madlab",
+            "health",
+            "performance",
+            "monitoring"
+        ],
+        "style": "dark",
+        "timezone": "browser",
+        "panels": [
+            {
+                "id": 1,
+                "title": "System Health Overview",
+                "type": "stat",
+                "targets": [
+                    {
+                        "expr": "health_score",
+                        "legendFormat": "Health Score"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "color": {
+                            "mode": "thresholds"
+                        },
+                        "thresholds": {
+                            "steps": [
+                                {
+                                    "color": "red",
+                                    "value": 0
+                                },
+                                {
+                                    "color": "yellow",
+                                    "value": 70
+                                },
+                                {
+                                    "color": "green",
+                                    "value": 90
+                                }
+                            ]
+                        },
+                        "unit": "short",
+                        "min": 0,
+                        "max": 100
+                    }
+                },
+                "gridPos": {
+                    "h": 8,
+                    "w": 6,
+                    "x": 0,
+                    "y": 0
+                }
+            },
+            {
+                "id": 2,
+                "title": "Component Status",
+                "type": "table",
+                "targets": [
+                    {
+                        "expr": "component_status",
+                        "legendFormat": "{{component}}"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "color": {
+                            "mode": "thresholds"
+                        },
+                        "thresholds": {
+                            "steps": [
+                                {
+                                    "color": "red",
+                                    "value": 0
+                                },
+                                {
+                                    "color": "yellow",
+                                    "value": 1
+                                },
+                                {
+                                    "color": "green",
+                                    "value": 2
+                                }
+                            ]
+                        },
+                        "mappings": [
+                            {
+                                "options": {
+                                    "0": {
+                                        "text": "Unhealthy"
+                                    }
+                                }
+                            },
+                            {
+                                "options": {
+                                    "1": {
+                                        "text": "Degraded"
+                                    }
+                                }
+                            },
+                            {
+                                "options": {
+                                    "2": {
+                                        "text": "Healthy"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "gridPos": {
+                    "h": 8,
+                    "w": 18,
+                    "x": 6,
+                    "y": 0
+                }
+            },
+            {
+                "id": 3,
+                "title": "Health Check Duration",
+                "type": "histogram",
+                "targets": [
+                    {
+                        "expr": "rate(health_check_duration_seconds_bucket[5m])",
+                        "legendFormat": "{{le}}"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "s",
+                        "min": 0
+                    }
+                },
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 0,
+                    "y": 8
+                }
+            },
+            {
+                "id": 4,
+                "title": "System Uptime",
+                "type": "stat",
+                "targets": [
+                    {
+                        "expr": "system_uptime_seconds",
+                        "legendFormat": "Uptime"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "s",
+                        "color": {
+                            "mode": "continuous-BlYlRd"
+                        }
+                    }
+                },
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 12,
+                    "y": 8
+                }
+            },
+            {
+                "id": 5,
+                "title": "AI Service Performance",
+                "type": "timeseries",
+                "targets": [
+                    {
+                        "expr": "rate(ai_requests_total[5m])",
+                        "legendFormat": "Requests/sec"
+                    },
+                    {
+                        "expr": "ai_queue_length",
+                        "legendFormat": "Queue Length"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "color": {
+                            "mode": "palette-classic"
+                        }
+                    }
+                },
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 0,
+                    "y": 16
+                }
+            },
+            {
+                "id": 6,
+                "title": "AI Request Duration",
+                "type": "histogram",
+                "targets": [
+                    {
+                        "expr": "rate(ai_request_duration_seconds_bucket[5m])",
+                        "legendFormat": "{{le}}"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "s",
+                        "min": 0
+                    }
+                },
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 12,
+                    "y": 16
+                }
+            },
+            {
+                "id": 7,
+                "title": "Database Performance",
+                "type": "timeseries",
+                "targets": [
+                    {
+                        "expr": "rate(database_query_duration_seconds_sum[5m]) / rate(database_query_duration_seconds_count[5m])",
+                        "legendFormat": "Avg Query Duration"
+                    },
+                    {
+                        "expr": "database_connections_active",
+                        "legendFormat": "Active Connections"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "color": {
+                            "mode": "palette-classic"
+                        },
+                        "unit": "s"
+                    }
+                },
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 0,
+                    "y": 24
+                }
+            },
+            {
+                "id": 8,
+                "title": "Cache Performance",
+                "type": "timeseries",
+                "targets": [
+                    {
+                        "expr": "cache_hit_rate",
+                        "legendFormat": "Hit Rate"
+                    },
+                    {
+                        "expr": "cache_memory_usage_bytes / cache_memory_max_bytes * 100",
+                        "legendFormat": "Memory Usage %"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "color": {
+                            "mode": "palette-classic"
+                        },
+                        "unit": "percent"
+                    }
+                },
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 12,
+                    "y": 24
+                }
+            },
+            {
+                "id": 9,
+                "title": "System Resources",
+                "type": "timeseries",
+                "targets": [
+                    {
+                        "expr": "system_cpu_usage_percent",
+                        "legendFormat": "CPU Usage"
+                    },
+                    {
+                        "expr": "system_memory_usage_bytes / system_memory_max_bytes * 100",
+                        "legendFormat": "Memory Usage"
+                    },
+                    {
+                        "expr": "system_disk_usage_bytes / system_disk_max_bytes * 100",
+                        "legendFormat": "Disk Usage"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "color": {
+                            "mode": "palette-classic"
+                        },
+                        "unit": "percent",
+                        "min": 0,
+                        "max": 100
+                    }
+                },
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 0,
+                    "y": 32
+                }
+            },
+            {
+                "id": 10,
+                "title": "Network Activity",
+                "type": "timeseries",
+                "targets": [
+                    {
+                        "expr": "rate(system_network_requests_total[5m])",
+                        "legendFormat": "Requests/sec"
+                    },
+                    {
+                        "expr": "rate(system_network_errors_total[5m])",
+                        "legendFormat": "Errors/sec"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "color": {
+                            "mode": "palette-classic"
+                        }
+                    }
+                },
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 12,
+                    "y": 32
+                }
+            },
+            {
+                "id": 11,
+                "title": "Health Check Trends",
+                "type": "timeseries",
+                "targets": [
+                    {
+                        "expr": "health_score",
+                        "legendFormat": "Health Score"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "color": {
+                            "mode": "thresholds"
+                        },
+                        "thresholds": {
+                            "steps": [
+                                {
+                                    "color": "red",
+                                    "value": 0
+                                },
+                                {
+                                    "color": "yellow",
+                                    "value": 70
+                                },
+                                {
+                                    "color": "green",
+                                    "value": 90
+                                }
+                            ]
+                        },
+                        "min": 0,
+                        "max": 100
+                    }
+                },
+                "gridPos": {
+                    "h": 8,
+                    "w": 24,
+                    "x": 0,
+                    "y": 40
+                }
+            },
+            {
+                "id": 12,
+                "title": "Component Status Timeline",
+                "type": "heatmap",
+                "targets": [
+                    {
+                        "expr": "component_status",
+                        "legendFormat": "{{component}}"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "color": {
+                            "mode": "thresholds"
+                        },
+                        "thresholds": {
+                            "steps": [
+                                {
+                                    "color": "red",
+                                    "value": 0
+                                },
+                                {
+                                    "color": "yellow",
+                                    "value": 1
+                                },
+                                {
+                                    "color": "green",
+                                    "value": 2
+                                }
+                            ]
+                        }
+                    }
+                },
+                "gridPos": {
+                    "h": 8,
+                    "w": 24,
+                    "x": 0,
+                    "y": 48
+                }
+            }
+        ],
+        "time": {
+            "from": "now-1h",
+            "to": "now"
+        },
+        "timepicker": {
+            "refresh_intervals": [
+                "5s",
+                "10s",
+                "30s",
+                "1m",
+                "5m",
+                "15m",
+                "30m",
+                "1h",
+                "2h",
+                "1d"
+            ]
+        },
+        "templating": {
+            "list": [
+                {
+                    "name": "component",
+                    "type": "query",
+                    "query": "label_values(component_status, component)",
+                    "refresh": 2,
+                    "includeAll": true,
+                    "multi": true
+                },
+                {
+                    "name": "time_range",
+                    "type": "interval",
+                    "query": "1m,5m,10m,30m,1h,6h,12h,1d",
+                    "current": "5m"
+                }
+            ]
+        },
+        "annotations": {
+            "list": [
+                {
+                    "name": "Health Check Alerts",
+                    "datasource": "Prometheus",
+                    "query": "health_score < 70",
+                    "iconColor": "red",
+                    "lineColor": "red",
+                    "textColor": "white"
+                }
+            ]
+        },
+        "refresh": "30s",
+        "schemaVersion": 30,
+        "version": 1,
+        "links": [
+            {
+                "title": "Health Check API",
+                "url": "/api/health",
+                "targetBlank": true
+            },
+            {
+                "title": "Health History",
+                "url": "/api/health/history",
+                "targetBlank": true
+            },
+            {
+                "title": "Prometheus Metrics",
+                "url": "http://localhost:9464/metrics",
+                "targetBlank": true
+            }
+        ]
+    }
+}

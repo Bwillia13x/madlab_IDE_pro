@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, memo, useCallback } from 'react';
+import { useState, useMemo, useRef, memo, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,6 +10,10 @@ import { Slider } from '@/components/ui/slider';
 import type { Widget } from '@/lib/store';
 import { Search, ExternalLink } from 'lucide-react';
 import { useWorkspaceStore } from '@/lib/store';
+import { getProviderCapabilities } from '@/lib/data/providers';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
+import '@/styles/optionsChain.css';
 
 interface OptionsChainWidgetProps {
   widget: Widget;
@@ -171,9 +175,10 @@ const OptionsChainWidget = memo(function OptionsChainWidget({ widget: _widget }:
   const [scrollTop, setScrollTop] = useState(0);
   
   const tableRef = useRef<HTMLDivElement>(null);
+  const outerRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
   const ITEM_HEIGHT = 32; // Height of each row in pixels
   const VISIBLE_ITEMS = 8; // Number of visible items
-  const CONTAINER_HEIGHT = VISIBLE_ITEMS * ITEM_HEIGHT;
 
   const underlying = useMemo(() => MOCK_UNDERLYINGS[symbol], [symbol]);
   const adjustedPrice = useMemo(() => underlying?.price * (1 + priceShock / 100) || 0, [underlying, priceShock]);
@@ -231,6 +236,41 @@ const OptionsChainWidget = memo(function OptionsChainWidget({ widget: _widget }:
   }, [optionChain, scrollTop, ITEM_HEIGHT, VISIBLE_ITEMS]);
 
   const totalHeight = optionChain.length * ITEM_HEIGHT;
+
+  // Apply virtualization styles via refs to avoid inline style lint
+  useEffect(() => {
+    if (outerRef.current) {
+      outerRef.current.style.setProperty('--containerHeight', `${totalHeight}px`);
+    }
+    if (innerRef.current) {
+      innerRef.current.style.transform = `translateY(${offsetY}px)`;
+    }
+  }, [totalHeight, offsetY]);
+
+  // Capability gating
+  const dataProvider = useWorkspaceStore((s) => s.dataProvider);
+  const caps = getProviderCapabilities(dataProvider);
+
+  if (!caps.options) {
+    return (
+      <Card className="h-full">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Search className="w-4 h-4" />
+            Options Chain
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert className="border-amber-200 bg-amber-50">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-800 text-xs">
+              This feature requires Polygon. Switch your data provider in Settings to enable Options.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="h-full">
@@ -348,24 +388,21 @@ const OptionsChainWidget = memo(function OptionsChainWidget({ widget: _widget }:
           {/* Virtualized Body */}
           <div 
             ref={tableRef}
-            className="relative overflow-auto border border-border rounded"
-            style={{ height: CONTAINER_HEIGHT }}
+            className="relative overflow-auto border border-border rounded h-64"
             onScroll={handleScroll}
           >
-            <div style={{ height: totalHeight }}>
-              <div 
-                style={{ 
-                  transform: `translateY(${offsetY}px)`,
-                  height: visibleItems.length * ITEM_HEIGHT
-                }}
-              >
+            <div
+              ref={outerRef}
+              className="options-virtual-outer"
+              aria-hidden
+            >
+              <div ref={innerRef} className="options-virtual-inner">
                 <table className="w-full text-xs">
                   <tbody>
                     {visibleItems.map((option) => (
                       <tr 
                         key={option.strike} 
-                        className="border-b border-border/50 hover:bg-muted/20"
-                        style={{ height: ITEM_HEIGHT }}
+                        className="border-b border-border/50 hover:bg-muted/20 h-8"
                       >
                         <td className={`py-1 text-left ${option.call.isITM ? 'bg-primary/10' : ''}`}>
                           C

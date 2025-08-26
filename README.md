@@ -1,6 +1,7 @@
 # MAD LAB - Agent-Programmable Workbench
 
 [![CI](https://github.com/your-repo/mad-lab-workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/your-repo/mad-lab-workbench/actions/workflows/ci.yml)
+[![E2E Smoke (PRs)](https://img.shields.io/badge/E2E%20Smoke-Playwright-blue)](https://github.com/your-repo/mad-lab-workbench/actions/workflows/ci.yml)
 
 A production-ready VS Code-inspired financial analysis workbench with agent integration capabilities, built with Next.js 14, TypeScript, and modern web technologies.
 
@@ -169,7 +170,13 @@ Create a `.env.local` file for custom configuration:
 # Optional: Custom API endpoints
 NEXT_PUBLIC_API_URL=https://your-api.com
 NEXT_PUBLIC_AGENT_API_URL=https://your-agent-api.com
+ALPHA_VANTAGE_KEY=your_av_key_here
+OPENAI_API_KEY=sk-... # or ANTHROPIC_API_KEY=...
 ```
+
+In-app, open Settings → Data Provider to select Alpha Vantage or Polygon. Options widgets require Polygon; historical backtests require Alpha Vantage.
+
+Agent: The agent panel calls the server route `/api/agent` so your API key stays on the server. Responses stream incrementally. The agent can trigger simple actions via directives like `action:add_widget:advanced-chart` which adds a widget to the active sheet.
 
 ### Theme Customization
 
@@ -211,6 +218,15 @@ pnpm e2e
 # Run E2E tests in UI mode
 pnpm e2e -- --ui
 ```
+
+### E2E Reports (Playwright)
+
+- On pull requests, CI runs smoke E2E tests and uploads the HTML report as an artifact named `playwright-report-<run id>`.
+- On pushes to `main`, CI runs the full E2E suite and uploads the HTML report.
+- To view a report:
+  1. Open GitHub → Actions → select the latest CI run for your PR or push.
+  2. Scroll to Artifacts and download `playwright-report-…`.
+  3. Unzip and open `index.html` locally, or serve it: `npx http-server playwright-report`.
 
 ## 🚀 Deployment
 
@@ -334,7 +350,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Built with ❤️ for the financial analysis community**
+Built with ❤️ for the financial analysis community.
 
 For questions, suggestions, or support, please [open an issue](https://github.com/your-repo/mad-lab-workbench/issues) or reach out to our team.
-# Platform ready for deployment - Sat Aug 16 11:29:09 PM UTC 2025
+
+Platform ready for deployment - Sat Aug 16 11:29:09 PM UTC 2025

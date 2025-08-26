@@ -77,7 +77,7 @@ export function MarketOverviewWidget({ widget: _widget }: Readonly<MarketOvervie
   };
 
   return (
-    <Card className="h-full">
+    <Card className="h-full" role="region" aria-label="Market Overview Widget">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm">Market Overview</CardTitle>
       </CardHeader>
@@ -94,8 +94,8 @@ export function MarketOverviewWidget({ widget: _widget }: Readonly<MarketOvervie
                   <div className="text-xs text-muted-foreground">Watch</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-xs font-medium">{kpi ? `$${kpi.price.toFixed(2)}` : '—'}</div>
-                  {kpi && (
+                  <div className="text-xs font-medium">{kpi ? `$${kpi.price?.toFixed(2)}` : '—'}</div>
+                  {kpi && kpi.change !== undefined && kpi.changePercent !== undefined && (
                     <div className={`text-xs flex items-center gap-1 ${getChangeColor(kpi.changePercent)}`}>
                       {getChangeIcon(kpi.changePercent)}
                       {kpi.change > 0 ? '+' : ''}{kpi.change.toFixed(2)} ({kpi.changePercent.toFixed(2)}%)

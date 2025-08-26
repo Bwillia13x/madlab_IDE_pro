@@ -64,7 +64,7 @@ export function TitleBar() {
       a.click();
       URL.revokeObjectURL(url);
       toast.success('Workspace exported');
-    } catch (e) {
+    } catch (_e) {
       toast.error('Export failed');
     }
   };
@@ -81,7 +81,7 @@ export function TitleBar() {
       const ok = importWorkspace(JSON.parse(text));
       if (!ok) toast.error('Import failed: invalid data');
       else toast.success('Workspace imported');
-    } catch (err) {
+    } catch (_err) {
       toast.error('Import error');
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';

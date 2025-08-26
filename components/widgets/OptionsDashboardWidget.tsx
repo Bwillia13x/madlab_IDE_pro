@@ -12,6 +12,9 @@ import { Zap } from 'lucide-react';
 import { useWorkspaceStore } from '@/lib/store';
 import { useKpis } from '@/lib/data/hooks';
 import type { Widget } from '@/lib/store';
+import { getProviderCapabilities } from '@/lib/data/providers';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface OptionsDashboardWidgetProps {
   widget: Widget;
@@ -64,6 +67,8 @@ const MOCK_PNL_DATA: PnLData[] = [
 
 export function OptionsDashboardWidget({ widget: _widget }: Readonly<OptionsDashboardWidgetProps>) {
   const globalSymbol = useWorkspaceStore((s) => s.globalSymbol);
+  const dataProvider = useWorkspaceStore((s) => s.dataProvider);
+  const caps = getProviderCapabilities(dataProvider);
   const symbols = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'SPY'];
   const initial = symbols.includes(globalSymbol) ? globalSymbol : 'AAPL';
   const [selectedSymbol, setSelectedSymbol] = useState(initial);
@@ -130,6 +135,28 @@ export function OptionsDashboardWidget({ widget: _widget }: Readonly<OptionsDash
   };
 
   const positionMetrics = calculatePositionMetrics();
+
+  if (!caps.options) {
+    return (
+      <Card className="h-full">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Zap className="w-4 h-4" />
+            Options Dashboard
+            <Badge variant="secondary" className="ml-auto">{initial}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert className="border-amber-200 bg-amber-50">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-800 text-xs">
+              This feature requires Polygon. Switch your data provider in Settings to enable the Options Dashboard.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="h-full">

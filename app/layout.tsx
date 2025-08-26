@@ -5,6 +5,9 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeSync } from '@/components/ThemeSync';
 import { DataProvider } from '@/components/providers/DataProvider';
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
+import { URLPersistenceSync } from '@/components/URLPersistenceSync';
+import { KeyboardShortcutsProvider } from '@/components/KeyboardShortcuts';
+import { CollaborationProvider } from '@/components/collaboration/CollaborationProvider';
 import dynamic from 'next/dynamic';
 import { Toaster } from 'sonner';
 
@@ -92,10 +95,15 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <DataProvider>
-            {children}
-          </DataProvider>
-          <ThemeSync />
+          <KeyboardShortcutsProvider>
+            <DataProvider>
+              <CollaborationProvider>
+                {children}
+              </CollaborationProvider>
+            </DataProvider>
+            <ThemeSync />
+            <URLPersistenceSync />
+          </KeyboardShortcutsProvider>
         </ThemeProvider>
         <ServiceWorkerRegistration />
         <PerformanceMonitor />

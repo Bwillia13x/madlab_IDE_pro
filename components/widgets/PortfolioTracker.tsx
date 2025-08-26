@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Trash2, TrendingUp, TrendingDown, DollarSign, Activity, RefreshCw } from 'lucide-react';
 import type { Widget } from '@/lib/store';
 import { useRealtimeKPIs } from '@/lib/data/useRealtimeData';
+import { WidgetExportButton } from './WidgetShell';
 
 interface PortfolioAsset {
   symbol: string;
@@ -37,14 +38,57 @@ export function PortfolioTracker({ widget, sheetId: _sheetId, onTitleChange: _on
   const [newSymbol, setNewSymbol] = useState('');
   const [newShares, setNewShares] = useState('');
   const [newAvgPrice, setNewAvgPrice] = useState('');
+  const widgetRef = useRef<HTMLDivElement>(null);
 
   // Fetch real-time data for all assets
   const { kpis: kpisData, isRunning: kpisLoading, error: kpisError } = useRealtimeKPIs(assets.map(asset => asset.symbol));
-  
+
+  // Asset data mapping
   const assetData = assets.map(asset => {
     const data = kpisData.find(kpi => kpi.symbol === asset.symbol);
     return { asset, data, loading: kpisLoading, error: kpisError };
   });
+
+  // Enhanced assets with real-time data
+  const enhancedAssets = useMemo(() => {
+    return assets.map((asset, index) => {
+      const data = assetData[index]?.data;
+      if (!data) return asset;
+
+      // Use average price since KPI data doesn't include current price
+      const currentPrice = asset.avgPrice;
+      const marketValue = asset.shares * currentPrice;
+      const totalReturn = 0; // No price change data available
+      const totalReturnPercent = 0;
+      const dayChange = asset.shares * data.change;
+      const dayChangePercent = data.changePercent;
+
+      return {
+        ...asset,
+        currentPrice,
+        marketValue,
+        totalReturn,
+        totalReturnPercent,
+        dayChange,
+        dayChangePercent,
+      };
+    });
+  }, [assets, assetData]);
+
+  // Prepare export data
+  const exportData = useMemo(() => {
+    return enhancedAssets.map(asset => ({
+      symbol: asset.symbol,
+      shares: asset.shares,
+      avgPrice: asset.avgPrice,
+      currentPrice: asset.currentPrice,
+      marketValue: asset.marketValue,
+      totalReturn: asset.totalReturn,
+      totalReturnPercent: asset.totalReturnPercent,
+      dayChange: asset.dayChange,
+      dayChangePercent: asset.dayChangePercent,
+    }));
+  }, [enhancedAssets]);
 
   // Calculate portfolio statistics
   const portfolioStats = useMemo(() => {
@@ -80,32 +124,6 @@ export function PortfolioTracker({ widget, sheetId: _sheetId, onTitleChange: _on
       totalReturnPercent,
       dayChangePercent,
     };
-  }, [assets, assetData]);
-
-  // Enhanced assets with real-time data
-  const enhancedAssets = useMemo(() => {
-    return assets.map((asset, index) => {
-      const data = assetData[index]?.data;
-      if (!data) return asset;
-
-      // Use average price since KPI data doesn't include current price
-      const currentPrice = asset.avgPrice;
-      const marketValue = asset.shares * currentPrice;
-      const totalReturn = 0; // No price change data available
-      const totalReturnPercent = 0;
-      const dayChange = asset.shares * data.change;
-      const dayChangePercent = data.changePercent;
-
-      return {
-        ...asset,
-        currentPrice,
-        marketValue,
-        totalReturn,
-        totalReturnPercent,
-        dayChange,
-        dayChangePercent,
-      };
-    });
   }, [assets, assetData]);
 
   const handleAddAsset = () => {
@@ -164,38 +182,46 @@ export function PortfolioTracker({ widget, sheetId: _sheetId, onTitleChange: _on
   
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              {widget.title}
-            </CardTitle>
-            {portfolioStats && (
-              <div className="flex items-center gap-4 mt-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-semibold">
-                    {formatCurrency(portfolioStats.totalMarketValue)}
-                  </span>
-                  <div className={`flex items-center gap-1 text-sm ${portfolioStats.totalReturn >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {portfolioStats.totalReturn >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                    {formatCurrency(Math.abs(portfolioStats.totalReturn))} ({formatPercent(portfolioStats.totalReturnPercent)})
+    <div ref={widgetRef}>
+      <Card className="h-full">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                {widget.title}
+              </CardTitle>
+              {portfolioStats && (
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-semibold">
+                      {formatCurrency(portfolioStats.totalMarketValue)}
+                    </span>
+                    <div className={`flex items-center gap-1 text-sm ${portfolioStats.totalReturn >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {portfolioStats.totalReturn >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                      {formatCurrency(Math.abs(portfolioStats.totalReturn))} ({formatPercent(portfolioStats.totalReturnPercent)})
+                    </div>
                   </div>
+                  <span className="text-sm text-muted-foreground">• Portfolio</span>
                 </div>
-                <span className="text-sm text-muted-foreground">• Portfolio</span>
-              </div>
-            )}
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <WidgetExportButton
+                widgetType={widget.type}
+                widgetTitle={widget.title}
+                data={exportData}
+                element={widgetRef.current || undefined}
+                className="mr-2"
+              />
+              <Button variant="outline" size="sm" className="h-8 px-2">
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Refresh
+              </Button>
+            </div>
           </div>
-          
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="h-8 px-2">
-              <RefreshCw className="h-3 w-3 mr-1" />
-              Refresh
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
       
       <CardContent className="space-y-4">
         {/* Portfolio Summary */}
@@ -353,5 +379,6 @@ export function PortfolioTracker({ widget, sheetId: _sheetId, onTitleChange: _on
         </div>
       </CardContent>
     </Card>
+    </div>
   );
 }

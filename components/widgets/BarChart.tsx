@@ -1,6 +1,13 @@
 'use client';
 
-import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import {
+  BarChart as RechartsBarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip,
+} from 'recharts';
 import type { Widget } from '@/lib/store';
 
 interface BarChartProps {
@@ -21,32 +28,29 @@ export function BarChart({ widget: _widget }: Readonly<BarChartProps>) {
     <div className="h-full">
       <ResponsiveContainer width="100%" height="100%">
         <RechartsBarChart data={MOCK_BAR_DATA}>
-          <XAxis 
-            dataKey="name" 
+          <XAxis
+            dataKey="name"
             axisLine={false}
             tickLine={false}
             tick={{ fontSize: 12, fill: '#969696' }}
           />
-          <YAxis 
-            axisLine={false}
-            tickLine={false}
-            tick={{ fontSize: 12, fill: '#969696' }}
-          />
-          <Tooltip 
-            contentStyle={{ 
-              backgroundColor: '#2d2d30', 
+          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#969696' }} />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: '#2d2d30',
               border: '1px solid #3e3e42',
               borderRadius: '4px',
-              color: '#cccccc'
+              color: '#cccccc',
             }}
           />
-          <Bar 
-            dataKey="value" 
-            fill="#007acc"
-            radius={[2, 2, 0, 0]}
-          />
+          <Bar dataKey="value" fill="#007acc" radius={[2, 2, 0, 0]} />
         </RechartsBarChart>
       </ResponsiveContainer>
+
+      {/* Data Source Indicator */}
+      <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+        Sample Data
+      </div>
     </div>
   );
 }

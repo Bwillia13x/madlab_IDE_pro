@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { useWorkspaceStore } from '@/lib/store';
-import { getProvider } from './providers';
+import { getProvider, getProviderCapabilities } from './providers';
 import type { PriceRange, KpiData, PricePoint, FinancialData } from './provider.types';
 
 // In-flight request cancellation helpers
@@ -43,6 +44,49 @@ function setCachedData<T>(key: string, data: T, ttl: number = CACHE_TTL): void {
   cache.set(key, { data, timestamp: Date.now(), ttl });
 }
 
+// Typed error mapping
+export type DataErrorType = 'rateLimit' | 'invalidKey' | 'network' | 'unauthorized' | 'aborted' | 'unknown';
+
+export function classifyError(error: unknown): { type: DataErrorType; message: string } {
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return { type: 'aborted', message: 'Request aborted' };
+  }
+  const message = error instanceof Error ? error.message : String(error ?? 'Unknown error');
+  if (/rate limit|quota|too many/i.test(message)) return { type: 'rateLimit', message };
+  if (/invalid api key|invalid key|api key required/i.test(message)) return { type: 'invalidKey', message };
+  if (/forbidden|unauthorized|401/i.test(message)) return { type: 'unauthorized', message };
+  if (/network|fetch failed|failed to fetch|timeout|dns/i.test(message)) return { type: 'network', message };
+  return { type: 'unknown', message };
+}
+
+function backoffDelay(baseMs: number, attempt: number): number {
+  const maxJitter = 0.3;
+  const exp = Math.min(6, attempt); // cap exponent
+  const delay = baseMs * Math.pow(2, exp);
+  const jitter = delay * (Math.random() * maxJitter);
+  return delay + jitter;
+}
+
+export async function fetchWithBackoff<T>(fn: () => Promise<T>, opts?: { signal?: AbortSignal; retries?: number; baseDelayMs?: number }): Promise<T> {
+  const retries = opts?.retries ?? 3;
+  const base = opts?.baseDelayMs ?? 250;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      if (opts?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+      return await fn();
+    } catch (err) {
+      const { type } = classifyError(err);
+      if (opts?.signal?.aborted || type === 'invalidKey' || type === 'unauthorized') throw err;
+      if (attempt === retries) throw err;
+      const delay = backoffDelay(base, attempt);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  // Unreachable, but satisfies TS return type
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  throw new Error('Unexpected backoff flow');
+}
+
 export function useKpis(symbol?: string) {
   const [data, setData] = useState<KpiData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -70,24 +114,47 @@ export function useKpis(symbol?: string) {
       abortRef.current?.abort();
       abortRef.current = controller;
       const provider = getProvider(dataProvider);
-      const attempt = async (tries = 2, delay = 250): Promise<KpiData> => {
-        try {
-          return await provider.getKpis(sym);
-        } catch (e) {
-          if (tries <= 0 || controller.signal.aborted) throw e;
-          await new Promise((r) => setTimeout(r, delay));
-          return attempt(tries - 1, Math.min(delay * 2, 2000));
+      // Capability check: prefer realtime if available, but allow historical-backed KPIs too
+      const caps = getProviderCapabilities(dataProvider);
+      if (!caps.realtime && !caps.historical) {
+        const msg = 'This feature requires a provider with realtime or historical quotes.';
+        setError(msg);
+        toast.info('This feature requires a provider with quotes (e.g., Alpha Vantage or Polygon).');
+        setData(null);
+        return;
+      }
+      try {
+        const kpiData = await fetchWithBackoff(() => provider.getKpis(sym), { signal: controller.signal, retries: 3, baseDelayMs: 250 });
+        setData(kpiData);
+        setCachedData(cacheKey, kpiData);
+      } catch (primaryErr) {
+        const classified = classifyError(primaryErr);
+        // Graceful demo fallback: if auth/key issue on real provider, serve mock data
+        if ((classified.type === 'invalidKey' || classified.type === 'unauthorized') && dataProvider !== 'mock') {
+          try {
+            const mock = getProvider('mock');
+            const mockData = await mock.getKpis(sym);
+            setData(mockData);
+            setCachedData(cacheKey, mockData);
+            toast.info('Using mock data due to provider authentication issue.');
+            return;
+          } catch {
+            throw primaryErr;
+          }
         }
-      };
-      const kpiData = await attempt();
-      setData(kpiData);
-      setCachedData(cacheKey, kpiData);
+        throw primaryErr;
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch KPI data');
+      const { type, message } = classifyError(err);
+      setError(message || 'Failed to fetch KPI data');
+      if (type === 'rateLimit') toast.warning('Rate limit reached. Please try again shortly.');
+      else if (type === 'invalidKey') toast.error('Invalid API key. Update your provider key in Settings.');
+      else if (type === 'network') toast.error('Network error. Check your connection and retry.');
+      else if (type !== 'aborted') toast.error(message);
     } finally {
       setLoading(false);
       }
-  }, [symbol, globalSymbol, dataProvider]);
+  }, [symbol, globalSymbol, dataProvider, abortRef]);
 
   useEffect(() => {
     fetchData();
@@ -124,24 +191,46 @@ export function usePrices(symbol?: string, range?: PriceRange) {
       abortRef.current?.abort();
       abortRef.current = controller;
       const provider = getProvider(dataProvider);
-      const attempt = async (tries = 2, delay = 250): Promise<PricePoint[]> => {
-        try {
-          return await provider.getPrices(sym, rng);
-        } catch (e) {
-          if (tries <= 0 || controller.signal.aborted) throw e;
-          await new Promise((r) => setTimeout(r, delay));
-          return attempt(tries - 1, Math.min(delay * 2, 2000));
+      const caps = getProviderCapabilities(dataProvider);
+      if (!caps.historical) {
+        const msg = 'This feature requires a provider with historical data.';
+        setError(msg);
+        toast.info('This feature requires historical data (e.g., Alpha Vantage or Polygon).');
+        setData([]);
+        return;
+      }
+      try {
+        const priceData = await fetchWithBackoff(() => provider.getPrices(sym, rng), { signal: controller.signal, retries: 3, baseDelayMs: 250 });
+        setData(priceData);
+        setCachedData(cacheKey, priceData);
+      } catch (primaryErr) {
+        const classified = classifyError(primaryErr);
+        if ((classified.type === 'invalidKey' || classified.type === 'unauthorized') && dataProvider !== 'mock') {
+          try {
+            const mock = getProvider('mock');
+            const mockData = await mock.getPrices(sym, rng);
+            setData(mockData);
+            setCachedData(cacheKey, mockData);
+            toast.info('Using mock data due to provider authentication issue.');
+            return;
+          } catch {
+            throw primaryErr;
+          }
         }
-      };
-      const priceData = await attempt();
-      setData(priceData);
-      setCachedData(cacheKey, priceData);
+        throw primaryErr;
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch price data');
+      const { type, message } = classifyError(err);
+      setError(message || 'Failed to fetch price data');
+      setData([]);
+      if (type === 'rateLimit') toast.warning('Rate limit reached. Please try again shortly.');
+      else if (type === 'invalidKey') toast.error('Invalid API key. Update your provider key in Settings.');
+      else if (type === 'network') toast.error('Network error. Check your connection and retry.');
+      else if (type !== 'aborted') toast.error(message);
     } finally {
       setLoading(false);
     }
-  }, [symbol, range, dataProvider, globalSymbol, globalTimeframe]);
+  }, [symbol, range, dataProvider, globalSymbol, globalTimeframe, abortRef]);
 
   useEffect(() => {
     fetchData();
@@ -177,24 +266,46 @@ export function useFinancials(symbol?: string) {
       abortRef.current?.abort();
       abortRef.current = controller;
       const provider = getProvider(dataProvider);
-      const attempt = async (tries = 2, delay = 250): Promise<FinancialData> => {
-        try {
-          return await provider.getFinancials(sym);
-        } catch (e) {
-          if (tries <= 0 || controller.signal.aborted) throw e;
-          await new Promise((r) => setTimeout(r, delay));
-          return attempt(tries - 1, Math.min(delay * 2, 2000));
+      const caps = getProviderCapabilities(dataProvider);
+      if (!caps.historical) {
+        const msg = 'This feature requires a provider with fundamentals support.';
+        setError(msg);
+        toast.info('This feature requires fundamentals from a provider like Alpha Vantage or Polygon.');
+        setData(null);
+        return;
+      }
+      try {
+        const financialData = await fetchWithBackoff(() => provider.getFinancials(sym), { signal: controller.signal, retries: 3, baseDelayMs: 250 });
+        setData(financialData);
+        setCachedData(cacheKey, financialData);
+      } catch (primaryErr) {
+        const classified = classifyError(primaryErr);
+        if ((classified.type === 'invalidKey' || classified.type === 'unauthorized') && dataProvider !== 'mock') {
+          try {
+            const mock = getProvider('mock');
+            const mockData = await mock.getFinancials(sym);
+            setData(mockData);
+            setCachedData(cacheKey, mockData);
+            toast.info('Using mock data due to provider authentication issue.');
+            return;
+          } catch {
+            throw primaryErr;
+          }
         }
-      };
-      const financialData = await attempt();
-      setData(financialData);
-      setCachedData(cacheKey, financialData);
+        throw primaryErr;
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch financial data');
+      const { type, message } = classifyError(err);
+      setError(message || 'Failed to fetch financial data');
+      setData(null);
+      if (type === 'rateLimit') toast.warning('Rate limit reached. Please try again shortly.');
+      else if (type === 'invalidKey') toast.error('Invalid API key. Update your provider key in Settings.');
+      else if (type === 'network') toast.error('Network error. Check your connection and retry.');
+      else if (type !== 'aborted') toast.error(message);
     } finally {
       setLoading(false);
     }
-  }, [symbol, dataProvider, globalSymbol]);
+  }, [symbol, dataProvider, globalSymbol, abortRef]);
 
   useEffect(() => {
     fetchData();
